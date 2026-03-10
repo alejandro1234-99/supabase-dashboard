@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/circle-snapshot",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/circle-sync",
+      "schedule": "0 4 * * 1"
+    }
+  ]
+}
