@@ -16,7 +16,6 @@ import {
 const navSections = [
   {
     label: "Nuevo Circle",
-    collapsible: true,
     items: [
       { href: "/dashboard", label: "Panel", icon: LayoutDashboard },
       { href: "/dashboard/users", label: "Usuarios", icon: Users },
@@ -26,7 +25,6 @@ const navSections = [
   },
   {
     label: "Panel de producto",
-    collapsible: true,
     items: [
       { href: "/dashboard/reviews", label: "Reviews", icon: Star },
       { href: "/dashboard/feedback", label: "NPS Formación", icon: MessageSquare },
@@ -39,7 +37,6 @@ const navSections = [
   },
   {
     label: "Cruce de ventas",
-    collapsible: false,
     items: [
       { href: "/dashboard/sales", label: "Ventas", icon: ShoppingCart },
       { href: "/dashboard/agendas", label: "Agendas", icon: CalendarDays },
@@ -48,7 +45,6 @@ const navSections = [
   },
   {
     label: "Operativa producto",
-    collapsible: false,
     items: [
       { href: "/dashboard/qa", label: "Q&A Pipeline", icon: HelpCircle },
     ],
@@ -58,7 +54,12 @@ const navSections = [
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    "Nuevo Circle": true,
+    "Panel de producto": true,
+    "Cruce de ventas": true,
+    "Operativa producto": true,
+  });
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -90,34 +91,28 @@ export default function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-5 overflow-y-auto scrollbar-thin">
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto scrollbar-thin">
         {navSections.map((section) => {
-          const isOpen = section.collapsible ? !!openSections[section.label] : true;
+          const isOpen = !!openSections[section.label];
           return (
-            <div key={section.label}>
-              {section.collapsible ? (
-                <button
-                  onClick={() => toggle(section.label)}
-                  className="flex items-center justify-between w-full px-2 mb-1.5 group"
-                >
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-white/50 group-hover:text-white/70 transition-colors">
-                    {section.label}
-                  </span>
-                  <ChevronDown
-                    className={cn(
-                      "h-3 w-3 text-white/20 group-hover:text-white/40 transition-all duration-200",
-                      isOpen && "rotate-180"
-                    )}
-                  />
-                </button>
-              ) : (
-                <p className="text-[10px] font-bold uppercase tracking-widest text-white/50 mb-1.5 px-2">
+            <div key={section.label} className="mb-1">
+              <button
+                onClick={() => toggle(section.label)}
+                className="flex items-center justify-between w-full px-2 py-2 rounded-lg group hover:bg-white/[0.04] transition-colors"
+              >
+                <span className="text-[11px] font-extrabold uppercase tracking-widest text-white/60 group-hover:text-white/80 transition-colors">
                   {section.label}
-                </p>
-              )}
+                </span>
+                <ChevronDown
+                  className={cn(
+                    "h-3.5 w-3.5 text-white/30 group-hover:text-white/50 transition-all duration-200",
+                    isOpen && "rotate-180"
+                  )}
+                />
+              </button>
 
               {isOpen && (
-                <div className="space-y-0.5">
+                <div className="space-y-0.5 mt-0.5 mb-2">
                   {section.items.map(({ href, label, icon: Icon }) => {
                     const active = pathname === href;
                     return (
