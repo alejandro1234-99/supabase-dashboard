@@ -1,0 +1,2 @@
+cd ~/Projects/supabase-dashboard
+npm run dev

@@ -89,7 +89,8 @@ export async function GET(req: NextRequest) {
     fecha_entrada: a.email ? (purchaseMap[a.email]?.fecha_compra ?? null) : null,
   }));
 
-  const casos = dataWithAll as {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const casos = dataWithAll as unknown as {
     tipo_exito: string | null;
     fuente_caso_exito: string | null;
     tags: string | null;

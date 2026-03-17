@@ -161,7 +161,6 @@ export default function JobsPage() {
             <Tooltip
               contentStyle={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, fontSize: 12 }}
               cursor={{ fill: "rgba(0,0,0,0.03)" }}
-              formatter={(v: number) => [v, "Ofertas"]}
             />
             <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} />
           </BarChart>
