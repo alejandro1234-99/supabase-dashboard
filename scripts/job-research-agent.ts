@@ -96,6 +96,7 @@ Cuando hayas terminado la investigación, responde ÚNICAMENTE con este JSON (si
 
 El campo "html_body" debe ser HTML compatible con Circle (sin estilos inline, sin clases CSS).
 Usa ÚNICAMENTE estas etiquetas: <div>, <p>, <strong>, <b>, <br>, <ul>, <li>, <a>.
+IMPORTANTE: En los atributos HTML usa comillas simples (no dobles) para no romper el JSON. Ejemplo: <a href='URL' target='_blank'>texto</a>
 Sigue EXACTAMENTE esta estructura:
 
 <div>
@@ -183,7 +184,22 @@ async function runResearchAgent(today: string): Promise<JobOffer[]> {
         throw new Error('Claude no devolvió JSON en la respuesta final')
       }
 
-      const data = JSON.parse(match[1])
+      let data: { offers?: JobOffer[] }
+      try {
+        data = JSON.parse(match[1])
+      } catch {
+        // Intentar reparar JSON con comillas dobles dentro de strings HTML
+        const repaired = match[1].replace(
+          /"html_body":\s*"([\s\S]*?)(?=",\s*"\w+"|"\s*\})/g,
+          (_m, html) => `"html_body": "${html.replace(/"/g, "'")}"`
+        )
+        try {
+          data = JSON.parse(repaired)
+        } catch {
+          console.error('JSON inválido incluso tras reparación:', match[1].slice(0, 300))
+          return []
+        }
+      }
       return data.offers ?? []
     }
 
