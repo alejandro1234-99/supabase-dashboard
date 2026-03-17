@@ -72,7 +72,7 @@ export default function LoginPage() {
       <div className="relative z-10 w-full max-w-sm px-4">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-5 tracking-tight">Panel de Administración</h1>
+          <h1 className="text-3xl font-bold text-white mb-5 tracking-tight font-[family-name:var(--font-display)]">Panel de Administración</h1>
           <Image
             src="/logo.png"
             alt="Revolutia"
