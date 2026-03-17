@@ -111,7 +111,7 @@ export default function Sidebar() {
                   onClick={() => toggle(section.label)}
                   className="flex items-center justify-between w-full px-2 mb-1.5 group"
                 >
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-white/30 group-hover:text-white/50 transition-colors">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-white/50 group-hover:text-white/70 transition-colors">
                     {section.label}
                   </span>
                   <ChevronDown
@@ -122,7 +122,7 @@ export default function Sidebar() {
                   />
                 </button>
               ) : (
-                <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-1.5 px-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white/50 mb-1.5 px-2">
                   {section.label}
                 </p>
               )}
@@ -138,8 +138,8 @@ export default function Sidebar() {
                         className={cn(
                           "relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150",
                           active
-                            ? "bg-[hsl(280_80%_60%_/_0.12)] text-[hsl(280_80%_72%)] font-semibold"
-                            : "text-white/45 hover:bg-white/[0.04] hover:text-white/80"
+                            ? "bg-[hsl(280_80%_60%_/_0.15)] text-[hsl(280_80%_78%)] font-semibold"
+                            : "text-white/70 hover:bg-white/[0.07] hover:text-white"
                         )}
                       >
                         {active && (
@@ -148,7 +148,7 @@ export default function Sidebar() {
                         <Icon
                           className={cn(
                             "h-4 w-4 shrink-0",
-                            active ? "text-[hsl(280_80%_65%)]" : "text-white/30"
+                            active ? "text-[hsl(280_80%_75%)]" : "text-white/55"
                           )}
                         />
                         {label}
