@@ -129,6 +129,63 @@
   }
 }
 
+/* ── Dark mode: adaptar clases Tailwind hardcodeadas ──────────────────────── */
+
+/* Fondos */
+.dark .bg-white        { background-color: hsl(240 6% 12%); }
+.dark .bg-gray-50      { background-color: hsl(240 5% 14%); }
+.dark .bg-gray-100     { background-color: hsl(240 5% 16%); }
+.dark .bg-gray-200     { background-color: hsl(240 5% 20%); }
+
+/* Texto */
+.dark .text-gray-900   { color: hsl(0 0% 95%); }
+.dark .text-gray-800   { color: hsl(0 0% 88%); }
+.dark .text-gray-700   { color: hsl(0 0% 80%); }
+.dark .text-gray-600   { color: hsl(0 0% 70%); }
+.dark .text-gray-500   { color: hsl(240 4% 55%); }
+.dark .text-gray-400   { color: hsl(240 4% 48%); }
+.dark .text-gray-300   { color: hsl(240 4% 40%); }
+
+/* Bordes */
+.dark .border-gray-50  { border-color: hsl(240 5% 14%); }
+.dark .border-gray-100 { border-color: hsl(240 5% 18%); }
+.dark .border-gray-200 { border-color: hsl(240 5% 22%); }
+.dark .divide-gray-100 > * + * { border-color: hsl(240 5% 18%); }
+
+/* Inputs y selects */
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: hsl(240 5% 16%);
+  border-color: hsl(240 5% 22%);
+  color: hsl(0 0% 90%);
+}
+.dark input::placeholder,
+.dark textarea::placeholder { color: hsl(240 4% 40%); }
+.dark input:focus,
+.dark textarea:focus,
+.dark select:focus {
+  border-color: hsl(280 80% 60% / 0.5);
+  outline: none;
+}
+
+/* Sombras: suavizar en dark */
+.dark .shadow-sm  { box-shadow: 0 1px 3px hsl(240 8% 4% / 0.6); }
+.dark .shadow-md  { box-shadow: 0 4px 12px hsl(240 8% 4% / 0.7); }
+.dark .shadow-lg  { box-shadow: 0 8px 24px hsl(240 8% 4% / 0.8); }
+.dark .shadow-2xl { box-shadow: 0 20px 48px hsl(240 8% 4% / 0.9); }
+
+/* Hover states */
+.dark .hover\:bg-gray-50:hover  { background-color: hsl(240 5% 16%); }
+.dark .hover\:bg-gray-100:hover { background-color: hsl(240 5% 18%); }
+
+/* Recharts tooltips y fondo de áreas */
+.dark .recharts-tooltip-wrapper .recharts-default-tooltip {
+  background-color: hsl(240 6% 14%) !important;
+  border-color: hsl(240 5% 22%) !important;
+  color: hsl(0 0% 90%) !important;
+}
+
 /* Revolutia utilities */
 .glow-primary {
   box-shadow: 0 0 20px -5px hsl(280 80% 60% / 0.45);
