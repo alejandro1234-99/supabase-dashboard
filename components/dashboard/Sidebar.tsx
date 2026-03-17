@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { createBrowserClient } from "@supabase/ssr";
 import {
   LayoutDashboard, Users, BarChart3, Activity,
-  Table2, RefreshCw, Settings, Star, Zap, Award, MessageSquare, ShoppingCart, CalendarDays, ClipboardList, Trophy, PlayCircle, Headphones, HelpCircle, Globe, ChevronDown, LogOut,
+  Table2, RefreshCw, Settings, Star, Award, MessageSquare,
+  ShoppingCart, CalendarDays, ClipboardList, Trophy, PlayCircle,
+  Headphones, HelpCircle, Globe, ChevronDown, LogOut,
 } from "lucide-react";
 
 const navSections = [
@@ -84,22 +87,21 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="w-64 min-h-screen bg-white border-r border-gray-100 flex flex-col shadow-sm">
+    <aside className="w-[260px] min-h-screen flex flex-col border-r border-white/[0.06] bg-[hsl(240_8%_8%)]">
       {/* Logo */}
-      <div className="p-5 border-b border-gray-100">
-        <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-sm">
-            <Zap className="h-5 w-5 text-white fill-white" />
-          </div>
-          <div>
-            <p className="font-extrabold text-sm text-gray-900 tracking-tight">Revolutia AI</p>
-            <p className="text-[11px] text-gray-400 font-medium">Admin Dashboard</p>
-          </div>
-        </div>
+      <div className="px-5 py-5 border-b border-white/[0.06]">
+        <Image
+          src="/logo.png"
+          alt="Revolutia"
+          width={140}
+          height={32}
+          className="h-7 w-auto object-contain"
+          priority
+        />
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 p-3 space-y-4 overflow-y-auto">
+      <nav className="flex-1 px-3 py-4 space-y-5 overflow-y-auto scrollbar-thin">
         {navSections.map((section) => {
           const isOpen = section.collapsible ? !!openSections[section.label] : true;
           return (
@@ -107,20 +109,20 @@ export default function Sidebar() {
               {section.collapsible ? (
                 <button
                   onClick={() => toggle(section.label)}
-                  className="flex items-center justify-between w-full px-3 mb-1.5 group"
+                  className="flex items-center justify-between w-full px-2 mb-1.5 group"
                 >
-                  <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider group-hover:text-gray-700 transition-colors">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-white/30 group-hover:text-white/50 transition-colors">
                     {section.label}
                   </span>
                   <ChevronDown
                     className={cn(
-                      "h-3 w-3 text-gray-300 group-hover:text-gray-500 transition-all duration-200",
+                      "h-3 w-3 text-white/20 group-hover:text-white/40 transition-all duration-200",
                       isOpen && "rotate-180"
                     )}
                   />
                 </button>
               ) : (
-                <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 px-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-1.5 px-2">
                   {section.label}
                 </p>
               )}
@@ -134,17 +136,22 @@ export default function Sidebar() {
                         key={href}
                         href={href}
                         className={cn(
-                          "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150",
+                          "relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150",
                           active
-                            ? "bg-emerald-50 text-emerald-700 shadow-sm"
-                            : "text-gray-500 hover:bg-gray-50 hover:text-gray-800"
+                            ? "bg-[hsl(280_80%_60%_/_0.12)] text-[hsl(280_80%_72%)] font-semibold"
+                            : "text-white/45 hover:bg-white/[0.04] hover:text-white/80"
                         )}
                       >
-                        <Icon className={cn("h-4 w-4 shrink-0", active ? "text-emerald-600" : "text-gray-400")} />
-                        {label}
                         {active && (
-                          <span className="ml-auto h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-[hsl(280_80%_60%)] rounded-r-full" />
                         )}
+                        <Icon
+                          className={cn(
+                            "h-4 w-4 shrink-0",
+                            active ? "text-[hsl(280_80%_65%)]" : "text-white/30"
+                          )}
+                        />
+                        {label}
                       </Link>
                     );
                   })}
@@ -155,12 +162,13 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="p-4 border-t border-gray-100 flex items-center justify-between">
-        <p className="text-[11px] text-gray-300 font-medium">v1.0 · Revolutia AI PRO</p>
+      {/* Footer */}
+      <div className="p-3 border-t border-white/[0.06] flex items-center justify-between">
+        <p className="text-[11px] text-white/20 font-medium px-2">v1.0 · Admin Dashboard</p>
         <button
           onClick={handleLogout}
           title="Cerrar sesión"
-          className="text-gray-300 hover:text-red-400 transition-colors"
+          className="p-2 rounded-lg text-white/25 hover:text-red-400 hover:bg-red-400/10 transition-all"
         >
           <LogOut className="h-4 w-4" />
         </button>
