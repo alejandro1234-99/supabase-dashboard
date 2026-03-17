@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { Zap, Loader2, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
   const searchParams = useSearchParams();
@@ -72,9 +72,7 @@ export default function LoginPage() {
       <div className="relative z-10 w-full max-w-sm px-4">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[hsl(280_80%_60%_/_0.15)] mb-5 glow-primary">
-            <Zap className="w-6 h-6 text-[hsl(280_80%_65%)]" />
-          </div>
+          <h1 className="text-3xl font-bold text-white mb-5 tracking-tight">Panel de Administración</h1>
           <Image
             src="/logo.png"
             alt="Revolutia"
@@ -83,8 +81,6 @@ export default function LoginPage() {
             className="h-8 w-auto mx-auto object-contain"
             priority
           />
-          <h1 className="text-3xl font-bold text-white mt-4 tracking-tight">Panel de Administración</h1>
-          <p className="text-white/40 text-sm mt-1.5">Acceso interno · Revolutia AI</p>
         </div>
 
         {/* Card */}
