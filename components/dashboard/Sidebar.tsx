@@ -13,6 +13,13 @@ import {
   Headphones, HelpCircle, Globe, ChevronDown, LogOut,
 } from "lucide-react";
 
+const SECTION_COLORS: Record<string, { bg: string; text: string }> = {
+  "Nuevo Circle":       { bg: "bg-indigo-500/20",  text: "text-indigo-200" },
+  "Panel de producto":  { bg: "bg-purple-500/20",  text: "text-purple-200" },
+  "Cruce de ventas":    { bg: "bg-emerald-500/20", text: "text-emerald-200" },
+  "Operativa producto": { bg: "bg-amber-500/20",   text: "text-amber-200" },
+};
+
 const navSections = [
   {
     label: "Nuevo Circle",
@@ -96,20 +103,29 @@ export default function Sidebar() {
           const isOpen = !!openSections[section.label];
           return (
             <div key={section.label} className="mb-1">
-              <button
-                onClick={() => toggle(section.label)}
-                className="flex items-center justify-between w-full px-2 py-2 rounded-lg group hover:bg-white/[0.04] transition-colors"
-              >
-                <span className="text-[13px] font-extrabold text-white/85 group-hover:text-white transition-colors tracking-wide">
-                  {section.label}
-                </span>
-                <ChevronDown
-                  className={cn(
-                    "h-4 w-4 text-white/50 group-hover:text-white/70 transition-all duration-200",
-                    isOpen && "rotate-180"
-                  )}
-                />
-              </button>
+              {(() => {
+                const c = SECTION_COLORS[section.label] ?? { bg: "bg-white/10", text: "text-white/80" };
+                return (
+                  <button
+                    onClick={() => toggle(section.label)}
+                    className={cn(
+                      "flex items-center justify-between w-full px-3 py-2 rounded-lg group transition-colors",
+                      c.bg
+                    )}
+                  >
+                    <span className={cn("text-[13px] font-extrabold tracking-wide transition-colors group-hover:brightness-125", c.text)}>
+                      {section.label}
+                    </span>
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 transition-all duration-200 opacity-60 group-hover:opacity-90",
+                        c.text,
+                        isOpen && "rotate-180"
+                      )}
+                    />
+                  </button>
+                );
+              })()}
 
               {isOpen && (
                 <div className="space-y-0.5 mt-0.5 mb-2">
