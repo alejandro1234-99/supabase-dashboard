@@ -59,7 +59,7 @@ const navSections = [
   },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ role = "admin" }: { role?: string }) {
   const pathname = usePathname();
   const router = useRouter();
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
@@ -98,7 +98,10 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto scrollbar-thin">
-        {navSections.map((section) => {
+        {(role === "qa_admin"
+          ? [{ label: "Operativa producto", items: navSections.flatMap(s => s.items).filter(i => i.href === "/dashboard/qa") }]
+          : navSections
+        ).map((section) => {
           const isOpen = !!openSections[section.label];
           return (
             <div key={section.label} className="mb-1">
