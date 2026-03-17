@@ -34,16 +34,22 @@ const navSections = [
       { href: "/dashboard/vimeo", label: "Consumo Vimeo", icon: PlayCircle },
       { href: "/dashboard/circle", label: "Circle", icon: Globe },
       { href: "/dashboard/exitos", label: "Casos de Éxito", icon: Trophy },
+      { href: "/dashboard/soporte", label: "Soporte", icon: Headphones },
     ],
   },
   {
-    label: "Plataforma",
+    label: "Cruce de ventas",
     collapsible: false,
     items: [
       { href: "/dashboard/sales", label: "Ventas", icon: ShoppingCart },
       { href: "/dashboard/agendas", label: "Agendas", icon: CalendarDays },
       { href: "/dashboard/onboarding", label: "Onboarding", icon: ClipboardList },
-      { href: "/dashboard/soporte", label: "Soporte", icon: Headphones },
+    ],
+  },
+  {
+    label: "Operativa producto",
+    collapsible: false,
+    items: [
       { href: "/dashboard/qa", label: "Q&A Pipeline", icon: HelpCircle },
     ],
   },
