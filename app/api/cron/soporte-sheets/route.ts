@@ -63,7 +63,8 @@ export async function GET(req: NextRequest) {
   }
 
   // Autenticación Google
-  const auth = new google.auth.JWT(serviceEmail, undefined, privateKey, [
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const auth = new (google.auth.JWT as any)(serviceEmail, undefined, privateKey, [
     "https://www.googleapis.com/auth/spreadsheets",
   ]);
   const sheets = google.sheets({ version: "v4", auth });
