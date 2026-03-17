@@ -23,6 +23,8 @@ type CasoExito = {
   comentarios_totales: number | null;
   caso_exito: string | null;
   avatar_url: string | null;
+  edicion: string | null;
+  fecha_entrada: string | null;
 };
 
 type AlumnoResult = {
@@ -149,9 +151,9 @@ function ExitoCard({ caso, onEdit }: { caso: CasoExito; onEdit: (c: CasoExito) =
       {/* Footer */}
       <div className="flex items-center justify-between pt-2.5 gap-2 min-w-0" style={{ borderTop: `1px solid ${color}18` }}>
         <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
-          {tag && (
-            <span className="text-xs font-semibold text-white/50 px-2 py-0.5 rounded-full" style={{ backgroundColor: color + "15", border: `1px solid ${color}25` }}>
-              {tag}
+          {caso.edicion && (
+            <span className="text-xs font-bold text-amber-300 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-full">
+              {caso.edicion}
             </span>
           )}
           {caso.fuente_caso_exito && (
@@ -159,8 +161,10 @@ function ExitoCard({ caso, onEdit }: { caso: CasoExito; onEdit: (c: CasoExito) =
           )}
         </div>
         <div className="flex items-center gap-3 shrink-0 text-xs text-white/40">
-          {caso.fecha_caso_exito && (
-            <span className="font-medium">{new Date(caso.fecha_caso_exito).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}</span>
+          {caso.fecha_entrada && (
+            <span className="font-medium text-white/50" title="Fecha de compra">
+              {new Date(caso.fecha_entrada).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "2-digit" })}
+            </span>
           )}
           <span className="text-white/30">{caso.posts_publicados ?? 0}p · {caso.comentarios_totales ?? 0}c</span>
         </div>

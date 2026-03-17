@@ -28,8 +28,9 @@ export async function GET(req: NextRequest) {
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  const alumnos = (data ?? []) as { id_circle: string | null; email: string | null; [key: string]: unknown }[];
+
   // Cruzar con circle_members para obtener avatar_url
-  const alumnos = (data ?? []) as { id_circle: string | null; [key: string]: unknown }[];
   const circleIds = alumnos.map((a) => a.id_circle).filter(Boolean).map(Number);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -44,12 +45,33 @@ export async function GET(req: NextRequest) {
     if (m.avatar_url) avatarMap[m.circle_member_id] = m.avatar_url;
   }
 
-  const dataWithAvatar = alumnos.map((a) => ({
+  // Cruzar con purchase_approved para obtener edición y fecha de entrada
+  const emails = alumnos.map((a) => a.email).filter(Boolean) as string[];
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: purchases } = emails.length > 0
+    ? await (supabase.from("purchase_approved" as any) as any)
+        .select("correo_electronico, edicion, fecha_compra")
+        .in("correo_electronico", emails)
+        .neq("status", "Rembolsado")
+        .order("fecha_compra", { ascending: false })
+    : { data: [] };
+
+  const purchaseMap: Record<string, { edicion: string | null; fecha_compra: string | null }> = {};
+  for (const p of (purchases ?? []) as { correo_electronico: string; edicion: string | null; fecha_compra: string | null }[]) {
+    if (!purchaseMap[p.correo_electronico]) {
+      purchaseMap[p.correo_electronico] = { edicion: p.edicion, fecha_compra: p.fecha_compra };
+    }
+  }
+
+  const dataWithAll = alumnos.map((a) => ({
     ...a,
     avatar_url: a.id_circle ? (avatarMap[Number(a.id_circle)] ?? null) : null,
+    edicion: a.email ? (purchaseMap[a.email]?.edicion ?? null) : null,
+    fecha_entrada: a.email ? (purchaseMap[a.email]?.fecha_compra ?? null) : null,
   }));
 
-  const casos = dataWithAvatar as {
+  const casos = dataWithAll as {
     tipo_exito: string | null;
     fuente_caso_exito: string | null;
     tags: string | null;
@@ -91,7 +113,7 @@ export async function GET(req: NextRequest) {
     .map(([lanzamiento, count]) => ({ lanzamiento, count }))
     .sort((a, b) => b.count - a.count);
 
-  // Actividad media de casos de éxito vs todos los alumnos
+  // Actividad media
   const avgPosts = total > 0 ? parseFloat((casos.reduce((s, r) => s + (r.posts_publicados ?? 0), 0) / total).toFixed(1)) : 0;
   const avgComentarios = total > 0 ? parseFloat((casos.reduce((s, r) => s + (r.comentarios_totales ?? 0), 0) / total).toFixed(1)) : 0;
   const avgConexiones = total > 0 ? parseFloat((casos.reduce((s, r) => s + (r.conexiones_circle ?? 0), 0) / total).toFixed(1)) : 0;
@@ -99,7 +121,7 @@ export async function GET(req: NextRequest) {
   const tipos = [...new Set(casos.map((r) => r.tipo_exito).filter(Boolean))].sort() as string[];
 
   return NextResponse.json({
-    data: dataWithAvatar,
+    data: dataWithAll,
     total,
     stats: { total, avgPosts, avgComentarios, avgConexiones },
     porTipo,

@@ -44,6 +44,8 @@ type Member = {
   joined_at: string | null;
   active: boolean;
   member_tags: string[];
+  edicion: string | null;
+  fecha_compra_venta: string | null;
 };
 
 type PorEspacio = { espacio: string; posts: number };
@@ -73,6 +75,7 @@ const SORT_COLS = [
   { key: "connections_count", label: "Conexiones" },
   { key: "last_seen_at",      label: "Última visita" },
   { key: "joined_at",         label: "Registro" },
+  { key: "fecha_compra_venta", label: "Compra" },
 ];
 
 function fmtMes(mes: string) {
@@ -391,19 +394,20 @@ export default function CirclePage() {
                     </div>
                   </th>
                 ))}
+                <th className="px-3 py-3 text-xs font-semibold text-white/40 uppercase tracking-wide">Edición</th>
                 <th className="px-3 py-3 text-xs font-semibold text-white/40 uppercase tracking-wide">Estado</th>
               </tr>
             </thead>
             <tbody>
               {membersLoading ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-10">
+                  <td colSpan={9} className="text-center py-10">
                     <Loader2 className="h-5 w-5 animate-spin text-indigo-400 mx-auto" />
                   </td>
                 </tr>
               ) : members.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-10 text-white/30">No se encontraron miembros</td>
+                  <td colSpan={9} className="text-center py-10 text-white/30">No se encontraron miembros</td>
                 </tr>
               ) : (
                 members.map((m) => {
@@ -450,6 +454,14 @@ export default function CirclePage() {
                         {m.last_seen_at ? timeAgo(m.last_seen_at) : "—"}
                       </td>
                       <td className="px-3 py-3 text-center text-white/45">{fmtDate(m.joined_at)}</td>
+                      <td className="px-3 py-3 text-center text-white/45">{fmtDate(m.fecha_compra_venta)}</td>
+                      <td className="px-3 py-3 text-center">
+                        {m.edicion && (
+                          <span className="inline-block text-[11px] font-semibold text-amber-300 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-full">
+                            {m.edicion}
+                          </span>
+                        )}
+                      </td>
                       <td className="px-3 py-3 text-center">
                         {isActive
                           ? <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-2 py-0.5 rounded-full">● Activo</span>
