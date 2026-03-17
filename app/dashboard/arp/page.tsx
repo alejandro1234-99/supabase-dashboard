@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Search, Loader2, Award, CheckCircle2, XCircle, BarChart2, TrendingUp, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Legend } from "recharts";
 
 const PASS_THRESHOLD = 0.7;
 
@@ -18,12 +18,15 @@ type Certificate = {
   fecha: string | null;
 };
 
+type MonthlyData = { month: string; total: number; aprobados: number; suspensos: number };
+
 type Stats = {
   total: number;
   aprobados: number;
   suspensos: number;
   avgPct: number;
   rangos: { label: string; count: number; aprobado: boolean }[];
+  monthlyData: MonthlyData[];
 };
 
 function StatCard({ icon: Icon, label, value, sub, color }: {
@@ -165,7 +168,7 @@ export default function ArpPage() {
       .then((d) => {
         if (d.error) return;
         setCerts(d.data ?? []);
-        setStats({ total: d.total, aprobados: d.aprobados, suspensos: d.suspensos, avgPct: d.avgPct, rangos: d.rangos });
+        setStats({ total: d.total, aprobados: d.aprobados, suspensos: d.suspensos, avgPct: d.avgPct, rangos: d.rangos, monthlyData: d.monthlyData ?? [] });
       })
       .finally(() => { setLoading(false); setSearching(false); });
   }, []);
@@ -222,6 +225,41 @@ export default function ArpPage() {
           <StatCard icon={CheckCircle2} label="Aprobados" value={stats.aprobados} sub={`≥ ${PASS_THRESHOLD * 100}% aciertos`} color="bg-emerald-500" />
           <StatCard icon={XCircle} label="Suspensos" value={stats.suspensos} color="bg-red-400" />
           <StatCard icon={TrendingUp} label="Media" value={`${Math.round(stats.avgPct * 100)}%`} sub="nota media" color="bg-purple-500" />
+        </div>
+      )}
+
+      {/* Gráfica mensual */}
+      {stats && stats.monthlyData.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <div className="mb-5">
+            <h2 className="font-bold text-gray-900 text-sm">Exámenes por mes</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Alumnos que han realizado el examen ARP cada mes</p>
+          </div>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={stats.monthlyData} barCategoryGap="30%" barGap={3}>
+              <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+              <YAxis hide allowDecimals={false} />
+              <Tooltip
+                cursor={{ fill: "#f3f4f6" }}
+                content={({ active, payload, label }) => {
+                  if (!active || !payload?.length) return null;
+                  return (
+                    <div className="bg-white border border-gray-100 shadow-lg rounded-xl px-3 py-2 text-xs space-y-1">
+                      <p className="font-semibold text-gray-700">{label}</p>
+                      <p className="text-emerald-600 font-medium">✓ {payload.find(p => p.dataKey === "aprobados")?.value} aprobados</p>
+                      <p className="text-red-400 font-medium">✗ {payload.find(p => p.dataKey === "suspensos")?.value} suspensos</p>
+                    </div>
+                  );
+                }}
+              />
+              <Legend
+                formatter={(value) => value === "aprobados" ? "Aprobados" : "Suspensos"}
+                wrapperStyle={{ fontSize: 11, color: "#9ca3af" }}
+              />
+              <Bar dataKey="aprobados" stackId="a" fill="#34d399" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="suspensos" stackId="a" fill="#f87171" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       )}
 

@@ -41,7 +41,26 @@ export async function GET(req: NextRequest) {
     aprobado: r.min >= 0.7,
   }));
 
-  return NextResponse.json({ data: records, total, aprobados, suspensos, avgPct, rangos });
+  // Exámenes por mes (últimos 12 meses)
+  const monthMap: Record<string, { total: number; aprobados: number }> = {};
+  for (const r of records) {
+    if (!r.fecha) continue;
+    const d = new Date(r.fecha);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    if (!monthMap[key]) monthMap[key] = { total: 0, aprobados: 0 };
+    monthMap[key].total++;
+    if (r.aprobado) monthMap[key].aprobados++;
+  }
+  const monthlyData = Object.entries(monthMap)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-12)
+    .map(([key, v]) => {
+      const [year, month] = key.split("-");
+      const label = new Date(Number(year), Number(month) - 1).toLocaleDateString("es-ES", { month: "short", year: "2-digit" });
+      return { month: label, total: v.total, aprobados: v.aprobados, suspensos: v.total - v.aprobados };
+    });
+
+  return NextResponse.json({ data: records, total, aprobados, suspensos, avgPct, rangos, monthlyData });
 }
 
 export async function DELETE(req: NextRequest) {

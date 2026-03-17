@@ -9,10 +9,18 @@ export async function GET(req: NextRequest) {
   const supabase = createAdminClient();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const estado = searchParams.get("estado") ?? "Sí"; // "Sí" | "Seguimiento" | "todos"
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let query = (supabase.from("alumnos" as any) as any)
     .select("*")
-    .eq("caso_exito", "Sí")
     .order("fecha_caso_exito", { ascending: false, nullsFirst: false });
+
+  if (estado === "todos") {
+    query = query.in("caso_exito", ["Sí", "Seguimiento"]);
+  } else {
+    query = query.eq("caso_exito", estado);
+  }
 
   if (tipo) query = query.eq("tipo_exito", tipo);
   if (search) query = query.or(`nombre_completo.ilike.%${search}%,descripcion_exito.ilike.%${search}%`);
