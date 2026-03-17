@@ -84,51 +84,54 @@ function ExitoCard({ caso, onEdit }: { caso: CasoExito; onEdit: (c: CasoExito) =
 
   return (
     <div
-      className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3 cursor-pointer hover:border-white/20 transition-all"
+      className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3 cursor-pointer hover:border-white/20 transition-all min-w-0"
       onClick={() => onEdit(caso)}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: color + "22", border: `1px solid ${color}40` }}>
-            <Trophy className="h-4 w-4" style={{ color }} />
-          </div>
-          <div>
-            <p className="font-bold text-white text-sm">{caso.nombre_completo ?? "—"}</p>
-            <p className="text-xs text-white/40">{caso.localizacion ?? caso.email ?? ""}</p>
-          </div>
+      {/* Fila 1: avatar + nombre + enlace | badges */}
+      <div className="flex items-start gap-3 min-w-0">
+        <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: color + "22", border: `1px solid ${color}40` }}>
+          <Trophy className="h-4 w-4" style={{ color }} />
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <p className="font-bold text-white text-sm truncate">{caso.nombre_completo ?? "—"}</p>
+            {caso.enlace_perfil && (
+              <a href={caso.enlace_perfil} target="_blank" rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="text-white/20 hover:text-indigo-400 transition-colors shrink-0">
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+          </div>
+          <p className="text-xs text-white/40 truncate">{caso.localizacion ?? caso.email ?? ""}</p>
+        </div>
+        {/* Badges alineados a la derecha, sin shrink */}
+        <div className="flex flex-col items-end gap-1.5 shrink-0">
           <EstadoBadge estado={caso.caso_exito} />
           <StageBadge tipo={caso.tipo_exito} />
-          {caso.enlace_perfil && (
-            <a href={caso.enlace_perfil} target="_blank" rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="text-white/20 hover:text-indigo-400 transition-colors">
-              <ExternalLink className="h-3.5 w-3.5" />
-            </a>
-          )}
         </div>
       </div>
 
+      {/* Descripción */}
       {caso.descripcion_exito && (
-        <p className="text-sm text-white/65 leading-relaxed border-l-2 pl-3" style={{ borderColor: color + "80" }}>
-          "{caso.descripcion_exito}"
+        <p className="text-xs text-white/60 leading-relaxed border-l-2 pl-3 line-clamp-3" style={{ borderColor: color + "70" }}>
+          {caso.descripcion_exito}
         </p>
       )}
 
-      <div className="flex items-center gap-3 pt-1 border-t border-white/[0.06] flex-wrap">
-        {tag && <span className="text-xs font-semibold text-white/40 bg-white/[0.05] px-2 py-0.5 rounded-full">{tag}</span>}
-        {caso.fuente_caso_exito && (
-          <span className="text-xs font-semibold text-indigo-400 bg-indigo-400/10 px-2 py-0.5 rounded-full">{caso.fuente_caso_exito}</span>
-        )}
-        {caso.fecha_caso_exito && (
-          <span className="text-xs text-white/30 ml-auto">
-            {new Date(caso.fecha_caso_exito).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}
-          </span>
-        )}
-        <div className="flex items-center gap-2 text-xs text-white/35 ml-auto">
-          <span>{caso.posts_publicados ?? 0} posts</span>
-          <span>{caso.comentarios_totales ?? 0} cmts</span>
+      {/* Footer: tag + fuente | fecha + actividad */}
+      <div className="flex items-center justify-between pt-2 border-t border-white/[0.06] gap-2 min-w-0">
+        <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+          {tag && <span className="text-xs font-semibold text-white/40 bg-white/[0.05] px-2 py-0.5 rounded-full truncate max-w-[100px]">{tag}</span>}
+          {caso.fuente_caso_exito && (
+            <span className="text-xs font-semibold text-indigo-400 bg-indigo-400/10 px-2 py-0.5 rounded-full">{caso.fuente_caso_exito}</span>
+          )}
+        </div>
+        <div className="flex items-center gap-3 shrink-0 text-xs text-white/30">
+          {caso.fecha_caso_exito && (
+            <span>{new Date(caso.fecha_caso_exito).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}</span>
+          )}
+          <span>{caso.posts_publicados ?? 0}p · {caso.comentarios_totales ?? 0}c</span>
         </div>
       </div>
     </div>
