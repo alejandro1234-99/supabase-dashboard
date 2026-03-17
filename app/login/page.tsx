@@ -83,7 +83,8 @@ export default function LoginPage() {
             className="h-8 w-auto mx-auto object-contain"
             priority
           />
-          <p className="text-white/40 text-sm mt-2.5">Panel de administración</p>
+          <h1 className="text-3xl font-bold text-white mt-4 tracking-tight">Panel de Administración</h1>
+          <p className="text-white/40 text-sm mt-1.5">Acceso interno · Revolutia AI</p>
         </div>
 
         {/* Card */}
