@@ -29,6 +29,7 @@ const navSections = [
       { href: "/dashboard/arp", label: "Certificados ARP", icon: Award },
       { href: "/dashboard/vimeo", label: "Consumo Vimeo", icon: PlayCircle },
       { href: "/dashboard/circle", label: "Circle", icon: Globe },
+      { href: "/dashboard/exitos", label: "Casos de Éxito", icon: Trophy },
     ],
   },
   {
@@ -39,7 +40,6 @@ const navSections = [
       { href: "/dashboard/agendas", label: "Agendas", icon: CalendarDays },
       { href: "/dashboard/onboarding", label: "Onboarding", icon: ClipboardList },
       { href: "/dashboard/alumnos", label: "Alumnos Circle", icon: Users },
-      { href: "/dashboard/exitos", label: "Casos de Éxito", icon: Trophy },
       { href: "/dashboard/soporte", label: "Soporte", icon: Headphones },
       { href: "/dashboard/qa", label: "Q&A Pipeline", icon: HelpCircle },
     ],
