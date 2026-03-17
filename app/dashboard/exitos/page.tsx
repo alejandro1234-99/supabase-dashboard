@@ -89,7 +89,7 @@ function ExitoCard({ caso, onEdit }: { caso: CasoExito; onEdit: (c: CasoExito) =
     <div
       className="relative rounded-2xl p-5 flex flex-col gap-3 cursor-pointer transition-all min-w-0 group overflow-hidden"
       style={{
-        backgroundColor: "hsl(240 6% 13%)",
+        backgroundColor: "hsl(240 5% 20%)",
         border: `1px solid ${color}28`,
         boxShadow: `0 0 0 0 ${color}00`,
       }}
@@ -427,7 +427,7 @@ export default function ExitosPage() {
       </div>
 
       {/* Buscador */}
-      <div className="bg-[hsl(240_6%_13%)] rounded-2xl border border-white/[0.07] p-5">
+      <div className="bg-[hsl(240_5%_20%)] rounded-2xl border border-white/[0.07] p-5">
         <div className="flex items-center gap-2 mb-3">
           <Plus className="h-4 w-4 text-emerald-400" />
           <p className="text-sm font-semibold text-white">Agregar alumno a caso de éxito</p>
@@ -445,7 +445,7 @@ export default function ExitosPage() {
             { icon: Activity,     label: "Posts medios",      val: stats.avgPosts,       color: "bg-blue-500" },
             { icon: MessageSquare,label: "Comentarios medios",val: stats.avgComentarios, color: "bg-purple-500" },
           ].map(({ icon: Icon, label, val, color }) => (
-            <div key={label} className="bg-[hsl(240_6%_13%)] rounded-2xl border border-white/[0.07] px-4 py-3 flex items-center gap-3">
+            <div key={label} className="bg-[hsl(240_5%_20%)] rounded-2xl border border-white/[0.07] px-4 py-3 flex items-center gap-3">
               <div className={`h-9 w-9 rounded-xl ${color} flex items-center justify-center shrink-0`}>
                 <Icon className="h-4 w-4 text-white" />
               </div>
@@ -460,7 +460,7 @@ export default function ExitosPage() {
 
       {/* Gráficas */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="bg-[hsl(240_6%_13%)] rounded-2xl border border-white/[0.07] p-5">
+        <div className="bg-[hsl(240_5%_20%)] rounded-2xl border border-white/[0.07] p-5">
           <h2 className="font-bold text-white text-sm mb-1">Por stage</h2>
           <p className="text-xs text-white/40 mb-2">Nivel del caso de éxito</p>
           <ResponsiveContainer width="100%" height={160}>
@@ -494,7 +494,7 @@ export default function ExitosPage() {
           </div>
         </div>
 
-        <div className="bg-[hsl(240_6%_13%)] rounded-2xl border border-white/[0.07] p-5">
+        <div className="bg-[hsl(240_5%_20%)] rounded-2xl border border-white/[0.07] p-5">
           <h2 className="font-bold text-white text-sm mb-1">Por lanzamiento</h2>
           <p className="text-xs text-white/40 mb-4">Distribución por edición</p>
           <ResponsiveContainer width="100%" height={160}>
@@ -515,7 +515,7 @@ export default function ExitosPage() {
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-[hsl(240_6%_13%)] rounded-2xl border border-white/[0.07] p-5">
+        <div className="bg-[hsl(240_5%_20%)] rounded-2xl border border-white/[0.07] p-5">
           <h2 className="font-bold text-white text-sm mb-3">Por fuente</h2>
           <div className="space-y-2.5">
             {porFuente.map((f) => (
