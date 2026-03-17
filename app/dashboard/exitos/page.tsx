@@ -22,6 +22,7 @@ type CasoExito = {
   posts_publicados: number | null;
   comentarios_totales: number | null;
   caso_exito: string | null;
+  avatar_url: string | null;
 };
 
 type AlumnoResult = {
@@ -81,20 +82,35 @@ function EstadoBadge({ estado }: { estado: string | null }) {
 function ExitoCard({ caso, onEdit }: { caso: CasoExito; onEdit: (c: CasoExito) => void }) {
   const color = STAGE_COLORS[caso.tipo_exito ?? ""] ?? "#818cf8";
   const tag = caso.tags?.split(",")[0].trim();
+  const initials = caso.nombre_completo
+    ?.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase() ?? "?";
 
   return (
     <div
       className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3 cursor-pointer hover:border-white/20 transition-all min-w-0"
       onClick={() => onEdit(caso)}
     >
-      {/* Fila 1: avatar + nombre + enlace | badges */}
+      {/* Fila 1: foto + nombre | badges */}
       <div className="flex items-start gap-3 min-w-0">
-        <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: color + "22", border: `1px solid ${color}40` }}>
-          <Trophy className="h-4 w-4" style={{ color }} />
+        {/* Avatar con borde del color del stage */}
+        <div className="shrink-0 h-11 w-11 rounded-full overflow-hidden flex items-center justify-center text-sm font-black"
+          style={{
+            outline: `2.5px solid ${color}`,
+            outlineOffset: "2px",
+            backgroundColor: color + "22",
+            color,
+          }}>
+          {caso.avatar_url
+            // eslint-disable-next-line @next/next/no-img-element
+            ? <img src={caso.avatar_url} alt={caso.nombre_completo ?? ""} className="h-full w-full object-cover" />
+            : initials
+          }
         </div>
+
+        {/* Nombre + subtítulo */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <p className="font-bold text-white text-sm truncate">{caso.nombre_completo ?? "—"}</p>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <p className="font-bold text-white text-sm leading-snug">{caso.nombre_completo ?? "—"}</p>
             {caso.enlace_perfil && (
               <a href={caso.enlace_perfil} target="_blank" rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
@@ -105,7 +121,8 @@ function ExitoCard({ caso, onEdit }: { caso: CasoExito; onEdit: (c: CasoExito) =
           </div>
           <p className="text-xs text-white/40 truncate">{caso.localizacion ?? caso.email ?? ""}</p>
         </div>
-        {/* Badges alineados a la derecha, sin shrink */}
+
+        {/* Badges en columna */}
         <div className="flex flex-col items-end gap-1.5 shrink-0">
           <EstadoBadge estado={caso.caso_exito} />
           <StageBadge tipo={caso.tipo_exito} />
@@ -119,10 +136,10 @@ function ExitoCard({ caso, onEdit }: { caso: CasoExito; onEdit: (c: CasoExito) =
         </p>
       )}
 
-      {/* Footer: tag + fuente | fecha + actividad */}
+      {/* Footer */}
       <div className="flex items-center justify-between pt-2 border-t border-white/[0.06] gap-2 min-w-0">
         <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
-          {tag && <span className="text-xs font-semibold text-white/40 bg-white/[0.05] px-2 py-0.5 rounded-full truncate max-w-[100px]">{tag}</span>}
+          {tag && <span className="text-xs font-semibold text-white/40 bg-white/[0.05] px-2 py-0.5 rounded-full">{tag}</span>}
           {caso.fuente_caso_exito && (
             <span className="text-xs font-semibold text-indigo-400 bg-indigo-400/10 px-2 py-0.5 rounded-full">{caso.fuente_caso_exito}</span>
           )}

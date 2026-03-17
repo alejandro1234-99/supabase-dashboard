@@ -28,7 +28,28 @@ export async function GET(req: NextRequest) {
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const casos = (data ?? []) as {
+  // Cruzar con circle_members para obtener avatar_url
+  const alumnos = (data ?? []) as { id_circle: string | null; [key: string]: unknown }[];
+  const circleIds = alumnos.map((a) => a.id_circle).filter(Boolean).map(Number);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: circleMembers } = circleIds.length > 0
+    ? await (supabase.from("circle_members" as any) as any)
+        .select("circle_member_id, avatar_url")
+        .in("circle_member_id", circleIds)
+    : { data: [] };
+
+  const avatarMap: Record<number, string> = {};
+  for (const m of (circleMembers ?? []) as { circle_member_id: number; avatar_url: string | null }[]) {
+    if (m.avatar_url) avatarMap[m.circle_member_id] = m.avatar_url;
+  }
+
+  const dataWithAvatar = alumnos.map((a) => ({
+    ...a,
+    avatar_url: a.id_circle ? (avatarMap[Number(a.id_circle)] ?? null) : null,
+  }));
+
+  const casos = dataWithAvatar as {
     tipo_exito: string | null;
     fuente_caso_exito: string | null;
     tags: string | null;
@@ -78,7 +99,7 @@ export async function GET(req: NextRequest) {
   const tipos = [...new Set(casos.map((r) => r.tipo_exito).filter(Boolean))].sort() as string[];
 
   return NextResponse.json({
-    data,
+    data: dataWithAvatar,
     total,
     stats: { total, avgPosts, avgComentarios, avgConexiones },
     porTipo,
