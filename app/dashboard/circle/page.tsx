@@ -59,11 +59,11 @@ type ActivityEvent = {
 };
 
 const EVENT_LABELS: Record<string, { label: string; color: string }> = {
-  member_joined:    { label: "Nuevo miembro",     color: "#10b981" },
-  post_created:     { label: "Post publicado",    color: "#6366f1" },
-  comment_created:  { label: "Comentario",        color: "#3b82f6" },
-  member_removed:   { label: "Miembro eliminado", color: "#ef4444" },
-  post_liked:       { label: "Like",              color: "#f59e0b" },
+  member_joined:    { label: "Nuevo miembro",     color: "#34d399" },
+  post_created:     { label: "Post publicado",    color: "#818cf8" },
+  comment_created:  { label: "Comentario",        color: "#60a5fa" },
+  member_removed:   { label: "Miembro eliminado", color: "#f87171" },
+  post_liked:       { label: "Like",              color: "#fbbf24" },
 };
 
 const SORT_COLS = [
@@ -98,7 +98,7 @@ function fmtDate(iso: string | null) {
   return new Date(iso).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "2-digit" });
 }
 
-const SPACE_COLORS = ["#6366f1","#10b981","#f59e0b","#3b82f6","#ef4444","#8b5cf6","#ec4899","#14b8a6"];
+const SPACE_COLORS = ["#818cf8","#34d399","#fbbf24","#60a5fa","#f87171","#a78bfa","#f472b6","#2dd4bf"];
 
 export default function CirclePage() {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -109,7 +109,6 @@ export default function CirclePage() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
 
-  // Members table state
   const [members, setMembers] = useState<Member[]>([]);
   const [membersTotal, setMembersTotal] = useState(0);
   const [membersPage, setMembersPage] = useState(1);
@@ -167,10 +166,10 @@ export default function CirclePage() {
   };
 
   const SortIcon = ({ col }: { col: string }) => {
-    if (col !== membersSort) return <ArrowUpDown className="h-3 w-3 text-gray-300" />;
+    if (col !== membersSort) return <ArrowUpDown className="h-3 w-3 text-white/20" />;
     return membersOrder === "desc"
-      ? <ArrowDown className="h-3 w-3 text-indigo-500" />
-      : <ArrowUp className="h-3 w-3 text-indigo-500" />;
+      ? <ArrowDown className="h-3 w-3 text-indigo-400" />
+      : <ArrowUp className="h-3 w-3 text-indigo-400" />;
   };
 
   const handleSync = async () => {
@@ -194,11 +193,11 @@ export default function CirclePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Circle — Comunidad</h1>
-          <p className="text-gray-400 text-sm mt-0.5">Monitoreo en tiempo real · Revolutia IA PRO</p>
+          <h1 className="text-2xl font-bold text-white">Circle — Comunidad</h1>
+          <p className="text-white/45 text-sm mt-0.5">Monitoreo en tiempo real · Revolutia IA PRO</p>
         </div>
         <a href="https://revolutia-ia-pro.circle.so" target="_blank" rel="noopener noreferrer"
-          className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 px-3 py-2 rounded-full hover:bg-indigo-100 transition-colors">
+          className="flex items-center gap-1.5 text-xs font-semibold text-indigo-400 bg-indigo-400/10 border border-indigo-400/20 px-3 py-2 rounded-full hover:bg-indigo-400/20 transition-colors">
           <ExternalLink className="h-3.5 w-3.5" /> Abrir Circle
         </a>
       </div>
@@ -207,20 +206,20 @@ export default function CirclePage() {
       {stats && (
         <div className="grid grid-cols-6 gap-3">
           {[
-            { icon: Users,         label: "Miembros",         val: stats.totalMembers,         color: "bg-indigo-500" },
-            { icon: Activity,      label: "Activos 7 días",   val: stats.activeMembers,        color: "bg-emerald-500" },
-            { icon: TrendingUp,    label: "Engagement",       val: `${stats.engagementRate}%`, color: "bg-blue-500" },
-            { icon: FileText,      label: "Posts totales",    val: stats.totalPosts,           color: "bg-amber-400" },
-            { icon: Zap,           label: "Posts esta semana",val: stats.postsThisWeek,        color: "bg-purple-500" },
-            { icon: AlertTriangle, label: "En riesgo (+14d)", val: stats.membersRisk,          color: "bg-red-400" },
+            { icon: Users,         label: "Miembros",          val: stats.totalMembers,         color: "bg-indigo-500" },
+            { icon: Activity,      label: "Activos 7 días",    val: stats.activeMembers,        color: "bg-emerald-500" },
+            { icon: TrendingUp,    label: "Engagement",        val: `${stats.engagementRate}%`, color: "bg-blue-500" },
+            { icon: FileText,      label: "Posts totales",     val: stats.totalPosts,           color: "bg-amber-500" },
+            { icon: Zap,           label: "Posts esta semana", val: stats.postsThisWeek,        color: "bg-purple-500" },
+            { icon: AlertTriangle, label: "En riesgo (+14d)",  val: stats.membersRisk,          color: "bg-red-500" },
           ].map(({ icon: Icon, label, val, color }) => (
             <div key={label} className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3 flex items-center gap-3">
               <div className={`h-8 w-8 rounded-xl ${color} flex items-center justify-center shrink-0`}>
                 <Icon className="h-4 w-4 text-white" />
               </div>
               <div>
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">{label}</p>
-                <p className="text-xl font-black text-gray-900 leading-tight">{val}</p>
+                <p className="text-xs font-semibold text-white/50 uppercase tracking-wide">{label}</p>
+                <p className="text-xl font-black text-white leading-tight">{val}</p>
               </div>
             </div>
           ))}
@@ -231,45 +230,45 @@ export default function CirclePage() {
       <div className="grid grid-cols-3 gap-4">
         {/* Crecimiento */}
         <div className="col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h2 className="font-bold text-gray-900 text-sm mb-1">Crecimiento de miembros</h2>
-          <p className="text-xs text-gray-400 mb-4">Nuevos miembros por mes</p>
+          <h2 className="font-bold text-white text-sm mb-1">Crecimiento de miembros</h2>
+          <p className="text-xs text-white/40 mb-4">Nuevos miembros por mes</p>
           <ResponsiveContainer width="100%" height={160}>
             <AreaChart data={crecimiento}>
               <defs>
                 <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#818cf8" stopOpacity={0.25} />
+                  <stop offset="95%" stopColor="#818cf8" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <XAxis dataKey="mes" tick={{ fontSize: 9, fill: "#9ca3af" }} tickFormatter={fmtMes} axisLine={false} tickLine={false} />
+              <XAxis dataKey="mes" tick={{ fontSize: 10, fill: "rgba(255,255,255,0.35)" }} tickFormatter={fmtMes} axisLine={false} tickLine={false} />
               <YAxis hide />
               <Tooltip
                 content={({ active, payload, label }) => {
                   if (!active || !payload?.length) return null;
                   return (
-                    <div className="bg-white border border-gray-100 shadow-lg rounded-xl px-3 py-2 text-xs">
-                      <p className="font-semibold text-gray-700">{fmtMes(label as string)}</p>
-                      <p className="font-bold text-indigo-600">{(payload[0].payload as Crecimiento).nuevos} nuevos</p>
+                    <div className="bg-[hsl(240_6%_18%)] border border-white/10 shadow-lg rounded-xl px-3 py-2 text-xs">
+                      <p className="font-semibold text-white/70">{fmtMes(label as string)}</p>
+                      <p className="font-bold text-indigo-400">{(payload[0].payload as Crecimiento).nuevos} nuevos</p>
                     </div>
                   );
                 }}
               />
-              <Area dataKey="nuevos" stroke="#6366f1" strokeWidth={2} fill="url(#grad)" />
+              <Area dataKey="nuevos" stroke="#818cf8" strokeWidth={2} fill="url(#grad)" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
 
         {/* Posts por espacio */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h2 className="font-bold text-gray-900 text-sm mb-3">Actividad por espacio</h2>
-          <div className="space-y-2">
+          <h2 className="font-bold text-white text-sm mb-3">Actividad por espacio</h2>
+          <div className="space-y-2.5">
             {porEspacio.slice(0, 7).map((e, i) => (
               <div key={e.espacio}>
-                <div className="flex justify-between mb-0.5">
-                  <span className="text-xs text-gray-600 truncate flex-1 mr-2">{e.espacio}</span>
-                  <span className="text-xs font-bold text-gray-800">{e.posts}</span>
+                <div className="flex justify-between mb-1">
+                  <span className="text-xs text-white/65 truncate flex-1 mr-2">{e.espacio}</span>
+                  <span className="text-xs font-bold text-white">{e.posts}</span>
                 </div>
-                <div className="h-1.5 bg-gray-100 rounded-full">
+                <div className="h-1.5 bg-white/10 rounded-full">
                   <div className="h-1.5 rounded-full"
                     style={{ width: `${Math.round((e.posts / (porEspacio[0]?.posts || 1)) * 100)}%`, backgroundColor: SPACE_COLORS[i % SPACE_COLORS.length] }} />
                 </div>
@@ -283,72 +282,72 @@ export default function CirclePage() {
       <div className="grid grid-cols-2 gap-4">
         {/* Top contribuidores */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h2 className="font-bold text-gray-900 text-sm mb-4">Top contribuidores</h2>
+          <h2 className="font-bold text-white text-sm mb-4">Top contribuidores</h2>
           <div className="space-y-3">
             {topContributors.map((c, i) => (
               <div key={c.email} className="flex items-center gap-3">
-                <span className="text-xs font-black text-gray-300 w-5 shrink-0">{i + 1}</span>
-                <div className="h-8 w-8 rounded-full bg-indigo-100 shrink-0 overflow-hidden flex items-center justify-center">
+                <span className="text-sm font-black text-white/30 w-5 shrink-0">{i + 1}</span>
+                <div className="h-8 w-8 rounded-full bg-indigo-500/20 border border-indigo-400/20 shrink-0 overflow-hidden flex items-center justify-center">
                   {c.avatar_url
                     // eslint-disable-next-line @next/next/no-img-element
                     ? <img src={c.avatar_url} alt={c.name} className="h-full w-full object-cover" />
-                    : <span className="text-xs font-black text-indigo-600">{c.name?.charAt(0)}</span>
+                    : <span className="text-xs font-black text-indigo-300">{c.name?.charAt(0)}</span>
                   }
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <p className="text-xs font-semibold text-gray-800 truncate">{c.name}</p>
+                    <p className="text-sm font-semibold text-white truncate">{c.name}</p>
                     {c.profile_url && (
                       <a href={c.profile_url} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="h-2.5 w-2.5 text-gray-300 hover:text-indigo-500" />
+                        <ExternalLink className="h-3 w-3 text-white/20 hover:text-indigo-400" />
                       </a>
                     )}
                   </div>
-                  <p className="text-[10px] text-gray-400">
+                  <p className="text-xs text-white/40">
                     {c.posts_count} posts · {c.comments_count} cmts
                     {c.last_seen_at && ` · visto ${timeAgo(c.last_seen_at)}`}
                   </p>
                 </div>
-                <span className="text-xs font-black text-indigo-600">{c.posts_count}</span>
+                <span className="text-sm font-black text-indigo-400">{c.posts_count}</span>
               </div>
             ))}
             {topContributors.length === 0 && (
-              <p className="text-sm text-gray-400 text-center py-4">Sincroniza la comunidad para ver contribuidores</p>
+              <p className="text-sm text-white/30 text-center py-4">Sincroniza la comunidad para ver contribuidores</p>
             )}
           </div>
         </div>
 
-        {/* Feed de actividad en tiempo real */}
+        {/* Feed de actividad */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-bold text-gray-900 text-sm">Actividad en tiempo real</h2>
+            <h2 className="font-bold text-white text-sm">Actividad en tiempo real</h2>
             <div className="flex items-center gap-1.5">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-[10px] text-gray-400 font-medium">En vivo</span>
+              <span className="text-xs text-white/40 font-medium">En vivo</span>
             </div>
           </div>
           {recentActivity.length === 0 ? (
-            <div className="text-center py-8 text-gray-400 space-y-2">
+            <div className="text-center py-8 text-white/30 space-y-2">
               <Zap className="h-8 w-8 mx-auto opacity-20" />
               <p className="text-xs">Configura el webhook en Make.com para ver actividad en tiempo real</p>
-              <p className="text-[10px] text-gray-300">POST → /api/circle/webhook</p>
+              <p className="text-xs text-white/20 font-mono">POST → /api/circle/webhook</p>
             </div>
           ) : (
-            <div className="space-y-2.5 max-h-72 overflow-y-auto">
+            <div className="space-y-3 max-h-72 overflow-y-auto scrollbar-thin">
               {recentActivity.map((e) => {
                 const ev = EVENT_LABELS[e.event_type] ?? { label: e.event_type, color: "#9ca3af" };
                 return (
                   <div key={e.id} className="flex items-start gap-2.5">
-                    <div className="h-1.5 w-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: ev.color }} />
+                    <div className="h-1.5 w-1.5 rounded-full mt-2 shrink-0" style={{ backgroundColor: ev.color }} />
                     <div className="flex-1 min-w-0">
-                      <span className="text-[10px] font-bold" style={{ color: ev.color }}>{ev.label}</span>
-                      <span className="text-[10px] text-gray-500 ml-1">
+                      <span className="text-xs font-bold" style={{ color: ev.color }}>{ev.label}</span>
+                      <span className="text-xs text-white/45 ml-1.5">
                         {e.member_name ?? e.member_email ?? ""}
                         {e.post_title ? ` · "${e.post_title.slice(0, 40)}..."` : ""}
                         {e.space_name ? ` · ${e.space_name}` : ""}
                       </span>
                     </div>
-                    <span className="text-[9px] text-gray-300 shrink-0">{timeAgo(e.happened_at)}</span>
+                    <span className="text-xs text-white/25 shrink-0">{timeAgo(e.happened_at)}</span>
                   </div>
                 );
               })}
@@ -359,33 +358,31 @@ export default function CirclePage() {
 
       {/* Members table */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
-        {/* Table header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
           <div>
-            <h2 className="font-bold text-gray-900 text-sm">Todos los miembros</h2>
-            <p className="text-[10px] text-gray-400 mt-0.5">{membersTotal} miembros · snaphots diarios activos</p>
+            <h2 className="font-bold text-white text-sm">Todos los miembros</h2>
+            <p className="text-xs text-white/40 mt-0.5">{membersTotal} miembros · snapshots diarios activos</p>
           </div>
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-300" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/25" />
             <input
               type="text"
               placeholder="Buscar nombre o email..."
               value={membersSearch}
               onChange={(e) => { setMembersSearch(e.target.value); setMembersPage(1); }}
-              className="pl-8 pr-3 py-1.5 text-xs border border-gray-200 rounded-full focus:outline-none focus:ring-1 focus:ring-indigo-300 w-56"
+              className="pl-8 pr-3 py-1.5 text-xs rounded-full focus:outline-none w-56 bg-white/[0.06] border border-white/10 text-white placeholder:text-white/25 focus:border-indigo-400/40"
             />
           </div>
         </div>
 
-        {/* Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+          <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-100">
-                <th className="text-left px-5 py-2.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Miembro</th>
+              <tr className="border-b border-white/[0.06]">
+                <th className="text-left px-5 py-3 text-xs font-semibold text-white/40 uppercase tracking-wide">Miembro</th>
                 {SORT_COLS.map(({ key, label }) => (
                   <th key={key}
-                    className="px-3 py-2.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wide cursor-pointer hover:text-gray-600 transition-colors"
+                    className="px-3 py-3 text-xs font-semibold text-white/40 uppercase tracking-wide cursor-pointer hover:text-white/70 transition-colors"
                     onClick={() => handleSort(key)}
                   >
                     <div className="flex items-center gap-1 justify-center">
@@ -394,7 +391,7 @@ export default function CirclePage() {
                     </div>
                   </th>
                 ))}
-                <th className="px-3 py-2.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Estado</th>
+                <th className="px-3 py-3 text-xs font-semibold text-white/40 uppercase tracking-wide">Estado</th>
               </tr>
             </thead>
             <tbody>
@@ -406,7 +403,7 @@ export default function CirclePage() {
                 </tr>
               ) : members.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-10 text-gray-400">No se encontraron miembros</td>
+                  <td colSpan={8} className="text-center py-10 text-white/30">No se encontraron miembros</td>
                 </tr>
               ) : (
                 members.map((m) => {
@@ -418,47 +415,47 @@ export default function CirclePage() {
                     : true;
 
                   return (
-                    <tr key={m.circle_member_id} className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors">
-                      <td className="px-5 py-2.5">
+                    <tr key={m.circle_member_id} className="border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors">
+                      <td className="px-5 py-3">
                         <div className="flex items-center gap-2.5">
-                          <div className="h-7 w-7 rounded-full bg-indigo-100 shrink-0 overflow-hidden flex items-center justify-center">
+                          <div className="h-7 w-7 rounded-full bg-indigo-500/20 border border-indigo-400/20 shrink-0 overflow-hidden flex items-center justify-center">
                             {m.avatar_url
                               // eslint-disable-next-line @next/next/no-img-element
                               ? <img src={m.avatar_url} alt={m.name ?? ""} className="h-full w-full object-cover" />
-                              : <span className="text-[10px] font-black text-indigo-600">{m.name?.charAt(0) ?? "?"}</span>
+                              : <span className="text-[10px] font-black text-indigo-300">{m.name?.charAt(0) ?? "?"}</span>
                             }
                           </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-1">
-                              <p className="font-semibold text-gray-800 truncate max-w-[140px]">{m.name ?? "—"}</p>
+                              <p className="font-semibold text-white truncate max-w-[140px]">{m.name ?? "—"}</p>
                               {m.profile_url && (
                                 <a href={m.profile_url} target="_blank" rel="noopener noreferrer">
-                                  <ExternalLink className="h-2.5 w-2.5 text-gray-300 hover:text-indigo-500 shrink-0" />
+                                  <ExternalLink className="h-3 w-3 text-white/20 hover:text-indigo-400 shrink-0" />
                                 </a>
                               )}
                             </div>
-                            <p className="text-[10px] text-gray-400 truncate max-w-[160px]">{m.email ?? "—"}</p>
+                            <p className="text-xs text-white/35 truncate max-w-[160px]">{m.email ?? "—"}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-3 py-2.5 text-center font-bold text-gray-700">{m.posts_count}</td>
-                      <td className="px-3 py-2.5 text-center text-gray-500">{m.comments_count}</td>
-                      <td className="px-3 py-2.5 text-center text-gray-500">{m.topics_count}</td>
-                      <td className="px-3 py-2.5 text-center">
-                        <span className={`font-bold ${m.connections_count > 0 ? "text-indigo-600" : "text-gray-300"}`}>
+                      <td className="px-3 py-3 text-center font-bold text-white">{m.posts_count}</td>
+                      <td className="px-3 py-3 text-center text-white/60">{m.comments_count}</td>
+                      <td className="px-3 py-3 text-center text-white/60">{m.topics_count}</td>
+                      <td className="px-3 py-3 text-center">
+                        <span className={`font-bold text-sm ${m.connections_count > 0 ? "text-indigo-400" : "text-white/20"}`}>
                           {m.connections_count}
                         </span>
                       </td>
-                      <td className="px-3 py-2.5 text-center text-gray-500">
+                      <td className="px-3 py-3 text-center text-white/60">
                         {m.last_seen_at ? timeAgo(m.last_seen_at) : "—"}
                       </td>
-                      <td className="px-3 py-2.5 text-center text-gray-400">{fmtDate(m.joined_at)}</td>
-                      <td className="px-3 py-2.5 text-center">
+                      <td className="px-3 py-3 text-center text-white/45">{fmtDate(m.joined_at)}</td>
+                      <td className="px-3 py-3 text-center">
                         {isActive
-                          ? <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">● Activo</span>
+                          ? <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-2 py-0.5 rounded-full">● Activo</span>
                           : isRisk
-                          ? <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">● Riesgo</span>
-                          : <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">● Inactivo</span>
+                          ? <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-400 bg-red-400/10 border border-red-400/20 px-2 py-0.5 rounded-full">● Riesgo</span>
+                          : <span className="inline-flex items-center gap-1 text-xs font-semibold text-white/35 bg-white/[0.05] border border-white/10 px-2 py-0.5 rounded-full">● Inactivo</span>
                         }
                       </td>
                     </tr>
@@ -469,29 +466,28 @@ export default function CirclePage() {
           </table>
         </div>
 
-        {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100">
-            <p className="text-[11px] text-gray-400">
+          <div className="flex items-center justify-between px-5 py-3 border-t border-white/[0.06]">
+            <p className="text-xs text-white/35">
               {((membersPage - 1) * PAGE_SIZE) + 1}–{Math.min(membersPage * PAGE_SIZE, membersTotal)} de {membersTotal}
             </p>
             <div className="flex items-center gap-1">
               <button
                 disabled={membersPage === 1}
                 onClick={() => setMembersPage((p) => p - 1)}
-                className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 transition-colors"
+                className="p-1.5 rounded-lg hover:bg-white/[0.06] disabled:opacity-30 transition-colors"
               >
-                <ChevronLeft className="h-3.5 w-3.5 text-gray-500" />
+                <ChevronLeft className="h-3.5 w-3.5 text-white/50" />
               </button>
-              <span className="text-[11px] text-gray-500 px-2">
+              <span className="text-xs text-white/40 px-2">
                 {membersPage} / {totalPages}
               </span>
               <button
                 disabled={membersPage === totalPages}
                 onClick={() => setMembersPage((p) => p + 1)}
-                className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 transition-colors"
+                className="p-1.5 rounded-lg hover:bg-white/[0.06] disabled:opacity-30 transition-colors"
               >
-                <ChevronRight className="h-3.5 w-3.5 text-gray-500" />
+                <ChevronRight className="h-3.5 w-3.5 text-white/50" />
               </button>
             </div>
           </div>
@@ -499,18 +495,18 @@ export default function CirclePage() {
       </div>
 
       {/* Sync info */}
-      <div className="bg-indigo-50 rounded-2xl border border-indigo-100 p-4 flex items-center justify-between">
+      <div className="bg-indigo-500/10 rounded-2xl border border-indigo-400/20 p-4 flex items-center justify-between">
         <div>
-          <p className="text-xs font-bold text-indigo-800">Sincronización con Circle</p>
-          <p className="text-[11px] text-indigo-500 mt-0.5">
-            Ejecuta <code className="bg-indigo-100 px-1 rounded font-mono">npm run sync:circle</code> para actualizar miembros y posts.
+          <p className="text-sm font-bold text-indigo-300">Sincronización con Circle</p>
+          <p className="text-xs text-indigo-300/60 mt-0.5">
+            Ejecuta <code className="bg-indigo-400/10 px-1.5 py-0.5 rounded font-mono text-indigo-300">npm run sync:circle</code> para actualizar miembros y posts.
             Para actividad en tiempo real, configura el webhook en Make.com → POST /api/circle/webhook
           </p>
         </div>
         <button
           onClick={handleSync}
           disabled={syncing}
-          className="flex items-center gap-1.5 text-xs font-bold text-indigo-700 bg-white border border-indigo-200 px-3 py-2 rounded-full hover:bg-indigo-50 disabled:opacity-50 transition-all shrink-0"
+          className="flex items-center gap-1.5 text-xs font-bold text-indigo-300 bg-indigo-400/10 border border-indigo-400/25 px-3 py-2 rounded-full hover:bg-indigo-400/20 disabled:opacity-50 transition-all shrink-0"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} />
           {syncing ? "Sincronizando..." : "Sincronizar ahora"}
