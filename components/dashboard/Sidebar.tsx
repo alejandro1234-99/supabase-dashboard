@@ -100,12 +100,12 @@ export default function Sidebar() {
                 onClick={() => toggle(section.label)}
                 className="flex items-center justify-between w-full px-2 py-2 rounded-lg group hover:bg-white/[0.04] transition-colors"
               >
-                <span className="text-[11px] font-extrabold uppercase tracking-widest text-white/60 group-hover:text-white/80 transition-colors">
+                <span className="text-[13px] font-extrabold text-white/85 group-hover:text-white transition-colors tracking-wide">
                   {section.label}
                 </span>
                 <ChevronDown
                   className={cn(
-                    "h-3.5 w-3.5 text-white/30 group-hover:text-white/50 transition-all duration-200",
+                    "h-4 w-4 text-white/50 group-hover:text-white/70 transition-all duration-200",
                     isOpen && "rotate-180"
                   )}
                 />
