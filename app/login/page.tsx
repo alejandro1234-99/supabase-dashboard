@@ -44,14 +44,19 @@ function LoginForm() {
     const role =
       data.user?.app_metadata?.role ?? data.user?.user_metadata?.role;
 
-    if (role !== "admin" && role !== "qa_admin") {
-      await supabase.auth.signOut();
-      setError("Tu cuenta no tiene permisos de administrador.");
-      setLoading(false);
+    if (role === "admin") {
+      window.location.href = "/dashboard";
       return;
     }
 
-    window.location.href = "/dashboard";
+    if (role === "qa_admin") {
+      window.location.href = "/dashboard/qa";
+      return;
+    }
+
+    await supabase.auth.signOut();
+    setError("Tu cuenta no tiene permisos de administrador.");
+    setLoading(false);
   };
 
   return (
