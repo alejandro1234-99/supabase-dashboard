@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { createBrowserClient } from "@supabase/ssr";
 import {
   LayoutDashboard, Users, BarChart3, Activity,
-  Table2, RefreshCw, Settings, Star, Zap, Award, MessageSquare, ShoppingCart, CalendarDays, ClipboardList, Trophy, PlayCircle, Headphones, HelpCircle, Globe, ChevronDown,
+  Table2, RefreshCw, Settings, Star, Zap, Award, MessageSquare, ShoppingCart, CalendarDays, ClipboardList, Trophy, PlayCircle, Headphones, HelpCircle, Globe, ChevronDown, LogOut,
 } from "lucide-react";
 
 const navSections = [
@@ -64,7 +65,19 @@ const navSections = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  }
 
   function toggle(label: string) {
     setOpenSections((prev) => ({ ...prev, [label]: !prev[label] }));
@@ -142,8 +155,15 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="p-4 border-t border-gray-100">
+      <div className="p-4 border-t border-gray-100 flex items-center justify-between">
         <p className="text-[11px] text-gray-300 font-medium">v1.0 · Revolutia AI PRO</p>
+        <button
+          onClick={handleLogout}
+          title="Cerrar sesión"
+          className="text-gray-300 hover:text-red-400 transition-colors"
+        >
+          <LogOut className="h-4 w-4" />
+        </button>
       </div>
     </aside>
   );
