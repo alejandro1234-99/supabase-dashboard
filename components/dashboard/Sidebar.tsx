@@ -136,10 +136,10 @@ export default function Sidebar() {
                         key={href}
                         href={href}
                         className={cn(
-                          "relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150",
+                          "relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-semibold transition-all duration-150",
                           active
-                            ? "bg-[hsl(280_80%_60%_/_0.15)] text-[hsl(280_80%_78%)] font-semibold"
-                            : "text-white/70 hover:bg-white/[0.07] hover:text-white"
+                            ? "bg-[hsl(280_80%_60%_/_0.22)] text-white shadow-sm"
+                            : "text-white/65 hover:bg-white/[0.08] hover:text-white"
                         )}
                       >
                         {active && (
@@ -148,7 +148,7 @@ export default function Sidebar() {
                         <Icon
                           className={cn(
                             "h-4 w-4 shrink-0",
-                            active ? "text-[hsl(280_80%_75%)]" : "text-white/55"
+                            active ? "text-[hsl(280_80%_80%)]" : "text-white/50"
                           )}
                         />
                         {label}
