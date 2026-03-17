@@ -34,6 +34,9 @@ export async function GET(req: NextRequest) {
   // Agregados via RPC / queries de conteo — evita el límite 1000 de PostgREST
   const sb = supabase as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
+  const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const SUPA_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
   const [
     { count: total },
     { count: totalCerradas },
@@ -41,7 +44,7 @@ export async function GET(req: NextRequest) {
     { data: rawTipo },
     { data: rawCanal },
     { data: rawResp },
-    { data: rawMes },
+    rawMesRes,
   ] = await Promise.all([
     sb.from("soporte").select("*", { count: "exact", head: true }),
     sb.from("soporte").select("*", { count: "exact", head: true }).eq("cerrada", true),
@@ -49,8 +52,26 @@ export async function GET(req: NextRequest) {
     sb.from("soporte").select("tipo_consulta").neq("tipo_consulta", null),
     sb.from("soporte").select("medio_canal").neq("medio_canal", null),
     sb.from("soporte").select("responsable, cerrada").neq("responsable", null),
-    sb.from("soporte").select("fecha").neq("fecha", null),
+    (async () => {
+      const PAGE = 1000;
+      let offset = 0;
+      const all: { fecha: string }[] = [];
+      while (true) {
+        const r = await fetch(
+          `${SUPA_URL}/rest/v1/soporte?select=fecha&fecha=not.is.null&numero_ticket=neq.0&limit=${PAGE}&offset=${offset}`,
+          { headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}`, "Range-Unit": "items", Range: `${offset}-${offset + PAGE - 1}` } }
+        );
+        const page = await r.json() as { fecha: string }[];
+        if (!Array.isArray(page) || page.length === 0) break;
+        all.push(...page);
+        if (page.length < PAGE) break;
+        offset += PAGE;
+      }
+      return all;
+    })(),
   ]);
+
+  const rawMes: { fecha: string }[] = Array.isArray(rawMesRes) ? rawMesRes : [];
 
   const totalNum = total ?? 0;
   const totalCerradasNum = totalCerradas ?? 0;
@@ -87,15 +108,45 @@ export async function GET(req: NextRequest) {
 
   // Por mes
   const mesMap: Record<string, number> = {};
+  const semanaMap: Record<string, number> = {};
+  const quarterMap: Record<string, number> = {};
+
   for (const r of (rawMes ?? []) as { fecha: string }[]) {
     if (!r.fecha) continue;
+    const d = new Date(r.fecha);
+    if (isNaN(d.getTime())) continue;
+
+    // Mes
     const mes = r.fecha.slice(0, 7);
     mesMap[mes] = (mesMap[mes] ?? 0) + 1;
+
+    // Semana ISO (YYYY-Www)
+    const jan4 = new Date(d.getFullYear(), 0, 4);
+    const startOfWeek1 = new Date(jan4);
+    startOfWeek1.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7));
+    const weekNum = Math.ceil(((d.getTime() - startOfWeek1.getTime()) / 86400000 + 1) / 7);
+    const semana = `${d.getFullYear()}-S${String(weekNum).padStart(2, "0")}`;
+    semanaMap[semana] = (semanaMap[semana] ?? 0) + 1;
+
+    // Quarter
+    const q = Math.ceil((d.getMonth() + 1) / 3);
+    const quarter = `${d.getFullYear()}-Q${q}`;
+    quarterMap[quarter] = (quarterMap[quarter] ?? 0) + 1;
   }
+
   const porMes = Object.entries(mesMap)
     .sort(([a], [b]) => a.localeCompare(b))
-    .slice(-8)
-    .map(([mes, count]) => ({ mes, count }));
+    .slice(-12)
+    .map(([mes, count]) => ({ label: mes, count }));
+
+  const porSemana = Object.entries(semanaMap)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-16)
+    .map(([semana, count]) => ({ label: semana, count }));
+
+  const porQuarter = Object.entries(quarterMap)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([quarter, count]) => ({ label: quarter, count }));
 
   const tipos = [...new Set(Object.keys(tipoMap))].sort();
   const canales = [...new Set(Object.keys(canalMap))].sort();
@@ -111,6 +162,8 @@ export async function GET(req: NextRequest) {
     porCanal,
     porResponsable,
     porMes,
+    porSemana,
+    porQuarter,
     tipos,
     canales,
     responsables,

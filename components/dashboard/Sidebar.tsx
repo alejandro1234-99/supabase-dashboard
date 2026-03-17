@@ -10,14 +10,14 @@ import {
   LayoutDashboard, Users, BarChart3, Activity,
   Star, Award, MessageSquare,
   ShoppingCart, CalendarDays, ClipboardList, Trophy, PlayCircle,
-  Headphones, HelpCircle, Globe, ChevronDown, LogOut,
+  Headphones, HelpCircle, Globe, ChevronDown, LogOut, Briefcase,
 } from "lucide-react";
 
 const SECTION_COLORS: Record<string, { bg: string; text: string }> = {
-  "Nuevo Circle":       { bg: "bg-indigo-500/20",  text: "text-indigo-200" },
-  "Panel de producto":  { bg: "bg-purple-500/20",  text: "text-purple-200" },
-  "Cruce de ventas":    { bg: "bg-emerald-500/20", text: "text-emerald-200" },
-  "Operativa producto": { bg: "bg-amber-500/20",   text: "text-amber-200" },
+  "Nuevo Circle":       { bg: "bg-indigo-50",   text: "text-indigo-600" },
+  "Panel de producto":  { bg: "bg-purple-50",   text: "text-purple-600" },
+  "Cruce de ventas":    { bg: "bg-emerald-50",  text: "text-emerald-700" },
+  "Operativa producto": { bg: "bg-amber-50",    text: "text-amber-700" },
 };
 
 const navSections = [
@@ -54,6 +54,7 @@ const navSections = [
     label: "Operativa producto",
     items: [
       { href: "/dashboard/qa", label: "Q&A Pipeline", icon: HelpCircle },
+      { href: "/dashboard/jobs", label: "Banco de Empleo", icon: Briefcase },
     ],
   },
 ];
@@ -84,16 +85,14 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="w-[260px] min-h-screen flex flex-col border-r border-white/[0.06] bg-[hsl(240_8%_8%)]">
+    <aside className="w-[260px] min-h-screen flex flex-col border-r border-gray-200 bg-slate-100">
       {/* Logo */}
-      <div className="px-5 py-5 border-b border-white/[0.06]">
-        <Image
+      <div className="px-5 py-5 border-b border-gray-100">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src="/logo.png"
           alt="Revolutia"
-          width={140}
-          height={32}
-          className="h-7 w-auto object-contain"
-          priority
+          className="h-6 w-auto object-contain"
         />
       </div>
 
@@ -138,17 +137,17 @@ export default function Sidebar() {
                         className={cn(
                           "relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-semibold transition-all duration-150",
                           active
-                            ? "bg-[hsl(280_80%_60%_/_0.22)] text-white shadow-sm"
-                            : "text-white/65 hover:bg-white/[0.08] hover:text-white"
+                            ? "bg-purple-50 text-purple-700 shadow-sm"
+                            : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
                         )}
                       >
                         {active && (
-                          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-[hsl(280_80%_60%)] rounded-r-full" />
+                          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-purple-500 rounded-r-full" />
                         )}
                         <Icon
                           className={cn(
                             "h-4 w-4 shrink-0",
-                            active ? "text-[hsl(280_80%_80%)]" : "text-white/50"
+                            active ? "text-purple-500" : "text-gray-400"
                           )}
                         />
                         {label}
@@ -163,12 +162,12 @@ export default function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="p-3 border-t border-white/[0.06] flex items-center justify-between">
-        <p className="text-[11px] text-white/20 font-medium px-2">v1.0 · Admin Dashboard</p>
+      <div className="p-3 border-t border-gray-100 flex items-center justify-between">
+        <p className="text-[11px] text-gray-300 font-medium px-2">v1.0 · Admin Dashboard</p>
         <button
           onClick={handleLogout}
           title="Cerrar sesión"
-          className="p-2 rounded-lg text-white/25 hover:text-red-400 hover:bg-red-400/10 transition-all"
+          className="p-2 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all"
         >
           <LogOut className="h-4 w-4" />
         </button>

@@ -1,0 +1,125 @@
+{
+  "name": "Job Research → Disparar GitHub Actions",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Cada día a las 9:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.github.com/repos/{{ $vars.GITHUB_REPO }}/actions/workflows/daily-job-research.yml/dispatches",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $vars.GITHUB_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.github.v3+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "ref",
+              "value": "main"
+            }
+          ]
+        }
+      },
+      "id": "trigger-github-actions",
+      "name": "Disparar GitHub Actions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "id": "check-status",
+              "leftValue": "={{ $response.statusCode }}",
+              "rightValue": 204,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      },
+      "id": "check-success",
+      "name": "¿Disparado correctamente?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "console.log('✅ GitHub Actions disparado correctamente a las', new Date().toISOString());\nreturn [{ json: { status: 'ok', triggered_at: new Date().toISOString() } }];"
+      },
+      "id": "log-success",
+      "name": "Log éxito",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 240]
+    },
+    {
+      "parameters": {
+        "jsCode": "console.error('❌ Error al disparar GitHub Actions:', $json);\nreturn [{ json: { status: 'error', data: $json } }];"
+      },
+      "id": "log-error",
+      "name": "Log error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 380]
+    }
+  ],
+  "connections": {
+    "Cada día a las 9:00": {
+      "main": [
+        [{ "node": "Disparar GitHub Actions", "type": "main", "index": 0 }]
+      ]
+    },
+    "Disparar GitHub Actions": {
+      "main": [
+        [{ "node": "¿Disparado correctamente?", "type": "main", "index": 0 }]
+      ]
+    },
+    "¿Disparado correctamente?": {
+      "main": [
+        [{ "node": "Log éxito", "type": "main", "index": 0 }],
+        [{ "node": "Log error", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
