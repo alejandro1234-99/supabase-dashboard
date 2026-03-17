@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { createBrowserClient } from "@supabase/ssr";
 import {
   LayoutDashboard, Users, BarChart3, Activity,
-  Table2, RefreshCw, Settings, Star, Award, MessageSquare,
+  Star, Award, MessageSquare,
   ShoppingCart, CalendarDays, ClipboardList, Trophy, PlayCircle,
   Headphones, HelpCircle, Globe, ChevronDown, LogOut,
 } from "lucide-react";
@@ -43,25 +43,8 @@ const navSections = [
       { href: "/dashboard/sales", label: "Ventas", icon: ShoppingCart },
       { href: "/dashboard/agendas", label: "Agendas", icon: CalendarDays },
       { href: "/dashboard/onboarding", label: "Onboarding", icon: ClipboardList },
-      { href: "/dashboard/alumnos", label: "Alumnos Circle", icon: Users },
       { href: "/dashboard/soporte", label: "Soporte", icon: Headphones },
       { href: "/dashboard/qa", label: "Q&A Pipeline", icon: HelpCircle },
-    ],
-  },
-  {
-    label: "Base de datos",
-    collapsible: false,
-    items: [
-      { href: "/dashboard/tables", label: "Explorador", icon: Table2 },
-      { href: "/dashboard/charts", label: "Gráficas", icon: BarChart3 },
-      { href: "/dashboard/migrate", label: "Migrar Airtable", icon: RefreshCw },
-    ],
-  },
-  {
-    label: "Sistema",
-    collapsible: false,
-    items: [
-      { href: "/dashboard/settings", label: "Configuración", icon: Settings },
     ],
   },
 ];
