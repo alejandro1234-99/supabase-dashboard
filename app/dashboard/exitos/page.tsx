@@ -38,7 +38,7 @@ type AlumnoResult = {
 type Stats = { total: number; avgPosts: number; avgComentarios: number; avgConexiones: number };
 type PorTipo = { tipo: string; count: number };
 type PorFuente = { fuente: string; count: number };
-type PorLanzamiento = { lanzamiento: string; count: number };
+type PorEdicion = { edicion: string; count: number };
 
 const STAGE_COLORS: Record<string, string> = {
   "Stage 0": "#818cf8",
@@ -388,9 +388,11 @@ export default function ExitosPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [porTipo, setPorTipo] = useState<PorTipo[]>([]);
   const [porFuente, setPorFuente] = useState<PorFuente[]>([]);
-  const [porLanzamiento, setPorLanzamiento] = useState<PorLanzamiento[]>([]);
+  const [porEdicion, setPorEdicion] = useState<PorEdicion[]>([]);
   const [tipos, setTipos] = useState<string[]>([]);
+  const [ediciones, setEdiciones] = useState<string[]>([]);
   const [tipoFilter, setTipoFilter] = useState<string | null>(null);
+  const [edicionFilter, setEdicionFilter] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [loading, setLoading] = useState(true);
@@ -402,6 +404,7 @@ export default function ExitosPage() {
     setLoading(true);
     const params = new URLSearchParams({ estado: tab });
     if (tipoFilter) params.set("tipo", tipoFilter);
+    if (edicionFilter) params.set("edicion", edicionFilter);
     if (search) params.set("search", search);
     Promise.all([
       fetch(`/api/exitos?${params}`).then((r) => r.json()),
@@ -412,11 +415,12 @@ export default function ExitosPage() {
       setStats(tabData.stats);
       setPorTipo(tabData.porTipo ?? []);
       setPorFuente(tabData.porFuente ?? []);
-      setPorLanzamiento(tabData.porLanzamiento ?? []);
+      setPorEdicion(tabData.porEdicion ?? []);
       setTipos(tabData.tipos ?? []);
+      setEdiciones(tabData.ediciones ?? []);
       setCounts({ confirmados: siData.total ?? 0, seguimiento: segData.total ?? 0 });
     }).finally(() => setLoading(false));
-  }, [tab, tipoFilter, search]);
+  }, [tab, tipoFilter, edicionFilter, search]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -499,18 +503,18 @@ export default function ExitosPage() {
         </div>
 
         <div className="bg-[hsl(240_5%_20%)] rounded-2xl border border-white/[0.07] p-5">
-          <h2 className="font-bold text-white text-sm mb-1">Por lanzamiento</h2>
-          <p className="text-xs text-white/40 mb-4">Distribución por edición</p>
+          <h2 className="font-bold text-white text-sm mb-1">Por edición</h2>
+          <p className="text-xs text-white/40 mb-4">Casos de éxito por lanzamiento</p>
           <ResponsiveContainer width="100%" height={160}>
-            <BarChart data={porLanzamiento} barCategoryGap="35%">
-              <XAxis dataKey="lanzamiento" tick={{ fontSize: 9, fill: "rgba(255,255,255,0.35)" }} axisLine={false} tickLine={false} />
+            <BarChart data={porEdicion} barCategoryGap="35%">
+              <XAxis dataKey="edicion" tick={{ fontSize: 9, fill: "rgba(255,255,255,0.35)" }} axisLine={false} tickLine={false} />
               <YAxis hide />
               <Tooltip cursor={{ fill: "rgba(255,255,255,0.04)" }} content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
                 return (
                   <div className="bg-[hsl(240_6%_18%)] border border-white/10 shadow-lg rounded-xl px-3 py-2 text-xs">
                     <p className="font-semibold text-white/60">{label}</p>
-                    <p className="font-bold text-amber-400">{(payload[0].payload as PorLanzamiento).count} casos</p>
+                    <p className="font-bold text-amber-400">{(payload[0].payload as PorEdicion).count} casos</p>
                   </div>
                 );
               }} />
@@ -572,7 +576,7 @@ export default function ExitosPage() {
         </div>
 
         {tab === "Sí" && (
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-xs font-medium text-white/35">Stage:</span>
             <button onClick={() => setTipoFilter(null)}
               className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${!tipoFilter ? "bg-white/10 text-white border border-white/20" : "text-white/40 border border-white/10"}`}>
@@ -587,6 +591,26 @@ export default function ExitosPage() {
                   color: tipoFilter === t ? "white" : STAGE_COLORS[t],
                 }}>
                 {t}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {ediciones.length > 0 && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs font-medium text-white/35">Edición:</span>
+            <button onClick={() => setEdicionFilter(null)}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${!edicionFilter ? "bg-amber-400/20 text-amber-300 border border-amber-400/30" : "text-white/40 border border-white/10"}`}>
+              Todas
+            </button>
+            {ediciones.map((ed) => (
+              <button key={ed} onClick={() => setEdicionFilter(edicionFilter === ed ? null : ed)}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${
+                  edicionFilter === ed
+                    ? "bg-amber-400/20 text-amber-300 border-amber-400/30"
+                    : "text-white/40 border-white/10 hover:text-white/60"
+                }`}>
+                {ed}
               </button>
             ))}
           </div>

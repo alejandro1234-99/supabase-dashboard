@@ -75,7 +75,6 @@ const SORT_COLS = [
   { key: "connections_count", label: "Conexiones" },
   { key: "last_seen_at",      label: "Última visita" },
   { key: "joined_at",         label: "Registro" },
-  { key: "fecha_compra_venta", label: "Compra" },
 ];
 
 function fmtMes(mes: string) {
@@ -119,6 +118,8 @@ export default function CirclePage() {
   const [membersSort, setMembersSort] = useState("posts_count");
   const [membersOrder, setMembersOrder] = useState<"asc" | "desc">("desc");
   const [membersLoading, setMembersLoading] = useState(false);
+  const [edicionFilter, setEdicionFilter] = useState<string | null>(null);
+  const [ediciones, setEdiciones] = useState<string[]>([]);
   const PAGE_SIZE = 50;
 
   const fetchStats = () => {
@@ -135,7 +136,7 @@ export default function CirclePage() {
       .finally(() => setLoading(false));
   };
 
-  const fetchMembers = useCallback((page: number, search: string, sort: string, order: "asc" | "desc") => {
+  const fetchMembers = useCallback((page: number, search: string, sort: string, order: "asc" | "desc", edicion: string | null) => {
     setMembersLoading(true);
     const params = new URLSearchParams({
       page: String(page),
@@ -143,20 +144,22 @@ export default function CirclePage() {
       sort,
       order,
       ...(search ? { search } : {}),
+      ...(edicion ? { edicion } : {}),
     });
     fetch(`/api/circle/members?${params}`)
       .then((r) => r.json())
       .then((d) => {
         setMembers(d.data ?? []);
         setMembersTotal(d.total ?? 0);
+        if (d.ediciones?.length) setEdiciones(d.ediciones);
       })
       .finally(() => setMembersLoading(false));
   }, []);
 
   useEffect(() => { fetchStats(); }, []);
   useEffect(() => {
-    fetchMembers(membersPage, membersSearch, membersSort, membersOrder);
-  }, [fetchMembers, membersPage, membersSearch, membersSort, membersOrder]);
+    fetchMembers(membersPage, membersSearch, membersSort, membersOrder, edicionFilter);
+  }, [fetchMembers, membersPage, membersSearch, membersSort, membersOrder, edicionFilter]);
 
   const handleSort = (col: string) => {
     if (col === membersSort) {
@@ -180,7 +183,7 @@ export default function CirclePage() {
     await fetch("/api/circle/sync", { method: "POST" });
     setSyncing(false);
     fetchStats();
-    fetchMembers(membersPage, membersSearch, membersSort, membersOrder);
+    fetchMembers(membersPage, membersSearch, membersSort, membersOrder, edicionFilter);
   };
 
   const totalPages = Math.ceil(membersTotal / PAGE_SIZE);
@@ -361,20 +364,44 @@ export default function CirclePage() {
 
       {/* Members table */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06] gap-4 flex-wrap">
           <div>
             <h2 className="font-bold text-white text-sm">Todos los miembros</h2>
             <p className="text-xs text-white/40 mt-0.5">{membersTotal} miembros · snapshots diarios activos</p>
           </div>
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/25" />
-            <input
-              type="text"
-              placeholder="Buscar nombre o email..."
-              value={membersSearch}
-              onChange={(e) => { setMembersSearch(e.target.value); setMembersPage(1); }}
-              className="pl-8 pr-3 py-1.5 text-xs rounded-full focus:outline-none w-56 bg-white/[0.06] border border-white/10 text-white placeholder:text-white/25 focus:border-indigo-400/40"
-            />
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Filtro edición */}
+            {ediciones.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-white/35 font-medium">Edición:</span>
+                <button
+                  onClick={() => { setEdicionFilter(null); setMembersPage(1); }}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${!edicionFilter ? "bg-amber-400/20 text-amber-300 border border-amber-400/30" : "text-white/35 hover:text-white/60"}`}
+                >
+                  Todas
+                </button>
+                {ediciones.map((ed) => (
+                  <button
+                    key={ed}
+                    onClick={() => { setEdicionFilter(edicionFilter === ed ? null : ed); setMembersPage(1); }}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${edicionFilter === ed ? "bg-amber-400/20 text-amber-300 border border-amber-400/30" : "text-white/35 border border-white/10 hover:text-white/60"}`}
+                  >
+                    {ed}
+                  </button>
+                ))}
+              </div>
+            )}
+            {/* Búsqueda */}
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/25" />
+              <input
+                type="text"
+                placeholder="Buscar nombre o email..."
+                value={membersSearch}
+                onChange={(e) => { setMembersSearch(e.target.value); setMembersPage(1); }}
+                className="pl-8 pr-3 py-1.5 text-xs rounded-full focus:outline-none w-52 bg-white/[0.06] border border-white/10 text-white placeholder:text-white/25 focus:border-indigo-400/40"
+              />
+            </div>
           </div>
         </div>
 

@@ -15,6 +15,20 @@ export async function GET(req: NextRequest) {
   const page    = parseInt(searchParams.get("page") ?? "1");
   const limit   = parseInt(searchParams.get("limit") ?? "50");
   const offset  = (page - 1) * limit;
+  const edicion = searchParams.get("edicion");
+
+  // Si hay filtro por edición, primero obtener los emails de esa edición
+  let emailFilter: string[] | null = null;
+  if (edicion) {
+    const { data: edPurchases } = await sb
+      .from("purchase_approved")
+      .select("correo_electronico")
+      .eq("edicion", edicion)
+      .neq("status", "Rembolsado");
+    emailFilter = ((edPurchases ?? []) as { correo_electronico: string }[])
+      .map((p) => p.correo_electronico)
+      .filter(Boolean);
+  }
 
   let query = sb
     .from("circle_members")
@@ -23,8 +37,11 @@ export async function GET(req: NextRequest) {
       { count: "exact" }
     );
 
-  if (search) {
-    query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
+  if (search) query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
+  if (emailFilter !== null) {
+    query = emailFilter.length > 0
+      ? query.in("email", emailFilter)
+      : query.in("email", ["__no_results__"]);
   }
 
   query = query
@@ -48,7 +65,6 @@ export async function GET(req: NextRequest) {
         .order("fecha_compra", { ascending: false })
     : { data: [] };
 
-  // Un alumno puede tener varias compras — tomamos la más reciente no reembolsada
   const purchaseMap: Record<string, { edicion: string | null; fecha_compra: string | null }> = {};
   for (const p of (purchases ?? []) as { correo_electronico: string; edicion: string | null; fecha_compra: string | null }[]) {
     if (!purchaseMap[p.correo_electronico]) {
@@ -62,5 +78,16 @@ export async function GET(req: NextRequest) {
     fecha_compra_venta: m.email ? (purchaseMap[m.email]?.fecha_compra ?? null) : null,
   }));
 
-  return NextResponse.json({ data: dataWithPurchase, total: count ?? 0, page, limit });
+  // Lista de ediciones disponibles (para filtros)
+  const { data: allEdiciones } = await sb
+    .from("purchase_approved")
+    .select("edicion")
+    .neq("status", "Rembolsado")
+    .not("edicion", "is", null);
+
+  const ediciones = [...new Set(
+    ((allEdiciones ?? []) as { edicion: string }[]).map((r) => r.edicion).filter(Boolean)
+  )].sort() as string[];
+
+  return NextResponse.json({ data: dataWithPurchase, total: count ?? 0, page, limit, ediciones });
 }
