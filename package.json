@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "jobs:research": "tsx scripts/job-research-agent.ts",
+    "jobs:research": "tsx --tsconfig tsconfig.scripts.json scripts/job-research-agent.ts",
     "migrate": "tsx scripts/migrate-airtable.ts",
     "setup:db": "tsx scripts/setup-db.ts",
     "import:trustpilot": "tsx scripts/import-trustpilot.ts",
