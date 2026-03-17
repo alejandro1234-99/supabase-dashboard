@@ -44,7 +44,7 @@ function LoginForm() {
     const role =
       data.user?.app_metadata?.role ?? data.user?.user_metadata?.role;
 
-    if (role !== "admin") {
+    if (role !== "admin" && role !== "qa_admin") {
       await supabase.auth.signOut();
       setError("Tu cuenta no tiene permisos de administrador.");
       setLoading(false);
