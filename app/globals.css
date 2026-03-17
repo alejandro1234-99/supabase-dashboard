@@ -132,9 +132,9 @@
 /* ── Dark mode: adaptar clases Tailwind hardcodeadas ──────────────────────── */
 
 /* Fondos */
-.dark .bg-white        { background-color: hsl(240 5% 20%); }
-.dark .bg-gray-50      { background-color: hsl(240 5% 17%); }
-.dark .bg-gray-100     { background-color: hsl(240 5% 19%); }
+.dark .bg-white        { background-color: hsl(240 5% 28%); }
+.dark .bg-gray-50      { background-color: hsl(240 5% 22%); }
+.dark .bg-gray-100     { background-color: hsl(240 5% 25%); }
 .dark .bg-gray-200     { background-color: hsl(240 5% 20%); }
 
 /* Texto */
