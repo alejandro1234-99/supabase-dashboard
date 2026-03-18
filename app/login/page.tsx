@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { Loader2, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff, Lock } from "lucide-react";
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -36,7 +36,7 @@ function LoginForm() {
     });
 
     if (authError) {
-      setError("Email o contraseña incorrectos.");
+      setError("Email o contrasena incorrectos.");
       setLoading(false);
       return;
     }
@@ -60,44 +60,38 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background relative overflow-hidden">
-      {/* Hero background */}
-      <div className="absolute bottom-0 left-0 right-0 h-[320px] pointer-events-none">
-        <Image
-          src="/hero-background.png"
-          alt=""
-          fill
-          className="object-cover opacity-30"
-          priority
-        />
-      </div>
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-background/90 to-transparent pointer-events-none" />
+    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] relative overflow-hidden">
+      {/* Subtle grid pattern */}
+      <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "32px 32px" }} />
 
-      {/* Content */}
-      <div className="relative z-10 w-full max-w-sm px-4">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-5 tracking-tight font-[family-name:var(--font-display)]">Panel de Administración</h1>
+      {/* Glow effects */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-500/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[400px] h-[200px] bg-purple-500/5 rounded-full blur-[80px] pointer-events-none" />
+
+      <div className="relative z-10 w-full max-w-[380px] px-5">
+        {/* Logo + heading */}
+        <div className="text-center mb-10">
           <Image
             src="/logo.png"
             alt="Revolutia"
-            width={160}
-            height={40}
-            className="h-8 w-auto mx-auto object-contain"
+            width={140}
+            height={36}
+            className="h-7 w-auto mx-auto object-contain mb-8 brightness-0 invert opacity-80"
             priority
           />
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.06] mb-5">
+            <Lock className="h-3 w-3 text-emerald-400" />
+            <span className="text-[11px] font-medium text-white/40 uppercase tracking-wider">Panel de Administracion</span>
+          </div>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Bienvenido</h1>
+          <p className="text-sm text-white/30 mt-1.5">Inicia sesion para acceder al dashboard</p>
         </div>
 
         {/* Card */}
-        <div className="bg-[hsl(240_6%_12%)] border border-white/[0.07] rounded-2xl shadow-2xl overflow-hidden">
-          <div className="px-7 pt-7 pb-2 text-center">
-            <h1 className="text-base font-semibold text-white">Iniciar sesión</h1>
-            <p className="text-[13px] text-white/40 mt-1">Acceso exclusivo para administradores</p>
-          </div>
-
-          <form onSubmit={handleLogin} className="p-7 space-y-4">
+        <div className="bg-white/[0.03] backdrop-blur-sm border border-white/[0.06] rounded-2xl shadow-2xl p-7">
+          <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <label className="text-[11px] font-semibold text-white/40 uppercase tracking-widest mb-1.5 block">
+              <label className="text-[11px] font-semibold text-white/30 uppercase tracking-widest mb-2 block">
                 Email
               </label>
               <input
@@ -107,13 +101,13 @@ function LoginForm() {
                 required
                 autoComplete="email"
                 placeholder="admin@revolutia.ai"
-                className="w-full h-10 text-sm bg-white/[0.05] border border-white/[0.08] rounded-xl px-3 text-white placeholder:text-white/20 focus:outline-none focus:border-[hsl(280_80%_60%_/_0.5)] focus:bg-white/[0.07] transition-all"
+                className="w-full h-11 text-sm bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 text-white placeholder:text-white/15 focus:outline-none focus:border-emerald-500/40 focus:bg-white/[0.06] focus:ring-1 focus:ring-emerald-500/20 transition-all"
               />
             </div>
 
             <div>
-              <label className="text-[11px] font-semibold text-white/40 uppercase tracking-widest mb-1.5 block">
-                Contraseña
+              <label className="text-[11px] font-semibold text-white/30 uppercase tracking-widest mb-2 block">
+                Contrasena
               </label>
               <div className="relative">
                 <input
@@ -123,12 +117,12 @@ function LoginForm() {
                   required
                   autoComplete="current-password"
                   placeholder="••••••••"
-                  className="w-full h-10 text-sm bg-white/[0.05] border border-white/[0.08] rounded-xl px-3 pr-10 text-white placeholder:text-white/20 focus:outline-none focus:border-[hsl(280_80%_60%_/_0.5)] focus:bg-white/[0.07] transition-all"
+                  className="w-full h-11 text-sm bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 pr-11 text-white placeholder:text-white/15 focus:outline-none focus:border-emerald-500/40 focus:bg-white/[0.06] focus:ring-1 focus:ring-emerald-500/20 transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPass((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/60 transition-colors"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/20 hover:text-white/50 transition-colors"
                 >
                   {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -136,15 +130,15 @@ function LoginForm() {
             </div>
 
             {error && (
-              <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5">
-                <p className="text-xs text-red-400">{error}</p>
+              <div className="bg-red-500/10 border border-red-500/15 rounded-xl px-4 py-3">
+                <p className="text-xs text-red-400 font-medium">{error}</p>
               </div>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-10 flex items-center justify-center gap-2 bg-[hsl(280_80%_60%)] text-white text-sm font-semibold rounded-xl hover:bg-[hsl(280_80%_55%)] transition-colors glow-primary disabled:opacity-60"
+              className="w-full h-11 flex items-center justify-center gap-2 bg-emerald-500 text-white text-sm font-bold rounded-xl hover:bg-emerald-400 active:bg-emerald-600 transition-all disabled:opacity-50 disabled:hover:bg-emerald-500 shadow-lg shadow-emerald-500/20"
             >
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
               {loading ? "Entrando..." : "Entrar"}
@@ -152,8 +146,8 @@ function LoginForm() {
           </form>
         </div>
 
-        <p className="text-center text-[12px] text-white/20 mt-6">
-          Solo usuarios admin del proyecto Supabase pueden acceder
+        <p className="text-center text-[11px] text-white/15 mt-8">
+          Acceso exclusivo para administradores
         </p>
       </div>
     </div>
