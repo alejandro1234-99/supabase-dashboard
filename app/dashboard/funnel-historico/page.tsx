@@ -137,7 +137,7 @@ export default function HistoricoPage() {
                       <p className="font-semibold text-gray-700 mb-1">{label}</p>
                       {payload.map((p) => (
                         <p key={p.dataKey as string} style={{ color: p.color }}>
-                          {p.dataKey}: {(p.value as number).toLocaleString("es-ES")}
+                          {String(p.dataKey)}: {Number(p.value).toLocaleString("es-ES")}
                         </p>
                       ))}
                     </div>
@@ -168,7 +168,7 @@ export default function HistoricoPage() {
                       <p className="font-semibold text-gray-700 mb-1">{label}</p>
                       {payload.map((p) => (
                         <p key={p.dataKey as string} style={{ color: p.color }}>
-                          {p.dataKey}: {p.value}%
+                          {String(p.dataKey)}: {p.value}%
                         </p>
                       ))}
                     </div>
@@ -202,7 +202,7 @@ export default function HistoricoPage() {
                       <p className="font-semibold text-gray-700 mb-1">{label}</p>
                       {payload.map((p) => (
                         <p key={p.dataKey as string} style={{ color: p.color }}>
-                          {p.dataKey}: {(p.value as number).toLocaleString("es-ES")}
+                          {String(p.dataKey)}: {Number(p.value).toLocaleString("es-ES")}
                         </p>
                       ))}
                     </div>
@@ -234,7 +234,7 @@ export default function HistoricoPage() {
                       <p className="font-semibold text-gray-700 mb-1">{label}</p>
                       {payload.map((p) => (
                         <p key={p.dataKey as string} style={{ color: p.color }}>
-                          {p.dataKey}: {p.value}
+                          {String(p.dataKey)}: {String(p.value)}
                         </p>
                       ))}
                     </div>
