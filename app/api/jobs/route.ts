@@ -3,8 +3,8 @@ import { createAdminClient } from "@/lib/supabase";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const status = searchParams.get("status") ?? "";
-  const category = searchParams.get("category") ?? "";
+  const status = searchParams.get("status") || "";
+  const category = searchParams.get("category") || "";
   const search = searchParams.get("search")?.trim() ?? "";
   const page = parseInt(searchParams.get("page") ?? "1");
   const pageSize = 20;
