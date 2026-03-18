@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Loader2, Users, CalendarDays, ShoppingCart, ChevronDown, TrendingUp, Plus, Save, Edit3, Trash2, X, FileText, Lightbulb, AlertTriangle } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 type Stats = {
   totalLeads: number;
@@ -78,6 +79,9 @@ type ComercialRow = {
   orgAgendas: number;
   orgVentas: number;
   cierreOrg: string;
+  untrackedAgendas: number;
+  untrackedVentas: number;
+  cierreUntracked: string;
 };
 
 const SOURCE_COLORS: Record<string, string> = {
@@ -100,6 +104,11 @@ export default function FunnelPage() {
   const [paidMedia, setPaidMedia] = useState<PaidMedia | null>(null);
   const [affiliateMedia, setAffiliateMedia] = useState<AffiliateMedia | null>(null);
   const [comerciales, setComerciales] = useState<ComercialRow[]>([]);
+  const [timeline, setTimeline] = useState<{ date: string; ventas: number; agendasCreadas: number; llamadas: number }[]>([]);
+  const [closerPerformance, setCloserPerformance] = useState<{
+    closer: string; llamadas: number; noShows: number; celebradas: number; ventas: number; cierre: string;
+    days: { date: string; llamadas: number; noShows: number; celebradas: number; ventas: number }[];
+  }[]>([]);
   const [notas, setNotas] = useState<{ id: string; titulo: string; contenido: string; tipo: string; created_at: string }[]>([]);
   const [showNewNota, setShowNewNota] = useState(false);
   const [newTitulo, setNewTitulo] = useState("");
@@ -149,6 +158,8 @@ export default function FunnelPage() {
         setPaidMedia(d.paidMedia ?? null);
         setAffiliateMedia(d.affiliateMedia ?? null);
         setComerciales(d.comerciales ?? []);
+        setTimeline(d.timeline ?? []);
+        setCloserPerformance(d.closerPerformance ?? []);
       })
       .finally(() => setLoading(false));
   }, [edicionFilter]);
@@ -309,9 +320,130 @@ export default function FunnelPage() {
             </div>
           </div>
 
-          {/* Desglose por fuente */}
+          {/* 2. Actividad diaria */}
+          <>
+            <h2 className="text-lg font-bold text-gray-900 mt-2">2. Actividad diaria</h2>
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                <p className="text-xs text-gray-400 mb-4">Ventas, agendas creadas y llamadas de closers por dia</p>
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={timeline.map((d) => ({
+                    dia: new Date(d.date).toLocaleDateString("es-ES", { day: "numeric", month: "short" }),
+                    Ventas: d.ventas,
+                    "Agendas creadas": d.agendasCreadas,
+                    "Llamadas hoy": d.llamadas,
+                  }))} barCategoryGap="20%">
+                    <XAxis dataKey="dia" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+                    <Tooltip
+                      cursor={{ fill: "#f3f4f6" }}
+                      content={({ active, payload, label }) => {
+                        if (!active || !payload?.length) return null;
+                        return (
+                          <div className="bg-white border border-gray-100 shadow-lg rounded-xl px-3 py-2 text-xs">
+                            <p className="font-semibold text-gray-700 mb-1">{label}</p>
+                            {payload.map((p) => (
+                              <p key={String(p.dataKey)} style={{ color: p.color }}>
+                                {String(p.dataKey)}: {String(p.value)}
+                              </p>
+                            ))}
+                          </div>
+                        );
+                      }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Bar dataKey="Ventas" radius={[3, 3, 0, 0]} fill="#f59e0b" />
+                    <Bar dataKey="Agendas creadas" radius={[3, 3, 0, 0]} fill="#6366f1" />
+                    <Bar dataKey="Llamadas hoy" radius={[3, 3, 0, 0]} fill="#10b981" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Rendimiento closers */}
+              <>
+                  <h3 className="text-sm font-bold text-gray-700 mt-4">Rendimiento closers <span className="font-normal text-gray-400">(Rendimiento en funcion de las llamadas ya celebradas)</span></h3>
+
+                  {/* Resumen por closer */}
+                  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-gray-100 bg-gray-50/60">
+                          <th className="text-left px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Closer</th>
+                          <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Llamadas</th>
+                          <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">No shows</th>
+                          <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Celebradas</th>
+                          <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Ventas</th>
+                          <th className="text-right px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">% cierre</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {closerPerformance.map((c) => (
+                          <tr key={c.closer} className="hover:bg-gray-50/50 transition-colors">
+                            <td className="px-5 py-3 text-sm font-semibold text-gray-800">{c.closer}</td>
+                            <td className="text-right px-4 py-3 text-sm text-gray-600">{c.llamadas}</td>
+                            <td className="text-right px-4 py-3 text-sm text-red-500 font-medium">{c.noShows}</td>
+                            <td className="text-right px-4 py-3 text-sm font-bold text-gray-900">{c.celebradas}</td>
+                            <td className="text-right px-4 py-3 text-sm font-bold text-emerald-600">{c.ventas}</td>
+                            <td className="text-right px-5 py-3 text-sm font-black text-gray-900">{c.cierre}%</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Detalle por dia y closer */}
+                  <h3 className="text-sm font-bold text-gray-700 mt-2">Detalle por dia</h3>
+                  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
+                    <table className="w-full min-w-[700px]">
+                      <thead>
+                        <tr className="border-b border-gray-100 bg-gray-50/60">
+                          <th className="text-left px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Dia</th>
+                          {closerPerformance.map((c) => (
+                            <th key={c.closer} colSpan={3} className="text-center px-2 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide border-l border-gray-100">
+                              {c.closer}
+                            </th>
+                          ))}
+                        </tr>
+                        <tr className="border-b border-gray-100 bg-gray-50/40">
+                          <th />
+                          {closerPerformance.map((c) => (
+                            <React.Fragment key={c.closer}>
+                              <th className="text-right px-2 py-2 text-[10px] font-bold text-gray-400 uppercase border-l border-gray-100">Llam</th>
+                              <th className="text-right px-2 py-2 text-[10px] font-bold text-gray-400 uppercase">Vent</th>
+                              <th className="text-right px-2 py-2 text-[10px] font-bold text-gray-400 uppercase">%</th>
+                            </React.Fragment>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {timeline.map((t) => (
+                          <tr key={t.date} className="hover:bg-gray-50/50 transition-colors">
+                            <td className="px-5 py-2.5 text-xs font-semibold text-gray-600">
+                              {new Date(t.date).toLocaleDateString("es-ES", { day: "numeric", month: "short", weekday: "short" })}
+                            </td>
+                            {closerPerformance.map((c) => {
+                              const dayData = c.days.find((d) => d.date === t.date);
+                              const cel = dayData ? dayData.celebradas : 0;
+                              const ven = dayData ? dayData.ventas : 0;
+                              const pct = cel > 0 ? ((ven / cel) * 100).toFixed(0) : "—";
+                              return (
+                                <React.Fragment key={c.closer}>
+                                  <td className="text-right px-2 py-2.5 text-xs text-gray-600 border-l border-gray-100">{cel || <span className="text-gray-300">—</span>}</td>
+                                  <td className="text-right px-2 py-2.5 text-xs font-bold text-emerald-600">{ven || <span className="text-gray-300 font-normal">—</span>}</td>
+                                  <td className="text-right px-2 py-2.5 text-xs font-semibold text-gray-500">{pct === "—" ? <span className="text-gray-300">—</span> : `${pct}%`}</td>
+                                </React.Fragment>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+              </>
+          </>
+
+          {/* 3. Desglose por fuente */}
           {sources.length > 0 && (<>
-            <h2 className="text-lg font-bold text-gray-900 mt-2">2. Desglose por fuente</h2>
+            <h2 className="text-lg font-bold text-gray-900 mt-2">3. Desglose por fuente</h2>
 
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               <table className="w-full">
@@ -364,10 +496,10 @@ export default function FunnelPage() {
             </div>
           </>)}
 
-          {/* 3. Paid Media */}
+          {/* 4. Paid Media */}
           {paidMedia && paidMedia.campaigns.length > 0 && (
             <>
-              <h2 className="text-lg font-bold text-gray-900 mt-2">3. Paid Media</h2>
+              <h2 className="text-lg font-bold text-gray-900 mt-2">4. Paid Media</h2>
 
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 <table className="w-full">
@@ -429,10 +561,10 @@ export default function FunnelPage() {
               </div>
             </>
           )}
-          {/* 4. Afiliados */}
+          {/* 5. Afiliados */}
           {affiliateMedia && affiliateMedia.types.length > 0 && (
             <>
-              <h2 className="text-lg font-bold text-gray-900 mt-2">4. Afiliados</h2>
+              <h2 className="text-lg font-bold text-gray-900 mt-2">5. Afiliados</h2>
 
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 <table className="w-full">
@@ -479,9 +611,9 @@ export default function FunnelPage() {
               </div>
             </>
           )}
-          {/* 5. Estudio por comercial */}
+          {/* 6. Estudio por comercial */}
           {comerciales.length > 0 && (<>
-              <h2 className="text-lg font-bold text-gray-900 mt-2">5. Estudio por comercial</h2>
+              <h2 className="text-lg font-bold text-gray-900 mt-2">6. Estudio por comercial</h2>
 
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
                 <table className="w-full min-w-[900px]">
@@ -492,7 +624,8 @@ export default function FunnelPage() {
                       <th rowSpan={2} className="text-right px-3 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Ventas</th>
                       <th rowSpan={2} className="text-right px-3 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide border-r border-gray-100">% cierre</th>
                       <th colSpan={5} className="text-center px-3 py-2 text-xs font-bold text-blue-500 uppercase tracking-wide border-r border-gray-100">Paid</th>
-                      <th colSpan={3} className="text-center px-3 py-2 text-xs font-bold text-emerald-500 uppercase tracking-wide">Organico</th>
+                      <th colSpan={3} className="text-center px-3 py-2 text-xs font-bold text-emerald-500 uppercase tracking-wide border-r border-gray-100">Organico</th>
+                      <th colSpan={3} className="text-center px-3 py-2 text-xs font-bold text-gray-400 uppercase tracking-wide">Untracked</th>
                     </tr>
                     <tr className="border-b border-gray-100 bg-gray-50/40">
                       <th className="text-right px-3 py-2 text-[10px] font-bold text-gray-400 uppercase">Ag. AV0</th>
@@ -500,6 +633,9 @@ export default function FunnelPage() {
                       <th className="text-right px-3 py-2 text-[10px] font-bold text-gray-400 uppercase">V. AV0</th>
                       <th className="text-right px-3 py-2 text-[10px] font-bold text-gray-400 uppercase">V. AV2</th>
                       <th className="text-right px-3 py-2 text-[10px] font-bold text-gray-400 uppercase border-r border-gray-100">% AV0 / AV2</th>
+                      <th className="text-right px-3 py-2 text-[10px] font-bold text-gray-400 uppercase">Agendas</th>
+                      <th className="text-right px-3 py-2 text-[10px] font-bold text-gray-400 uppercase">Ventas</th>
+                      <th className="text-right px-3 py-2 text-[10px] font-bold text-gray-400 uppercase border-r border-gray-100">% cierre</th>
                       <th className="text-right px-3 py-2 text-[10px] font-bold text-gray-400 uppercase">Agendas</th>
                       <th className="text-right px-3 py-2 text-[10px] font-bold text-gray-400 uppercase">Ventas</th>
                       <th className="text-right px-3 py-2 text-[10px] font-bold text-gray-400 uppercase">% cierre</th>
@@ -522,7 +658,10 @@ export default function FunnelPage() {
                         <td className="text-right px-3 py-3 text-sm font-semibold text-blue-600 border-r border-gray-100">{c.cierreAV0}% / {c.cierreAV2}%</td>
                         <td className="text-right px-3 py-3 text-sm text-gray-600">{c.orgAgendas}</td>
                         <td className="text-right px-3 py-3 text-sm text-gray-600">{c.orgVentas}</td>
-                        <td className="text-right px-3 py-3 text-sm font-semibold text-emerald-600">{c.cierreOrg}%</td>
+                        <td className="text-right px-3 py-3 text-sm font-semibold text-emerald-600 border-r border-gray-100">{c.cierreOrg}%</td>
+                        <td className="text-right px-3 py-3 text-sm text-gray-600">{c.untrackedAgendas}</td>
+                        <td className="text-right px-3 py-3 text-sm text-gray-600">{c.untrackedVentas}</td>
+                        <td className="text-right px-3 py-3 text-sm font-semibold text-gray-500">{c.cierreUntracked}%</td>
                       </tr>
                     ))}
                   </tbody>
@@ -530,10 +669,10 @@ export default function FunnelPage() {
               </div>
           </>)}
 
-          {/* 6. Conclusiones del lanzamiento */}
+          {/* 7. Conclusiones del lanzamiento */}
           <div className="mt-2">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900">6. Conclusiones del lanzamiento</h2>
+              <h2 className="text-lg font-bold text-gray-900">7. Conclusiones del lanzamiento</h2>
               <button
                 onClick={() => setShowNewNota(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white text-xs font-semibold rounded-xl hover:bg-emerald-600 transition-colors"

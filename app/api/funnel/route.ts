@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
   // Fetch agendas
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let agendasQuery = (supabase.from("agendas" as any) as any)
-    .select("email, edicion, comercial, no_show, fecha_llamada");
+    .select("email, edicion, comercial, no_show, fecha_llamada, creada");
   if (edicion) agendasQuery = agendasQuery.eq("edicion", edicion);
   const agendasData = await fetchAll(agendasQuery);
   const agendas = agendasData as {
@@ -85,12 +85,13 @@ export async function GET(req: NextRequest) {
     comercial: string | null;
     no_show: boolean;
     fecha_llamada: string | null;
+    creada: string | null;
   }[];
 
   // Fetch sales
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let salesQuery = (supabase.from("purchase_approved" as any) as any)
-    .select("correo_electronico, edicion, status, cash_collected, nombre_comercial");
+    .select("correo_electronico, edicion, status, cash_collected, nombre_comercial, fecha_compra");
   if (edicion) salesQuery = salesQuery.eq("edicion", edicion);
   const salesData = await fetchAll(salesQuery);
   const sales = salesData as {
@@ -99,6 +100,7 @@ export async function GET(req: NextRequest) {
     status: string | null;
     cash_collected: number | null;
     nombre_comercial: string | null;
+    fecha_compra: string | null;
   }[];
 
   // Build email → source map from leads
@@ -270,6 +272,9 @@ export async function GET(req: NextRequest) {
     "Raul Garcia": "Raúl",
     "Raúl": "Raúl",
     "Raul": "Raúl",
+    "Nacho": "Nacho",
+    "Nacho Revolutia": "Nacho",
+    "Nacho Laguna": "Nacho",
   };
   function normComercial(name: string | null): string {
     if (!name) return "Sin asignar";
@@ -284,7 +289,15 @@ export async function GET(req: NextRequest) {
     paidAV0Agendas: number; paidAV2Agendas: number;
     paidAV0Ventas: number; paidAV2Ventas: number;
     orgAgendas: number; orgVentas: number;
+    untrackedAgendas: number; untrackedVentas: number;
   };
+  const COMERCIALES_FIJOS = ["Nacho", "Arnau", "Hector", "Alberto"];
+  const EDITION_COMERCIALES: Record<string, string[]> = {
+    "Enero 2026": ["Nacho", "Arnau", "Hector"],
+    "Febrero 2026": ["Arnau", "Hector", "Alberto", "Raúl"],
+    "Marzo 2026": ["Nacho", "Arnau", "Hector", "Alberto"],
+  };
+  const edicionComerciales = edicion ? (EDITION_COMERCIALES[edicion] ?? COMERCIALES_FIJOS) : COMERCIALES_FIJOS;
   const comercialMap: Record<string, ComercialStats> = {};
   function getComercial(name: string): ComercialStats {
     if (!comercialMap[name]) comercialMap[name] = {
@@ -292,8 +305,25 @@ export async function GET(req: NextRequest) {
       paidAV0Agendas: 0, paidAV2Agendas: 0,
       paidAV0Ventas: 0, paidAV2Ventas: 0,
       orgAgendas: 0, orgVentas: 0,
+      untrackedAgendas: 0, untrackedVentas: 0,
     };
     return comercialMap[name];
+  }
+  // Initialize edition commercials so they always appear
+  for (const c of edicionComerciales) getComercial(c);
+
+  // Build email → closer map: prioritize non-no_show agenda (the one that wasn't cancelled)
+  const emailCloserMap: Record<string, string> = {};
+  for (const a of agendas) {
+    const email = (a.email ?? "").toLowerCase();
+    if (!email) continue;
+    const closer = normComercial(a.comercial);
+    // Only overwrite if this agenda is NOT a no_show (non-cancelled takes priority)
+    if (!a.no_show) {
+      emailCloserMap[email] = closer;
+    } else if (!emailCloserMap[email]) {
+      emailCloserMap[email] = closer;
+    }
   }
 
   for (const a of agendas) {
@@ -310,14 +340,17 @@ export async function GET(req: NextRequest) {
         if (camp === "AV2") cm.paidAV2Agendas++;
       }
       if (src === "Organico") cm.orgAgendas++;
+      if (src === "Untracked" || !src) cm.untrackedAgendas++;
     }
   }
 
+  // Ventas: attribute to the closer from the non-cancelled agenda
   for (const s of sales) {
-    const c = normComercial(s.nombre_comercial);
+    const email = (s.correo_electronico ?? "").toLowerCase();
+    const closerFromAgenda = email ? emailCloserMap[email] : null;
+    const c = closerFromAgenda ?? normComercial(s.nombre_comercial);
     const cm = getComercial(c);
     cm.ventas++;
-    const email = (s.correo_electronico ?? "").toLowerCase();
     if (email) {
       const src = emailSource[email];
       if (src === "Paid") {
@@ -326,11 +359,12 @@ export async function GET(req: NextRequest) {
         if (camp === "AV2") cm.paidAV2Ventas++;
       }
       if (src === "Organico") cm.orgVentas++;
+      if (src === "Untracked" || !src) cm.untrackedVentas++;
     }
   }
 
   const comerciales = Object.entries(comercialMap)
-    .filter(([name]) => name !== "Sin asignar")
+    .filter(([name]) => edicionComerciales.includes(name))
     .map(([name, d]) => ({
       comercial: name,
       agendas: d.agendas,
@@ -346,8 +380,140 @@ export async function GET(req: NextRequest) {
       orgAgendas: d.orgAgendas,
       orgVentas: d.orgVentas,
       cierreOrg: d.orgAgendas > 0 ? ((d.orgVentas / d.orgAgendas) * 100).toFixed(1) : "0",
+      untrackedAgendas: d.untrackedAgendas,
+      untrackedVentas: d.untrackedVentas,
+      cierreUntracked: d.untrackedAgendas > 0 ? ((d.untrackedVentas / d.untrackedAgendas) * 100).toFixed(1) : "0",
     }))
-    .sort((a, b) => b.ventas - a.ventas);
+    .sort((a, b) => edicionComerciales.indexOf(a.comercial) - edicionComerciales.indexOf(b.comercial));
+
+  // Daily timeline: ventas por dia, agendas creadas por dia, llamadas por dia
+  // Fixed date ranges per edition so the chart always shows the launch window
+  const EDITION_DATE_RANGES: Record<string, { start: string; days: number }> = {
+    "Enero 2026": { start: "2026-01-27", days: 8 },
+    "Febrero 2026": { start: "2026-02-24", days: 8 },
+    "Marzo 2026": { start: "2026-03-24", days: 8 },
+  };
+
+  const dailyMap: Record<string, { ventas: number; agendasCreadas: number; llamadas: number }> = {};
+
+  // Pre-fill days for the edition
+  const edRange = edicion ? EDITION_DATE_RANGES[edicion] : null;
+  if (edRange) {
+    const start = new Date(edRange.start);
+    for (let i = 0; i < edRange.days; i++) {
+      const d = new Date(start);
+      d.setDate(d.getDate() + i);
+      const key = d.toISOString().split("T")[0];
+      dailyMap[key] = { ventas: 0, agendasCreadas: 0, llamadas: 0 };
+    }
+  }
+
+  function getDay(map: Record<string, { ventas: number; agendasCreadas: number; llamadas: number }>, date: string) {
+    if (!map[date]) map[date] = { ventas: 0, agendasCreadas: 0, llamadas: 0 };
+    return map[date];
+  }
+
+  for (const s of sales) {
+    if (s.fecha_compra) {
+      const day = s.fecha_compra.split("T")[0];
+      getDay(dailyMap, day).ventas++;
+    }
+  }
+  for (const a of agendas) {
+    if (a.creada) {
+      const day = a.creada.split("T")[0];
+      getDay(dailyMap, day).agendasCreadas++;
+    }
+    if (a.fecha_llamada) {
+      const day = a.fecha_llamada.split("T")[0];
+      getDay(dailyMap, day).llamadas++;
+    }
+  }
+
+  // Only include days within the edition range
+  const rangeStart = edRange ? edRange.start : null;
+  const rangeEnd = edRange ? (() => { const d = new Date(edRange.start); d.setDate(d.getDate() + edRange.days - 1); return d.toISOString().split("T")[0]; })() : null;
+
+  const timeline = Object.entries(dailyMap)
+    .filter(([date]) => {
+      if (rangeStart && rangeEnd) return date >= rangeStart && date <= rangeEnd;
+      return true;
+    })
+    .map(([date, d]) => ({ date, ...d }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  // Closer daily performance: calls done, no-shows, ventas closed, close rate
+  // We match agenda email → sale email to attribute conversions to the closer
+  const saleEmails = new Set(sales.map((s) => (s.correo_electronico ?? "").toLowerCase()).filter(Boolean));
+
+  type CloserDayStats = {
+    llamadas: number;
+    noShows: number;
+    celebradas: number;
+    ventas: number;
+  };
+  const closerDailyMap: Record<string, Record<string, CloserDayStats>> = {};
+  const closerTotals: Record<string, CloserDayStats> = {};
+
+  for (const c of edicionComerciales) {
+    closerTotals[c] = { llamadas: 0, noShows: 0, celebradas: 0, ventas: 0 };
+  }
+
+  const today = new Date().toISOString().split("T")[0];
+
+  for (const a of agendas) {
+    if (!a.fecha_llamada) continue;
+    const day = a.fecha_llamada.split("T")[0];
+    if (day > today) continue; // Solo llamadas que ya se celebraron (hoy o antes)
+    const closer = normComercial(a.comercial);
+    if (closer === "Sin asignar") continue;
+
+    if (!closerDailyMap[closer]) closerDailyMap[closer] = {};
+    if (!closerDailyMap[closer][day]) closerDailyMap[closer][day] = { llamadas: 0, noShows: 0, celebradas: 0, ventas: 0 };
+    if (!closerTotals[closer]) closerTotals[closer] = { llamadas: 0, noShows: 0, celebradas: 0, ventas: 0 };
+
+    const cd = closerDailyMap[closer][day];
+    const ct = closerTotals[closer];
+
+    cd.llamadas++;
+    ct.llamadas++;
+
+    if (a.no_show) {
+      cd.noShows++;
+      ct.noShows++;
+    } else {
+      cd.celebradas++;
+      ct.celebradas++;
+
+      const email = (a.email ?? "").toLowerCase();
+      if (email && saleEmails.has(email)) {
+        cd.ventas++;
+        ct.ventas++;
+      }
+    }
+  }
+
+  const closerPerformance = edicionComerciales.map((closer) => {
+    const t = closerTotals[closer];
+    const daily = closerDailyMap[closer] ?? {};
+    const days = Object.entries(daily)
+      .filter(([date]) => {
+        if (rangeStart && rangeEnd) return date >= rangeStart && date <= rangeEnd;
+        return true;
+      })
+      .map(([date, d]) => ({ date, ...d }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    return {
+      closer,
+      llamadas: t.llamadas,
+      noShows: t.noShows,
+      celebradas: t.celebradas,
+      ventas: t.ventas,
+      cierre: t.celebradas > 0 ? ((t.ventas / t.celebradas) * 100).toFixed(1) : "0",
+      days,
+    };
+  });
 
   return NextResponse.json({
     stats: {
@@ -373,5 +539,7 @@ export async function GET(req: NextRequest) {
       types: affiliateTypes,
     },
     comerciales,
+    timeline,
+    closerPerformance,
   });
 }

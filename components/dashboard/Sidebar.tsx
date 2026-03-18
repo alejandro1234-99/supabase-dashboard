@@ -53,6 +53,7 @@ const navSections = [
     label: "Operativa producto",
     number: "3",
     items: [
+      { href: "/dashboard/gestion-exitos", label: "Gestion Casos de Exito", icon: Trophy },
       { href: "/dashboard/qa", label: "Q&A Pipeline", icon: HelpCircle },
       { href: "/dashboard/jobs", label: "Banco de Empleo", icon: Briefcase },
     ],
