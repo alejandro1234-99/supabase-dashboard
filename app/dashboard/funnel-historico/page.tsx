@@ -203,15 +203,16 @@ export default function HistoricoPage() {
                     const mediaCl = parseFloat(cierreLlamada);
                     const mediaCv = parseFloat(convLead);
 
-                    const varRa = mediaRa > 0 ? ((ra - mediaRa) / mediaRa) * 100 : 0;
-                    const varCl = mediaCl > 0 ? ((cl - mediaCl) / mediaCl) * 100 : 0;
-                    const varCv = mediaCv > 0 ? ((cv - mediaCv) / mediaCv) * 100 : 0;
+                    // Diferencia en puntos porcentuales (no relativa)
+                    const varRa = ra - mediaRa;
+                    const varCl = cl - mediaCl;
+                    const varCv = cv - mediaCv;
 
                     const cellClass = (v: number) =>
-                      v > 0.5 ? "bg-emerald-50 text-emerald-700" :
-                      v < -0.5 ? "bg-red-50 text-red-700" :
+                      v > 0.05 ? "bg-emerald-50 text-emerald-700" :
+                      v < -0.05 ? "bg-red-50 text-red-700" :
                       "bg-gray-50 text-gray-400";
-                    const fmtVar = (v: number) => v > 0 ? `+${v.toFixed(1)}%` : v < 0 ? `${v.toFixed(1)}%` : "—";
+                    const fmtVar = (v: number) => v > 0.05 ? `+${v.toFixed(1)} pp` : v < -0.05 ? `${v.toFixed(1)} pp` : "—";
 
                     return (
                       <tr key={d.edicion} className={`border-t border-gray-100 ${isEnCurso ? "bg-amber-50/20" : ""}`}>
