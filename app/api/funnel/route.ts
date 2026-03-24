@@ -2,16 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase";
 
 /**
- * Fetch all rows from a table, paginating in chunks of 1000 to bypass Supabase default limit.
+ * Fetch all rows using a query builder function.
+ * Creates a fresh query per page to avoid Supabase's .range() reuse issues.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function fetchAll(query: any): Promise<any[]> {
-  const PAGE = 5000;
+async function fetchAll(buildQuery: () => any): Promise<any[]> {
+  const PAGE = 1000;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const all: any[] = [];
   let from = 0;
   while (true) {
-    const { data } = await query.range(from, from + PAGE - 1);
+    const { data } = await buildQuery().range(from, from + PAGE - 1);
     if (!data || data.length === 0) break;
     all.push(...data);
     if (data.length < PAGE) break;
@@ -59,25 +60,32 @@ export async function GET(req: NextRequest) {
   const supabase = createAdminClient();
 
   // Fetch leads, agendas, sales IN PARALLEL
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let leadsQuery = (supabase.from("leads" as any) as any)
-    .select("email, edicion, funnel, medium, test, campaign, fuente_medio, fecha_registro");
-  if (edicion) leadsQuery = leadsQuery.eq("edicion", edicion);
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let agendasQuery = (supabase.from("agendas" as any) as any)
-    .select("email, edicion, comercial, no_show, fecha_llamada, creada");
-  if (edicion) agendasQuery = agendasQuery.eq("edicion", edicion);
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let salesQuery = (supabase.from("purchase_approved" as any) as any)
-    .select("correo_electronico, edicion, status, cash_collected, nombre_comercial, fecha_compra");
-  if (edicion) salesQuery = salesQuery.eq("edicion", edicion);
+  const buildLeads = () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let q = (supabase.from("leads" as any) as any)
+      .select("email, edicion, funnel, medium, test, campaign, fuente_medio, fecha_registro");
+    if (edicion) q = q.eq("edicion", edicion);
+    return q;
+  };
+  const buildAgendas = () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let q = (supabase.from("agendas" as any) as any)
+      .select("email, edicion, comercial, no_show, fecha_llamada, creada");
+    if (edicion) q = q.eq("edicion", edicion);
+    return q;
+  };
+  const buildSales = () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let q = (supabase.from("purchase_approved" as any) as any)
+      .select("correo_electronico, edicion, status, cash_collected, nombre_comercial, fecha_compra");
+    if (edicion) q = q.eq("edicion", edicion);
+    return q;
+  };
 
   const [leadsData, agendasData, salesData] = await Promise.all([
-    fetchAll(leadsQuery),
-    fetchAll(agendasQuery),
-    fetchAll(salesQuery),
+    fetchAll(buildLeads),
+    fetchAll(buildAgendas),
+    fetchAll(buildSales),
   ]);
 
   const leads = leadsData as {

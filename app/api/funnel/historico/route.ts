@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function fetchAll(query: any): Promise<any[]> {
-  const PAGE = 5000;
+async function fetchAll(buildQuery: () => any): Promise<any[]> {
+  const PAGE = 1000;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const all: any[] = [];
   let from = 0;
   while (true) {
-    const { data } = await query.range(from, from + PAGE - 1);
+    const { data } = await buildQuery().range(from, from + PAGE - 1);
     if (!data || data.length === 0) break;
     all.push(...data);
     if (data.length < PAGE) break;
@@ -42,11 +42,11 @@ export async function GET() {
   // Fetch ALL data in PARALLEL
   const [leads, agendas, sales] = await Promise.all([
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    fetchAll((supabase.from("leads" as any) as any).select("email, edicion, funnel, medium, test")),
+    fetchAll(() => (supabase.from("leads" as any) as any).select("email, edicion, funnel, medium, test")),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    fetchAll((supabase.from("agendas" as any) as any).select("email, edicion")),
+    fetchAll(() => (supabase.from("agendas" as any) as any).select("email, edicion")),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    fetchAll((supabase.from("purchase_approved" as any) as any).select("correo_electronico, edicion, cash_collected, status")),
+    fetchAll(() => (supabase.from("purchase_approved" as any) as any).select("correo_electronico, edicion, cash_collected, status")),
   ]);
 
   // Build email→source per edition
