@@ -109,37 +109,78 @@ export default function HistoricoPage() {
       </div>
 
       {/* Tabla resumen */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-gray-100 bg-gray-50/60">
-              <th className="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Edicion</th>
-              <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Leads</th>
-              <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Agendas</th>
-              <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Ventas</th>
-              <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Ratio agenda</th>
-              <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Cierre</th>
-              <th className="text-right px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Conv. lead</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {data.map((d) => (
-              <tr key={d.edicion} className="hover:bg-gray-50/50 transition-colors">
-                <td className="px-6 py-3.5 text-sm font-semibold text-gray-700">{d.edicion}</td>
-                <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">{d.leads.toLocaleString("es-ES")}</td>
-                <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">
-                  {d.agendasUnicas}
-                  <span className="text-xs font-normal text-gray-400 ml-1">({d.agendas})</span>
-                </td>
-                <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">{d.ventas}</td>
-                <td className="text-right px-4 py-3.5 text-sm font-semibold text-emerald-600">{d.convLeadAgenda}%</td>
-                <td className="text-right px-4 py-3.5 text-sm font-semibold text-indigo-600">{d.convAgendaVenta}%</td>
-                <td className="text-right px-6 py-3.5 text-sm font-semibold text-amber-600">{d.convLeadVenta}%</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {(() => {
+        // Ediciones cerradas = todas menos la ultima (la en curso)
+        const closed = data.length > 1 ? data.slice(0, -1) : [];
+        const closedCount = closed.length;
+        const avgLeads = closedCount > 0 ? Math.round(closed.reduce((s, d) => s + d.leads, 0) / closedCount) : 0;
+        const avgAgendas = closedCount > 0 ? Math.round(closed.reduce((s, d) => s + d.agendas, 0) / closedCount) : 0;
+        const avgAgendasUnicas = closedCount > 0 ? Math.round(closed.reduce((s, d) => s + d.agendasUnicas, 0) / closedCount) : 0;
+        const avgVentas = closedCount > 0 ? Math.round(closed.reduce((s, d) => s + d.ventas, 0) / closedCount) : 0;
+        // Ratios desde totales agregados (no media de medias)
+        const sumLeads = closed.reduce((s, d) => s + d.leads, 0);
+        const sumAgendasU = closed.reduce((s, d) => s + d.agendasUnicas, 0);
+        const sumVentas = closed.reduce((s, d) => s + d.ventas, 0);
+        const ratioAgenda = sumLeads > 0 ? ((sumAgendasU / sumLeads) * 100).toFixed(1) : "0";
+        const cierreLlamada = sumAgendasU > 0 ? ((sumVentas / sumAgendasU) * 100).toFixed(1) : "0";
+        const convLead = sumLeads > 0 ? ((sumVentas / sumLeads) * 100).toFixed(1) : "0";
+
+        return (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50/60">
+                  <th className="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Edicion</th>
+                  <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Leads</th>
+                  <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Agendas</th>
+                  <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Ventas</th>
+                  <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Ratio agenda</th>
+                  <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Cierre</th>
+                  <th className="text-right px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Conv. lead</th>
+                </tr>
+              </thead>
+              <tbody>
+                {/* Fila media — referencia de ediciones cerradas */}
+                {closedCount > 0 && (
+                  <tr className="bg-indigo-50/60 border-b-2 border-indigo-200">
+                    <td className="px-6 py-3 text-sm font-black text-indigo-700">Media <span className="text-xs font-normal text-indigo-400">({closedCount} ed. cerradas)</span></td>
+                    <td className="text-right px-4 py-3 text-sm font-bold text-indigo-900">{avgLeads.toLocaleString("es-ES")}</td>
+                    <td className="text-right px-4 py-3 text-sm font-bold text-indigo-900">
+                      {avgAgendasUnicas}
+                      <span className="text-xs font-normal text-indigo-400 ml-1">({avgAgendas})</span>
+                    </td>
+                    <td className="text-right px-4 py-3 text-sm font-bold text-indigo-900">{avgVentas}</td>
+                    <td className="text-right px-4 py-3 text-sm font-black text-indigo-600">{ratioAgenda}%</td>
+                    <td className="text-right px-4 py-3 text-sm font-black text-indigo-600">{cierreLlamada}%</td>
+                    <td className="text-right px-6 py-3 text-sm font-black text-indigo-600">{convLead}%</td>
+                  </tr>
+                )}
+                {/* Filas por edicion */}
+                {data.map((d, idx) => {
+                  const isEnCurso = idx === data.length - 1;
+                  return (
+                    <tr key={d.edicion} className={`border-t border-gray-50 hover:bg-gray-50/50 transition-colors ${isEnCurso ? "bg-amber-50/30" : ""}`}>
+                      <td className="px-6 py-3.5 text-sm font-semibold text-gray-700">
+                        {d.edicion}
+                        {isEnCurso && <span className="text-[10px] font-normal text-amber-500 ml-2">en curso</span>}
+                      </td>
+                      <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">{d.leads.toLocaleString("es-ES")}</td>
+                      <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">
+                        {d.agendasUnicas}
+                        <span className="text-xs font-normal text-gray-400 ml-1">({d.agendas})</span>
+                      </td>
+                      <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">{d.ventas}</td>
+                      <td className="text-right px-4 py-3.5 text-sm font-semibold text-emerald-600">{d.convLeadAgenda}%</td>
+                      <td className="text-right px-4 py-3.5 text-sm font-semibold text-indigo-600">{d.convAgendaVenta}%</td>
+                      <td className="text-right px-6 py-3.5 text-sm font-semibold text-amber-600">{d.convLeadVenta}%</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        );
+      })()}
 
       {/* Embudo por edicion */}
       <div className="grid grid-cols-2 gap-4">
