@@ -7,7 +7,7 @@ import { createAdminClient } from "@/lib/supabase";
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function fetchAll(buildQuery: () => any): Promise<any[]> {
-  const PAGE = 1000;
+  const PAGE = 50000;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const all: any[] = [];
   let from = 0;
