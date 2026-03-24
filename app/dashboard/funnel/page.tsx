@@ -491,54 +491,6 @@ export default function FunnelPage() {
                     </table>
                   </div>
 
-                  {/* Detalle por dia y closer */}
-                  <h3 className="text-sm font-bold text-gray-700 mt-2">Detalle por dia</h3>
-                  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
-                    <table className="w-full min-w-[700px]">
-                      <thead>
-                        <tr className="border-b border-gray-100 bg-gray-50/60">
-                          <th className="text-left px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Dia</th>
-                          {closerPerformance.map((c) => (
-                            <th key={c.closer} colSpan={3} className="text-center px-2 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide border-l border-gray-100">
-                              {c.closer}
-                            </th>
-                          ))}
-                        </tr>
-                        <tr className="border-b border-gray-100 bg-gray-50/40">
-                          <th />
-                          {closerPerformance.map((c) => (
-                            <React.Fragment key={c.closer}>
-                              <th className="text-right px-2 py-2 text-[10px] font-bold text-gray-400 uppercase border-l border-gray-100">Llam</th>
-                              <th className="text-right px-2 py-2 text-[10px] font-bold text-gray-400 uppercase">Vent</th>
-                              <th className="text-right px-2 py-2 text-[10px] font-bold text-gray-400 uppercase">%</th>
-                            </React.Fragment>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-50">
-                        {timeline.map((t) => (
-                          <tr key={t.date} className="hover:bg-gray-50/50 transition-colors">
-                            <td className="px-5 py-2.5 text-xs font-semibold text-gray-600">
-                              {new Date(t.date).toLocaleDateString("es-ES", { day: "numeric", month: "short", weekday: "short" })}
-                            </td>
-                            {closerPerformance.map((c) => {
-                              const dayData = c.days.find((d) => d.date === t.date);
-                              const cel = dayData ? dayData.celebradas : 0;
-                              const ven = dayData ? dayData.ventas : 0;
-                              const pct = cel > 0 ? ((ven / cel) * 100).toFixed(0) : "—";
-                              return (
-                                <React.Fragment key={c.closer}>
-                                  <td className="text-right px-2 py-2.5 text-xs text-gray-600 border-l border-gray-100">{cel || <span className="text-gray-300">—</span>}</td>
-                                  <td className="text-right px-2 py-2.5 text-xs font-bold text-emerald-600">{ven || <span className="text-gray-300 font-normal">—</span>}</td>
-                                  <td className="text-right px-2 py-2.5 text-xs font-semibold text-gray-500">{pct === "—" ? <span className="text-gray-300">—</span> : `${pct}%`}</td>
-                                </React.Fragment>
-                              );
-                            })}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
               </>
           </>
 
@@ -887,6 +839,55 @@ export default function FunnelPage() {
                 </table>
               </div>
           </>)}
+
+          {/* Detalle por dia y closer */}
+          <h3 className="text-sm font-bold text-gray-700 mt-2">Detalle por dia</h3>
+          <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-x-auto">
+            <table className="w-full min-w-[700px]" style={{ fontSize: "11px" }}>
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50/60">
+                  <th className="text-left px-3 py-1 text-[10px] font-bold text-gray-400 uppercase">Dia</th>
+                  {closerPerformance.map((c) => (
+                    <th key={c.closer} colSpan={3} className="text-center px-2 py-1 text-[10px] font-bold text-gray-500 uppercase border-l border-gray-100">
+                      {c.closer}
+                    </th>
+                  ))}
+                </tr>
+                <tr className="border-b border-gray-100 bg-gray-50/40">
+                  <th />
+                  {closerPerformance.map((c) => (
+                    <React.Fragment key={c.closer}>
+                      <th className="text-right px-2 py-0.5 text-[9px] font-bold text-gray-400 uppercase border-l border-gray-100">Llam</th>
+                      <th className="text-right px-2 py-0.5 text-[9px] font-bold text-gray-400 uppercase">Vent</th>
+                      <th className="text-right px-2 py-0.5 text-[9px] font-bold text-gray-400 uppercase">%</th>
+                    </React.Fragment>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {timeline.map((t) => (
+                  <tr key={t.date} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-3 py-0.5 text-xs font-semibold text-gray-600">
+                      {new Date(t.date).toLocaleDateString("es-ES", { day: "numeric", month: "short", weekday: "short" })}
+                    </td>
+                    {closerPerformance.map((c) => {
+                      const dayData = c.days.find((d) => d.date === t.date);
+                      const cel = dayData ? dayData.celebradas : 0;
+                      const ven = dayData ? dayData.ventas : 0;
+                      const pct = cel > 0 ? ((ven / cel) * 100).toFixed(0) : "—";
+                      return (
+                        <React.Fragment key={c.closer}>
+                          <td className="text-right px-2 py-0.5 text-xs text-gray-600 border-l border-gray-100">{cel || <span className="text-gray-300">—</span>}</td>
+                          <td className="text-right px-2 py-0.5 text-xs font-bold text-emerald-600">{ven || <span className="text-gray-300 font-normal">—</span>}</td>
+                          <td className="text-right px-2 py-0.5 text-xs font-semibold text-gray-500">{pct === "—" ? <span className="text-gray-300">—</span> : `${pct}%`}</td>
+                        </React.Fragment>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           {/* 7. Conclusiones del lanzamiento */}
           <div className="mt-2">
