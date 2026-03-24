@@ -125,7 +125,7 @@ export default function HistoricoPage() {
         const cierreLlamada = sumAgendasU > 0 ? ((sumVentas / sumAgendasU) * 100).toFixed(1) : "0";
         const convLead = sumLeads > 0 ? ((sumVentas / sumLeads) * 100).toFixed(1) : "0";
 
-        return (
+        return (<>
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <table className="w-full">
               <thead>
@@ -179,7 +179,63 @@ export default function HistoricoPage() {
               </tbody>
             </table>
           </div>
-        );
+
+          {/* Matriz de variaciones vs media */}
+          {closedCount > 0 && (
+            <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden mt-2">
+              <table className="w-full" style={{ fontSize: "11px" }}>
+                <thead>
+                  <tr className="bg-gray-800"><td colSpan={4} className="px-3 py-1 text-[10px] font-bold text-white uppercase tracking-widest">Variacion vs media</td></tr>
+                  <tr className="border-b border-gray-100 bg-gray-50/60">
+                    <th className="text-left px-3 py-1 text-[10px] font-bold text-gray-400 uppercase">Edicion</th>
+                    <th className="text-right px-3 py-1 text-[10px] font-bold text-gray-400 uppercase">Ratio agenda</th>
+                    <th className="text-right px-3 py-1 text-[10px] font-bold text-gray-400 uppercase">Cierre llamada</th>
+                    <th className="text-right px-3 py-1 text-[10px] font-bold text-gray-400 uppercase">Conv. lead</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.map((d, idx) => {
+                    const isEnCurso = idx === data.length - 1;
+                    const ra = parseFloat(d.convLeadAgenda);
+                    const cl = parseFloat(d.convAgendaVenta);
+                    const cv = parseFloat(d.convLeadVenta);
+                    const mediaRa = parseFloat(ratioAgenda);
+                    const mediaCl = parseFloat(cierreLlamada);
+                    const mediaCv = parseFloat(convLead);
+
+                    const varRa = mediaRa > 0 ? ((ra - mediaRa) / mediaRa) * 100 : 0;
+                    const varCl = mediaCl > 0 ? ((cl - mediaCl) / mediaCl) * 100 : 0;
+                    const varCv = mediaCv > 0 ? ((cv - mediaCv) / mediaCv) * 100 : 0;
+
+                    const cellClass = (v: number) =>
+                      v > 0.5 ? "bg-emerald-50 text-emerald-700" :
+                      v < -0.5 ? "bg-red-50 text-red-700" :
+                      "bg-gray-50 text-gray-400";
+                    const fmtVar = (v: number) => v > 0 ? `+${v.toFixed(1)}%` : v < 0 ? `${v.toFixed(1)}%` : "—";
+
+                    return (
+                      <tr key={d.edicion} className={`border-t border-gray-100 ${isEnCurso ? "bg-amber-50/20" : ""}`}>
+                        <td className="px-3 py-0.5 text-xs font-semibold text-gray-700">
+                          {isEnCurso ? <span className="italic text-amber-600">{d.edicion} <span className="text-[9px] font-normal">en curso</span></span> : d.edicion}
+                        </td>
+                        <td className={`text-right px-3 py-0.5 text-xs font-bold ${cellClass(varRa)}`}>{fmtVar(varRa)}</td>
+                        <td className={`text-right px-3 py-0.5 text-xs font-bold ${cellClass(varCl)}`}>{fmtVar(varCl)}</td>
+                        <td className={`text-right px-3 py-0.5 text-xs font-bold ${cellClass(varCv)}`}>{fmtVar(varCv)}</td>
+                      </tr>
+                    );
+                  })}
+                  {/* Fila media referencia */}
+                  <tr className="border-t-2 border-indigo-200 bg-indigo-50/40">
+                    <td className="px-3 py-0.5 text-xs font-black text-indigo-700">Media</td>
+                    <td className="text-right px-3 py-0.5 text-xs text-gray-400">—</td>
+                    <td className="text-right px-3 py-0.5 text-xs text-gray-400">—</td>
+                    <td className="text-right px-3 py-0.5 text-xs text-gray-400">—</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>);
       })()}
 
       {/* Embudo por edicion */}
