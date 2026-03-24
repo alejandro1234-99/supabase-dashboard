@@ -21,7 +21,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
 
 // CSV files to import
 const CSV_FILES = [
-  resolve(process.env.HOME!, "Desktop/enero.csv"),
+  resolve(process.env.HOME!, "Downloads/Leads Registro Marzo 2025 Revolutia - MAR26.csv"),
 ];
 
 /**
@@ -167,7 +167,7 @@ function parseFile(filePath: string): LeadRow[] {
 
     if (!email) { skipped++; continue; }
 
-    const edicionRaw = get(cols, "edicion") ?? "Enero 2026";
+    const edicionRaw = get(cols, "edicion") ?? "Marzo 2026";
 
     rows.push({
       fecha_registro: parseDate(get(cols, "fecha registrofirst") ?? "") ?? null,

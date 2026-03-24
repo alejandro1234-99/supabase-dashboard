@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
   // Aggregated stats (all records, not paginated)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: allData } = await (supabase.from("course_feedback" as any) as any)
-    .select("semana, rating");
+    .select("semana, rating, submitted_at");
 
   const all = allData ?? [];
 
@@ -44,6 +44,43 @@ export async function GET(req: NextRequest) {
       count: c,
     }));
 
+  // Timeline: by day, calendar week, and month
+  const byDay: Record<string, { sum: number; count: number }> = {};
+  const byCalWeek: Record<string, { sum: number; count: number }> = {};
+  const byMonth: Record<string, { sum: number; count: number }> = {};
+
+  for (const r of all as { rating: number; submitted_at: string }[]) {
+    const d = new Date(r.submitted_at);
+    const day = d.toISOString().split("T")[0];
+    const month = day.substring(0, 7);
+    // ISO week
+    const tmp = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    tmp.setUTCDate(tmp.getUTCDate() + 4 - (tmp.getUTCDay() || 7));
+    const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
+    const weekNum = Math.ceil((((tmp.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+    const weekKey = `${tmp.getUTCFullYear()}-W${String(weekNum).padStart(2, "0")}`;
+
+    if (!byDay[day]) byDay[day] = { sum: 0, count: 0 };
+    byDay[day].sum += r.rating; byDay[day].count++;
+
+    if (!byCalWeek[weekKey]) byCalWeek[weekKey] = { sum: 0, count: 0 };
+    byCalWeek[weekKey].sum += r.rating; byCalWeek[weekKey].count++;
+
+    if (!byMonth[month]) byMonth[month] = { sum: 0, count: 0 };
+    byMonth[month].sum += r.rating; byMonth[month].count++;
+  }
+
+  const toTimeline = (map: Record<string, { sum: number; count: number }>) =>
+    Object.entries(map)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, { sum, count: c }]) => ({ key, avg: parseFloat((sum / c).toFixed(2)), count: c }));
+
+  const ratingTimeline = {
+    byDay: toTimeline(byDay),
+    byWeek: toTimeline(byCalWeek),
+    byMonth: toTimeline(byMonth),
+  };
+
   const totalResponses = all.length;
   const globalAvg = totalResponses > 0
     ? parseFloat(((all as { rating: number }[]).reduce((s, r) => s + r.rating, 0) / totalResponses).toFixed(2))
@@ -59,6 +96,7 @@ export async function GET(req: NextRequest) {
     globalAvg,
     semanasActivas,
     semanaStats,
+    ratingTimeline,
   });
 }
 

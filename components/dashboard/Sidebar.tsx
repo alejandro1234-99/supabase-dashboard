@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Users, BarChart3, Activity,
   Star, Award, MessageSquare,
   ShoppingCart, CalendarDays, ClipboardList, Trophy, PlayCircle,
-  Headphones, HelpCircle, Globe, ChevronDown, LogOut, Briefcase, GitMerge, TrendingUp,
+  Headphones, HelpCircle, Globe, ChevronDown, LogOut, Briefcase, GitMerge, TrendingUp, FileText, Presentation,
 } from "lucide-react";
 
 const SECTION_STYLES: Record<string, { bg: string; text: string; border: string; activeBg: string; activeText: string; activeBar: string; number: string }> = {
@@ -40,6 +40,7 @@ const navSections = [
     label: "Panel de producto",
     number: "2",
     items: [
+      { href: "/dashboard/reembolsos", label: "Reembolsos", icon: ClipboardList },
       { href: "/dashboard/reviews", label: "Reviews", icon: Star },
       { href: "/dashboard/feedback", label: "NPS Formacion", icon: MessageSquare },
       { href: "/dashboard/arp", label: "Certificados ARP", icon: Award },
@@ -53,9 +54,12 @@ const navSections = [
     label: "Operativa producto",
     number: "3",
     items: [
+      { href: "/dashboard/onboardings", label: "Onboardings", icon: ClipboardList },
       { href: "/dashboard/gestion-exitos", label: "Gestion Casos de Exito", icon: Trophy },
       { href: "/dashboard/qa", label: "Q&A Pipeline", icon: HelpCircle },
       { href: "/dashboard/jobs", label: "Banco de Empleo", icon: Briefcase },
+      { href: "/dashboard/documentos", label: "Documentos y Accesos", icon: FileText },
+      { href: "/dashboard/workshops", label: "Workshops", icon: Presentation },
     ],
   },
 ];

@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Loader2, MessageSquare, Star, TrendingUp, Users, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LineChart, Line } from "recharts";
 
 type FeedbackItem = {
   id: string;
@@ -169,6 +169,8 @@ function AvgChart({ semanaStats }: { semanaStats: SemanaStats[] }) {
 export default function FeedbackPage() {
   const [items, setItems] = useState<FeedbackItem[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [ratingTimeline, setRatingTimeline] = useState<{ byDay: { key: string; avg: number; count: number }[]; byWeek: { key: string; avg: number; count: number }[]; byMonth: { key: string; avg: number; count: number }[] }>({ byDay: [], byWeek: [], byMonth: [] });
+  const [timelineView, setTimelineView] = useState<"byWeek" | "byDay" | "byMonth">("byWeek");
   const [count, setCount] = useState(0);
   const [page, setPage] = useState(1);
   const [semanaFilter, setSemanaFilter] = useState<number | null>(null);
@@ -191,6 +193,7 @@ export default function FeedbackPage() {
           semanasActivas: d.semanasActivas,
           semanaStats: d.semanaStats ?? [],
         });
+        setRatingTimeline(d.ratingTimeline ?? { byDay: [], byWeek: [], byMonth: [] });
       })
       .finally(() => setLoading(false));
   }, [page, semanaFilter]);
@@ -260,8 +263,56 @@ export default function FeedbackPage() {
             </div>
           </div>
 
-          {/* Gráfica */}
+          {/* Gráfica por módulo */}
           {stats.semanaStats.length > 0 && <AvgChart semanaStats={stats.semanaStats} />}
+
+          {/* Gráfica temporal de valoraciones */}
+          {ratingTimeline.byWeek.length > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="font-bold text-gray-900 text-sm">Media de valoraciones en el tiempo</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">Evolucion de la nota media (todos los cursos)</p>
+                </div>
+                <div className="flex bg-gray-100 rounded-lg p-0.5 gap-0.5">
+                  {([["byDay", "Dias"], ["byWeek", "Semanas"], ["byMonth", "Meses"]] as const).map(([v, l]) => (
+                    <button key={v} onClick={() => setTimelineView(v)}
+                      className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${timelineView === v ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"}`}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <ResponsiveContainer width="100%" height={260}>
+                <LineChart data={ratingTimeline[timelineView].map((d) => {
+                  let label = d.key;
+                  if (timelineView === "byDay") label = new Date(d.key).toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+                  else if (timelineView === "byWeek") label = d.key.replace(/^\d{4}-/, "");
+                  else if (timelineView === "byMonth") {
+                    const [y, m] = d.key.split("-");
+                    const names: Record<string, string> = { "01": "Ene", "02": "Feb", "03": "Mar", "04": "Abr", "05": "May", "06": "Jun", "07": "Jul", "08": "Ago", "09": "Sep", "10": "Oct", "11": "Nov", "12": "Dic" };
+                    label = `${names[m] ?? m} ${y.substring(2)}`;
+                  }
+                  return { label, avg: d.avg, count: d.count };
+                })}>
+                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+                  <YAxis domain={[1, 5]} tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+                  <Tooltip content={({ active, payload, label }) => {
+                    if (!active || !payload?.length) return null;
+                    const d = payload[0].payload as { avg: number; count: number };
+                    return (
+                      <div className="bg-white border border-gray-100 shadow-lg rounded-xl px-3 py-2 text-xs">
+                        <p className="font-semibold text-gray-700">{label}</p>
+                        <p className="font-bold text-amber-500">{d.avg.toFixed(2)} / 5</p>
+                        <p className="text-gray-400">{d.count} respuestas</p>
+                      </div>
+                    );
+                  }} />
+                  <Line type="monotone" dataKey="avg" stroke="#f59e0b" strokeWidth={2.5} dot={{ r: 3, fill: "#f59e0b" }} activeDot={{ r: 5 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </>
       )}
 
