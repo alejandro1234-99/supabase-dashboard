@@ -41,10 +41,16 @@ const EDICIONES = ["Noviembre 2025", "Enero 2026", "Febrero 2026", "Marzo 2026"]
 const HISTORICAL_OVERRIDES: Record<string, {
   leads: number; agendas: number; agendasUnicas: number; ventas: number; cash: number;
   convLeadAgenda: string; convAgendaVenta: string; convLeadVenta: string;
+  leadsBySource: Record<Source, number>;
+  agendasBySource: Record<Source, number>;
+  ventasBySource: Record<Source, number>;
 }> = {
   "Noviembre 2025": {
-    leads: 6853, agendas: 180, agendasUnicas: 180, ventas: 62, cash: 0,
-    convLeadAgenda: "2.6", convAgendaVenta: "34.4", convLeadVenta: "0.9",
+    leads: 6853, agendas: 180, agendasUnicas: 180, ventas: 60, cash: 0,
+    convLeadAgenda: "2.6", convAgendaVenta: "33.3", convLeadVenta: "0.9",
+    leadsBySource: { Paid: 5628, Organico: 467, Afiliados: 732, Untracked: 26 },
+    agendasBySource: { Paid: 98, Organico: 11, Afiliados: 23, Untracked: 48 },
+    ventasBySource: { Paid: 29, Organico: 2, Afiliados: 10, Untracked: 19 },
   },
 };
 
@@ -75,13 +81,7 @@ export async function GET() {
     const override = HISTORICAL_OVERRIDES[ed];
     const edLeads = leads.filter((r: { edicion: string }) => r.edicion === ed);
     if (override && edLeads.length === 0) {
-      return {
-        edicion: ed,
-        ...override,
-        leadsBySource: { Paid: 0, Organico: 0, Afiliados: 0, Untracked: override.leads } as Record<Source, number>,
-        agendasBySource: { Paid: 0, Organico: 0, Afiliados: 0, Untracked: override.agendas } as Record<Source, number>,
-        ventasBySource: { Paid: 0, Organico: 0, Afiliados: 0, Untracked: override.ventas } as Record<Source, number>,
-      };
+      return { edicion: ed, ...override };
     }
 
     const edAgendas = agendas.filter((r: { edicion: string }) => r.edicion === ed);
