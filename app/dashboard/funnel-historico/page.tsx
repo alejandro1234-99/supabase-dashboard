@@ -209,30 +209,29 @@ export default function HistoricoPage() {
 
         {/* Herramienta 2 — Barras agrupadas */}
         <div className="px-3 py-2 border-b border-gray-100">
-          <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">Volumen por edicion</p>
+          <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">Ratios por edicion (barras)</p>
           <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={filteredData.map((d, idx) => ({
+            <BarChart data={filteredData.map((d) => ({
               ed: d.edicion.replace(" 2025", " 25").replace(" 2026", " 26"),
-              Leads: d.leads,
-              Agendas: d.agendasUnicas,
-              Ventas: d.ventas,
-              _enCurso: idx === filteredData.length - 1 && d.edicion === data[data.length - 1]?.edicion,
+              "Ratio agenda": parseFloat(d.convLeadAgenda),
+              "Cierre llamada": parseFloat(d.convAgendaVenta),
+              "Conv. lead": parseFloat(d.convLeadVenta),
             }))} barCategoryGap="20%">
               <XAxis dataKey="ed" tick={{ fontSize: 9, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 9, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 9, fill: "#9ca3af" }} axisLine={false} tickLine={false} unit="%" />
               <Tooltip content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
                 return (
                   <div className="bg-white border border-gray-200 shadow-lg rounded-lg px-2 py-1.5 text-[10px]">
                     <p className="font-bold text-gray-700 mb-0.5">{label}</p>
-                    {payload.map((p) => <p key={String(p.dataKey)} style={{ color: p.color }}>{String(p.dataKey)}: {Number(p.value).toLocaleString("es-ES")}</p>)}
+                    {payload.map((p) => <p key={String(p.dataKey)} style={{ color: p.color }}>{String(p.dataKey)}: {p.value}%</p>)}
                   </div>
                 );
               }} />
               <Legend wrapperStyle={{ fontSize: 10 }} />
-              <Bar dataKey="Leads" radius={[3, 3, 0, 0]} fill="#0ea5e9" />
-              <Bar dataKey="Agendas" radius={[3, 3, 0, 0]} fill="#8b5cf6" />
-              <Bar dataKey="Ventas" radius={[3, 3, 0, 0]} fill="#f59e0b" />
+              <Bar dataKey="Ratio agenda" radius={[3, 3, 0, 0]} fill="#0ea5e9" />
+              <Bar dataKey="Cierre llamada" radius={[3, 3, 0, 0]} fill="#8b5cf6" />
+              <Bar dataKey="Conv. lead" radius={[3, 3, 0, 0]} fill="#f59e0b" />
             </BarChart>
           </ResponsiveContainer>
         </div>
