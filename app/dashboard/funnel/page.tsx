@@ -374,7 +374,7 @@ export default function FunnelPage() {
                   <span className="text-white text-sm font-black">%</span>
                 </div>
                 <div>
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Conversion lead → venta</p>
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Conv. lead → venta</p>
                   <p className="text-2xl font-black text-emerald-700 leading-tight">{stats.convLeadVenta}% <span className="text-sm font-medium text-emerald-500">lead → venta</span></p>
                 </div>
               </div>
@@ -394,7 +394,7 @@ export default function FunnelPage() {
                   <span className="text-white text-sm font-black">%</span>
                 </div>
                 <div>
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Ratio de agenda</p>
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Ratio agenda</p>
                   <p className="text-2xl font-black text-indigo-700 leading-tight">{stats.convLeadAgenda}% <span className="text-sm font-medium text-indigo-500">lead → agenda</span></p>
                 </div>
               </div>
@@ -414,7 +414,7 @@ export default function FunnelPage() {
                   <span className="text-white text-sm font-black">%</span>
                 </div>
                 <div>
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Cierre de llamada</p>
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Cierre llamada</p>
                   <p className="text-2xl font-black text-amber-700 leading-tight">{stats.convAgendaVenta}% <span className="text-sm font-medium text-amber-500">agenda → venta</span></p>
                 </div>
               </div>
@@ -473,7 +473,7 @@ export default function FunnelPage() {
                           <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">No shows</th>
                           <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Celebradas</th>
                           <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Ventas</th>
-                          <th className="text-right px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Cierre de llamada</th>
+                          <th className="text-right px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Cierre llamada</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
@@ -508,9 +508,9 @@ export default function FunnelPage() {
                     <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">%</th>
                     <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Ventas</th>
                     <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">%</th>
-                    <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">R. agenda</th>
+                    <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Ratio agenda</th>
                     <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Cierre</th>
-                    <th className="text-right px-3 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Conv. L→V</th>
+                    <th className="text-right px-3 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Conv. lead</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -608,9 +608,9 @@ export default function FunnelPage() {
                       <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">%</th>
                       <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Ventas</th>
                       <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">%</th>
-                      <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Ratio de agenda</th>
-                      <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Conv. L→V</th>
-                      <th className="text-right px-3 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Cierre de llamada</th>
+                      <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Ratio agenda</th>
+                      <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Conv. lead</th>
+                      <th className="text-right px-3 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Cierre llamada</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -762,7 +762,7 @@ export default function FunnelPage() {
                       <th rowSpan={2} className="text-left px-3 py-0.5 text-[10px] font-bold text-gray-400 uppercase border-r border-gray-100">Closing</th>
                       <th rowSpan={2} className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Agendas</th>
                       <th rowSpan={2} className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Ventas</th>
-                      <th rowSpan={2} className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase border-r border-gray-100">Cierre de llamada</th>
+                      <th rowSpan={2} className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase border-r border-gray-100">Cierre llamada</th>
                       <th colSpan={7} className="text-center px-2 py-0.5 text-xs font-bold text-blue-500 uppercase tracking-wide border-r border-gray-100">Paid</th>
                       <th colSpan={3} className="text-center px-2 py-0.5 text-xs font-bold text-emerald-500 uppercase tracking-wide">Organico</th>
                     </tr>
@@ -776,7 +776,7 @@ export default function FunnelPage() {
                       <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase border-r border-gray-100">% AV0 / AV2</th>
                       <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Agendas</th>
                       <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Ventas</th>
-                      <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Cierre de llamada</th>
+                      <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Cierre llamada</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">

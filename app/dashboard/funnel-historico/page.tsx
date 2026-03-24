@@ -62,8 +62,8 @@ export default function HistoricoPage() {
 
   const conversionData = data.map((d) => ({
     edicion: d.edicion,
-    "Ratio de agenda": parseFloat(d.convLeadAgenda),
-    "Cierre de llamada": parseFloat(d.convAgendaVenta),
+    "Ratio agenda": parseFloat(d.convLeadAgenda),
+    "Cierre llamada": parseFloat(d.convAgendaVenta),
     "Conv. lead → venta": parseFloat(d.convLeadVenta),
   }));
 
@@ -117,9 +117,9 @@ export default function HistoricoPage() {
               <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Leads</th>
               <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Agendas</th>
               <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Ventas</th>
-              <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">R. agenda</th>
+              <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Ratio agenda</th>
               <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Cierre</th>
-              <th className="text-right px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Conv. L→V</th>
+              <th className="text-right px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Conv. lead</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -198,8 +198,8 @@ export default function HistoricoPage() {
                 }}
               />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Line type="monotone" dataKey="Ratio de agenda" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} />
-              <Line type="monotone" dataKey="Cierre de llamada" stroke="#6366f1" strokeWidth={2} dot={{ r: 4 }} />
+              <Line type="monotone" dataKey="Ratio agenda" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} />
+              <Line type="monotone" dataKey="Cierre llamada" stroke="#6366f1" strokeWidth={2} dot={{ r: 4 }} />
               <Line type="monotone" dataKey="Conv. lead → venta" stroke="#f59e0b" strokeWidth={2} dot={{ r: 4 }} />
             </LineChart>
           </ResponsiveContainer>

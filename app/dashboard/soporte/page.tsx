@@ -133,7 +133,7 @@ export default function SoportePage() {
           <StatCard icon={CheckCircle}   label="Cerradas"      value={stats.totalCerradas}      color="bg-emerald-500" />
           <StatCard icon={Clock}         label="Pendientes"    value={stats.totalPendientes}     color="bg-amber-500" />
           <StatCard icon={AlertTriangle} label="Escaladas"     value={stats.totalEscaladas}      color="bg-rose-500" />
-          <StatCard icon={TrendingUp}    label="Cierre de llamada"   value={`${stats.tasaCierre}%`}   color="bg-violet-500" />
+          <StatCard icon={TrendingUp}    label="Cierre llamada"   value={`${stats.tasaCierre}%`}   color="bg-violet-500" />
         </div>
       )}
 
