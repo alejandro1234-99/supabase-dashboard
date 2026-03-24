@@ -226,10 +226,10 @@ export default function HistoricoPage() {
                   })}
                   {/* Fila media referencia */}
                   <tr className="border-t-2 border-indigo-200 bg-indigo-50/40">
-                    <td className="px-3 py-0.5 text-xs font-black text-indigo-700">Media</td>
-                    <td className="text-right px-3 py-0.5 text-xs text-gray-400">—</td>
-                    <td className="text-right px-3 py-0.5 text-xs text-gray-400">—</td>
-                    <td className="text-right px-3 py-0.5 text-xs text-gray-400">—</td>
+                    <td className="px-3 py-0.5 text-xs font-black text-indigo-700">Media <span className="font-normal text-indigo-400">({closedCount} ed.)</span></td>
+                    <td className="text-right px-3 py-0.5 text-xs font-bold text-indigo-600">{ratioAgenda}%</td>
+                    <td className="text-right px-3 py-0.5 text-xs font-bold text-indigo-600">{cierreLlamada}%</td>
+                    <td className="text-right px-3 py-0.5 text-xs font-bold text-indigo-600">{convLead}%</td>
                   </tr>
                 </tbody>
               </table>
