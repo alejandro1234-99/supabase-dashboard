@@ -34,7 +34,19 @@ function classifyLead(lead: { funnel: string | null; medium: string | null; test
   return "Untracked";
 }
 
-const EDICIONES = ["Enero 2026", "Febrero 2026", "Marzo 2026"];
+const EDICIONES = ["Noviembre 2025", "Enero 2026", "Febrero 2026", "Marzo 2026"];
+
+// Ediciones con datos resumidos (sin detalle por filas en Supabase)
+// Se inyectan directamente cuando no hay datos suficientes en las tablas
+const HISTORICAL_OVERRIDES: Record<string, {
+  leads: number; agendas: number; agendasUnicas: number; ventas: number; cash: number;
+  convLeadAgenda: string; convAgendaVenta: string; convLeadVenta: string;
+}> = {
+  "Noviembre 2025": {
+    leads: 6853, agendas: 180, agendasUnicas: 180, ventas: 62, cash: 0,
+    convLeadAgenda: "2.6", convAgendaVenta: "34.4", convLeadVenta: "0.9",
+  },
+};
 
 export async function GET() {
   const supabase = createAdminClient();
@@ -59,7 +71,19 @@ export async function GET() {
   }
 
   const ediciones = EDICIONES.map((ed) => {
+    // Use historical override if available and no real data
+    const override = HISTORICAL_OVERRIDES[ed];
     const edLeads = leads.filter((r: { edicion: string }) => r.edicion === ed);
+    if (override && edLeads.length === 0) {
+      return {
+        edicion: ed,
+        ...override,
+        leadsBySource: { Paid: 0, Organico: 0, Afiliados: 0, Untracked: override.leads } as Record<Source, number>,
+        agendasBySource: { Paid: 0, Organico: 0, Afiliados: 0, Untracked: override.agendas } as Record<Source, number>,
+        ventasBySource: { Paid: 0, Organico: 0, Afiliados: 0, Untracked: override.ventas } as Record<Source, number>,
+      };
+    }
+
     const edAgendas = agendas.filter((r: { edicion: string }) => r.edicion === ed);
     const edSales = sales.filter((r: { edicion: string }) => r.edicion === ed);
     const edAgendasUnicas = new Set(edAgendas.map((r: { email: string }) => r.email?.toLowerCase()).filter(Boolean)).size;
