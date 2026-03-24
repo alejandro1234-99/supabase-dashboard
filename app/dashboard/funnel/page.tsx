@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
+import { swr, invalidateCache } from "@/lib/cached-fetch";
 import { Loader2, Users, CalendarDays, ShoppingCart, ChevronDown, TrendingUp, Plus, Save, Edit3, Trash2, X, FileText, Lightbulb, AlertTriangle } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
@@ -146,32 +147,37 @@ export default function FunnelPage() {
       });
   }, []);
 
+  const cancelRef = useRef<(() => void)[]>([]);
+
   const fetchData = useCallback(() => {
     if (!edicionFilter) return;
-    setLoading(true);
-    const params = new URLSearchParams({ edicion: edicionFilter });
-    fetch(`/api/funnel?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setStats(d.stats);
-        setSources(d.sources ?? []);
-        setPaidMedia(d.paidMedia ?? null);
-        setAffiliateMedia(d.affiliateMedia ?? null);
-        setComerciales(d.comerciales ?? []);
-        setTimeline(d.timeline ?? []);
-        setCloserPerformance(d.closerPerformance ?? []);
-      })
-      .finally(() => setLoading(false));
+    // Cancel previous SWR subscriptions
+    cancelRef.current.forEach((c) => c());
+    cancelRef.current = [];
+
+    const funnelUrl = `/api/funnel?edicion=${encodeURIComponent(edicionFilter)}`;
+    const notasUrl = `/api/notas?edicion=${encodeURIComponent(edicionFilter)}`;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    cancelRef.current.push(swr<any>(funnelUrl, (d, isStale) => {
+      setStats(d.stats);
+      setSources(d.sources ?? []);
+      setPaidMedia(d.paidMedia ?? null);
+      setAffiliateMedia(d.affiliateMedia ?? null);
+      setComerciales(d.comerciales ?? []);
+      setTimeline(d.timeline ?? []);
+      setCloserPerformance(d.closerPerformance ?? []);
+      if (!isStale) setLoading(false);
+      else setLoading(false); // Show stale data, no spinner
+    }));
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    cancelRef.current.push(swr<any>(notasUrl, (d) => {
+      setNotas(d.data ?? []);
+    }));
   }, [edicionFilter]);
 
-  const fetchNotas = useCallback(() => {
-    if (!edicionFilter) return;
-    fetch(`/api/notas?edicion=${encodeURIComponent(edicionFilter)}`)
-      .then((r) => r.json())
-      .then((d) => setNotas(d.data ?? []));
-  }, [edicionFilter]);
-
-  useEffect(() => { if (initialized) { fetchData(); fetchNotas(); } }, [fetchData, fetchNotas, initialized]);
+  useEffect(() => { if (initialized) fetchData(); }, [fetchData, initialized]);
 
   async function handleCreateNota() {
     if (!newTitulo.trim() || !edicionFilter) return;
@@ -181,7 +187,7 @@ export default function FunnelPage() {
       body: JSON.stringify({ edicion: edicionFilter, titulo: newTitulo, contenido: newContenido, tipo: newTipo }),
     });
     setNewTitulo(""); setNewContenido(""); setNewTipo("conclusion"); setShowNewNota(false);
-    fetchNotas();
+    invalidateCache("/api/notas"); fetchData();
   }
 
   async function handleUpdateNota(id: string) {
@@ -191,12 +197,12 @@ export default function FunnelPage() {
       body: JSON.stringify({ id, titulo: editTitulo, contenido: editContenido, tipo: editTipo }),
     });
     setEditingNotaId(null);
-    fetchNotas();
+    invalidateCache("/api/notas"); fetchData();
   }
 
   async function handleDeleteNota(id: string) {
     await fetch(`/api/notas?id=${id}`, { method: "DELETE" });
-    fetchNotas();
+    invalidateCache("/api/notas"); fetchData();
   }
 
   return (

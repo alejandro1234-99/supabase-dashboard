@@ -50,50 +50,45 @@ function classifyLead(lead: { funnel: string | null; medium: string | null; test
   return "Untracked";
 }
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const edicion = searchParams.get("edicion");
 
   const supabase = createAdminClient();
 
-  // Fetch leads (include medium and test for classification)
+  // Fetch leads, agendas, sales IN PARALLEL
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let leadsQuery = (supabase.from("leads" as any) as any)
     .select("email, edicion, funnel, medium, test, campaign, fuente_medio, fecha_registro");
   if (edicion) leadsQuery = leadsQuery.eq("edicion", edicion);
-  const leadsData = await fetchAll(leadsQuery);
-  const leads = leadsData as {
-    email: string | null;
-    edicion: string | null;
-    funnel: string | null;
-    medium: string | null;
-    test: string | null;
-    campaign: string | null;
-    fuente_medio: string | null;
-    fecha_registro: string | null;
-  }[];
 
-  // Fetch agendas
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let agendasQuery = (supabase.from("agendas" as any) as any)
     .select("email, edicion, comercial, no_show, fecha_llamada, creada");
   if (edicion) agendasQuery = agendasQuery.eq("edicion", edicion);
-  const agendasData = await fetchAll(agendasQuery);
-  const agendas = agendasData as {
-    email: string | null;
-    edicion: string | null;
-    comercial: string | null;
-    no_show: boolean;
-    fecha_llamada: string | null;
-    creada: string | null;
-  }[];
 
-  // Fetch sales
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let salesQuery = (supabase.from("purchase_approved" as any) as any)
     .select("correo_electronico, edicion, status, cash_collected, nombre_comercial, fecha_compra");
   if (edicion) salesQuery = salesQuery.eq("edicion", edicion);
-  const salesData = await fetchAll(salesQuery);
+
+  const [leadsData, agendasData, salesData] = await Promise.all([
+    fetchAll(leadsQuery),
+    fetchAll(agendasQuery),
+    fetchAll(salesQuery),
+  ]);
+
+  const leads = leadsData as {
+    email: string | null; edicion: string | null; funnel: string | null;
+    medium: string | null; test: string | null; campaign: string | null;
+    fuente_medio: string | null; fecha_registro: string | null;
+  }[];
+  const agendas = agendasData as {
+    email: string | null; edicion: string | null; comercial: string | null;
+    no_show: boolean; fecha_llamada: string | null; creada: string | null;
+  }[];
   const sales = salesData as {
     correo_electronico: string | null;
     edicion: string | null;

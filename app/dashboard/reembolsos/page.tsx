@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { swr } from "@/lib/cached-fetch";
 import { Loader2, ShoppingCart, RefreshCw, Clock, Users, FileCheck } from "lucide-react";
 
 type Stats = {
@@ -83,18 +84,19 @@ export default function ReembolsosPage() {
   const [edicionFilter, setEdicionFilter] = useState("Global");
   const [loading, setLoading] = useState(true);
 
+  const cancelRef = useRef<(() => void) | null>(null);
+
   const fetchData = useCallback(() => {
-    setLoading(true);
-    const params = new URLSearchParams();
+    if (cancelRef.current) cancelRef.current();
+    const params = new URLSearchParams({ mkt: "1" });
     if (edicionFilter !== "Global") params.set("edicion", edicionFilter);
-    fetch(`/api/onboardings?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setStats(d.stats ?? null);
-        setEstudioReembolsos(d.estudioReembolsos ?? null);
-        setEstudioMkt(d.estudioMkt ?? null);
-      })
-      .finally(() => setLoading(false));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    cancelRef.current = swr<any>(`/api/onboardings?${params}`, (d) => {
+      setStats(d.stats ?? null);
+      setEstudioReembolsos(d.estudioReembolsos ?? null);
+      setEstudioMkt(d.estudioMkt ?? null);
+      setLoading(false);
+    });
   }, [edicionFilter]);
 
   useEffect(() => { fetchData(); }, [fetchData]);

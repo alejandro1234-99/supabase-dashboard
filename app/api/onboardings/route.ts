@@ -1,30 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const edicion = searchParams.get("edicion") || "";
+  const includeMkt = searchParams.get("mkt") === "1";
 
   const supabase = createAdminClient();
 
   const VALID_EDICIONES = ["Enero 2026", "Febrero 2026", "Marzo 2026"];
 
-  // Onboarding data
+  // Fetch onboarding + purchase data IN PARALLEL
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let obQuery = (supabase.from("onboarding" as any) as any)
-    .select("*");
+  let obQuery = (supabase.from("onboarding" as any) as any).select("*");
   if (edicion) obQuery = obQuery.eq("edicion", edicion);
   else obQuery = obQuery.in("edicion", VALID_EDICIONES);
-  const { data: obData, error: obError } = await obQuery;
-  if (obError) return NextResponse.json({ error: obError.message }, { status: 500 });
 
-  // Purchase approved data
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let paQuery = (supabase.from("purchase_approved" as any) as any)
-    .select("*");
+  let paQuery = (supabase.from("purchase_approved" as any) as any).select("*");
   if (edicion) paQuery = paQuery.eq("edicion", edicion);
   else paQuery = paQuery.in("edicion", VALID_EDICIONES);
-  const { data: paData, error: paError } = await paQuery;
+
+  const [{ data: obData, error: obError }, { data: paData, error: paError }] = await Promise.all([obQuery, paQuery]);
+  if (obError) return NextResponse.json({ error: obError.message }, { status: 500 });
   if (paError) return NextResponse.json({ error: paError.message }, { status: 500 });
 
   const onboardings = obData ?? [];
@@ -309,7 +309,10 @@ export async function GET(req: NextRequest) {
     })(),
   };
 
-  // ── 3. Estudio reembolsos vs Mkt (leads) ──
+  // ── 3. Estudio reembolsos vs Mkt (leads) — solo si se pide ──
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let estudioMkt: any = null;
+  if (includeMkt) {
   // Fetch ALL leads to match by email across editions
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const allLeads = await (async () => {
@@ -408,7 +411,8 @@ export async function GET(req: NextRequest) {
       tasa: (mktAvatarTotal[av] ?? 0) > 0 ? (((mktAvatarReemb[av] ?? 0) / mktAvatarTotal[av]) * 100).toFixed(1) : "0",
     }));
 
-  const estudioMkt = { mktFuente, mktAvatar, matchCount: mktMatchCount, noMatch: mktNoMatch };
+  estudioMkt = { mktFuente, mktAvatar, matchCount: mktMatchCount, noMatch: mktNoMatch };
+  } // end if includeMkt
 
   return NextResponse.json({
     onboardings,

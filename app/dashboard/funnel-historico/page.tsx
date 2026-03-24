@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { swr } from "@/lib/cached-fetch";
 import { Loader2 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, LineChart, Line } from "recharts";
 
@@ -34,10 +35,12 @@ export default function HistoricoPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/funnel/historico")
-      .then((r) => r.json())
-      .then((d) => setData(d.ediciones ?? []))
-      .finally(() => setLoading(false));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cancel = swr<any>("/api/funnel/historico", (d) => {
+      setData(d.ediciones ?? []);
+      setLoading(false);
+    });
+    return cancel;
   }, []);
 
   if (loading) {

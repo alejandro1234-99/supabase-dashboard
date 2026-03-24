@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { swr, invalidateCache } from "@/lib/cached-fetch";
 import { Loader2, ShoppingCart, ClipboardList, AlertTriangle, FileCheck, FileText, Users, RefreshCw, Clock, Search, Link2, Check, X, Trash2, Download, Filter, Plus } from "lucide-react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
@@ -332,20 +333,35 @@ export default function OnboardingsPage() {
   const [ventasCustomFilters, setVentasCustomFilters] = useState<CustomFilter[]>([]);
   const [obCustomFilters, setObCustomFilters] = useState<CustomFilter[]>([]);
 
+  const cancelRef = useRef<(() => void) | null>(null);
+
   const fetchData = useCallback((silent = false) => {
-    if (!silent) setLoading(true);
+    if (cancelRef.current) cancelRef.current();
     const params = new URLSearchParams();
     if (edicionFilter !== "Global") params.set("edicion", edicionFilter);
-    fetch(`/api/onboardings?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
+    const url = `/api/onboardings?${params}`;
+
+    if (silent) {
+      // Silent refresh — skip cache, just fetch
+      fetch(url).then((r) => r.json()).then((d) => {
         setStats(d.stats ?? null);
         setRiesgoMap(d.riesgoMap ?? {});
         setAvatarMap(d.avatarMap ?? {});
         setVentas(d.ventas ?? []);
         setOnboardings(d.onboardings ?? []);
-      })
-      .finally(() => { if (!silent) setLoading(false); });
+      });
+      return;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    cancelRef.current = swr<any>(url, (d, isStale) => {
+      setStats(d.stats ?? null);
+      setRiesgoMap(d.riesgoMap ?? {});
+      setAvatarMap(d.avatarMap ?? {});
+      setVentas(d.ventas ?? []);
+      setOnboardings(d.onboardings ?? []);
+      setLoading(false);
+    });
   }, [edicionFilter]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
