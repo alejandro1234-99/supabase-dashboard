@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { swr } from "@/lib/cached-fetch";
+import { distribute } from "@/lib/distribute-untracked";
 import { Loader2 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, LineChart, Line } from "recharts";
 
@@ -73,6 +74,24 @@ export default function HistoricoPage() {
     Afiliados: d.leadsBySource.Afiliados,
     Untracked: d.leadsBySource.Untracked,
   }));
+
+  // Adjusted source data (untracked distributed)
+  function adjustSource(src: SourceBreakdown): { Paid: number; Organico: number; Afiliados: number } {
+    const tracked = [
+      { key: "Paid", value: src.Paid },
+      { key: "Organico", value: src.Organico },
+      { key: "Afiliados", value: src.Afiliados },
+    ];
+    const adj = distribute(tracked, src.Untracked);
+    return {
+      Paid: adj.find((a) => a.key === "Paid")?.adjusted ?? 0,
+      Organico: adj.find((a) => a.key === "Organico")?.adjusted ?? 0,
+      Afiliados: adj.find((a) => a.key === "Afiliados")?.adjusted ?? 0,
+    };
+  }
+
+  const adjSourceLeadsData = data.map((d) => ({ edicion: d.edicion, ...adjustSource(d.leadsBySource) }));
+  const adjSourceVentasData = data.map((d) => ({ edicion: d.edicion, ...adjustSource(d.ventasBySource) }));
 
   const sourceVentasData = data.map((d) => ({
     edicion: d.edicion,
@@ -249,6 +268,57 @@ export default function HistoricoPage() {
               <Bar dataKey="Organico" stackId="a" fill="#10b981" />
               <Bar dataKey="Afiliados" stackId="a" fill="#a855f7" />
               <Bar dataKey="Untracked" stackId="a" fill="#9ca3af" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+      {/* Adjusted charts */}
+      <p className="text-xs text-gray-400 mt-4">Datos ajustados (untracked distribuido proporcionalmente)</p>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-white rounded-2xl border border-emerald-100 shadow-sm p-6">
+          <h2 className="text-sm font-bold text-gray-900 mb-1">Leads por fuente (ajustado)</h2>
+          <p className="text-xs text-gray-400 mb-4">Sin untracked — distribuido</p>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={adjSourceLeadsData} barCategoryGap="25%">
+              <XAxis dataKey="edicion" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+              <YAxis hide />
+              <Tooltip cursor={{ fill: "#f3f4f6" }} content={({ active, payload, label }) => {
+                if (!active || !payload?.length) return null;
+                return (
+                  <div className="bg-white border border-gray-100 shadow-lg rounded-xl px-3 py-2 text-xs">
+                    <p className="font-semibold text-gray-700 mb-1">{label}</p>
+                    {payload.map((p) => <p key={String(p.dataKey)} style={{ color: p.color }}>{String(p.dataKey)}: {Number(p.value).toLocaleString("es-ES")}</p>)}
+                  </div>
+                );
+              }} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Bar dataKey="Paid" stackId="a" fill="#3b82f6" />
+              <Bar dataKey="Organico" stackId="a" fill="#10b981" />
+              <Bar dataKey="Afiliados" stackId="a" fill="#a855f7" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-emerald-100 shadow-sm p-6">
+          <h2 className="text-sm font-bold text-gray-900 mb-1">Ventas por fuente (ajustado)</h2>
+          <p className="text-xs text-gray-400 mb-4">Sin untracked — distribuido</p>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={adjSourceVentasData} barCategoryGap="25%">
+              <XAxis dataKey="edicion" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+              <YAxis hide />
+              <Tooltip cursor={{ fill: "#f3f4f6" }} content={({ active, payload, label }) => {
+                if (!active || !payload?.length) return null;
+                return (
+                  <div className="bg-white border border-gray-100 shadow-lg rounded-xl px-3 py-2 text-xs">
+                    <p className="font-semibold text-gray-700 mb-1">{label}</p>
+                    {payload.map((p) => <p key={String(p.dataKey)} style={{ color: p.color }}>{String(p.dataKey)}: {String(p.value)}</p>)}
+                  </div>
+                );
+              }} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Bar dataKey="Paid" stackId="a" fill="#3b82f6" />
+              <Bar dataKey="Organico" stackId="a" fill="#10b981" />
+              <Bar dataKey="Afiliados" stackId="a" fill="#a855f7" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

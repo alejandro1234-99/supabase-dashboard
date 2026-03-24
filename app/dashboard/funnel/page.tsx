@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { swr, invalidateCache } from "@/lib/cached-fetch";
+import { distributeMultiPhase, distribute } from "@/lib/distribute-untracked";
 import { Loader2, Users, CalendarDays, ShoppingCart, ChevronDown, TrendingUp, Plus, Save, Edit3, Trash2, X, FileText, Lightbulb, AlertTriangle } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
@@ -179,6 +180,80 @@ export default function FunnelPage() {
 
   useEffect(() => { if (initialized) fetchData(); }, [fetchData, initialized]);
 
+  // Adjusted sources (untracked distributed)
+  const adjustedSources = useMemo(() => {
+    if (!sources.length) return [];
+    return distributeMultiPhase(
+      sources.map((s) => ({ key: s.source, leads: s.leads, agendas: s.agendas, ventas: s.ventas }))
+    );
+  }, [sources]);
+
+  // Adjusted Paid campaigns
+  const adjustedPaidCampaigns = useMemo(() => {
+    if (!paidMedia) return [];
+    const tracked = paidMedia.campaigns.filter((c) => c.campaign !== "untracked");
+    const untracked = paidMedia.campaigns.find((c) => c.campaign === "untracked");
+    if (!untracked) return tracked.map((c) => ({ ...c, adjLeads: c.leads, adjAgendas: c.agendas, adjVentas: c.ventas }));
+    const adjL = distribute(tracked.map((c) => ({ key: c.campaign, value: c.leads })), untracked.leads);
+    const adjA = distribute(tracked.map((c) => ({ key: c.campaign, value: c.agendas })), untracked.agendas);
+    const adjV = distribute(tracked.map((c) => ({ key: c.campaign, value: c.ventas })), untracked.ventas);
+    return tracked.map((c) => ({
+      ...c,
+      adjLeads: adjL.find((a) => a.key === c.campaign)?.adjusted ?? c.leads,
+      adjAgendas: adjA.find((a) => a.key === c.campaign)?.adjusted ?? c.agendas,
+      adjVentas: adjV.find((a) => a.key === c.campaign)?.adjusted ?? c.ventas,
+    }));
+  }, [paidMedia]);
+
+  // Adjusted Affiliates
+  const adjustedAffiliates = useMemo(() => {
+    if (!affiliateMedia) return [];
+    const tracked = affiliateMedia.types.filter((t) => t.affiliate !== "untracked");
+    const untracked = affiliateMedia.types.find((t) => t.affiliate === "untracked");
+    if (!untracked) return tracked.map((t) => ({ ...t, adjLeads: t.leads, adjAgendas: t.agendas, adjVentas: t.ventas }));
+    const adjL = distribute(tracked.map((t) => ({ key: t.affiliate, value: t.leads })), untracked.leads);
+    const adjA = distribute(tracked.map((t) => ({ key: t.affiliate, value: t.agendas })), untracked.agendas);
+    const adjV = distribute(tracked.map((t) => ({ key: t.affiliate, value: t.ventas })), untracked.ventas);
+    return tracked.map((t) => ({
+      ...t,
+      adjLeads: adjL.find((a) => a.key === t.affiliate)?.adjusted ?? t.leads,
+      adjAgendas: adjA.find((a) => a.key === t.affiliate)?.adjusted ?? t.agendas,
+      adjVentas: adjV.find((a) => a.key === t.affiliate)?.adjusted ?? t.ventas,
+    }));
+  }, [affiliateMedia]);
+
+  // Adjusted Comerciales (untracked distributed, no untracked columns)
+  const adjustedComerciales = useMemo(() => {
+    return comerciales.map((c) => {
+      const trackedAg = c.paidAV0Agendas + c.paidAV2Agendas + c.orgAgendas;
+      const untrackedAg = c.untrackedAgendas;
+      const adjAg = distribute(
+        [{ key: "paidAV0", value: c.paidAV0Agendas }, { key: "paidAV2", value: c.paidAV2Agendas }, { key: "org", value: c.orgAgendas }],
+        untrackedAg
+      );
+      const trackedVe = c.paidAV0Ventas + c.paidAV2Ventas + c.orgVentas;
+      const untrackedVe = c.untrackedVentas;
+      const adjVe = distribute(
+        [{ key: "paidAV0", value: c.paidAV0Ventas }, { key: "paidAV2", value: c.paidAV2Ventas }, { key: "org", value: c.orgVentas }],
+        untrackedVe
+      );
+      const av0Ag = adjAg.find((a) => a.key === "paidAV0")?.adjusted ?? 0;
+      const av2Ag = adjAg.find((a) => a.key === "paidAV2")?.adjusted ?? 0;
+      const orgAg = adjAg.find((a) => a.key === "org")?.adjusted ?? 0;
+      const av0Ve = adjVe.find((a) => a.key === "paidAV0")?.adjusted ?? 0;
+      const av2Ve = adjVe.find((a) => a.key === "paidAV2")?.adjusted ?? 0;
+      const orgVe = adjVe.find((a) => a.key === "org")?.adjusted ?? 0;
+      return {
+        ...c,
+        paidAV0Agendas: av0Ag, paidAV2Agendas: av2Ag, orgAgendas: orgAg,
+        paidAV0Ventas: av0Ve, paidAV2Ventas: av2Ve, orgVentas: orgVe,
+        cierreAV0: av0Ag > 0 ? ((av0Ve / av0Ag) * 100).toFixed(1) : "0",
+        cierreAV2: av2Ag > 0 ? ((av2Ve / av2Ag) * 100).toFixed(1) : "0",
+        cierreOrg: orgAg > 0 ? ((orgVe / orgAg) * 100).toFixed(1) : "0",
+      };
+    });
+  }, [comerciales]);
+
   async function handleCreateNota() {
     if (!newTitulo.trim() || !edicionFilter) return;
     await fetch("/api/notas", {
@@ -284,6 +359,7 @@ export default function FunnelPage() {
 
             {/* Tarjetas KPI — derecha */}
             <div className="flex-1 grid grid-cols-2 gap-4 content-start">
+              {/* Leads + Tasa lead→venta */}
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3 flex items-center gap-3">
                 <div className="h-9 w-9 rounded-xl bg-emerald-500 flex items-center justify-center shrink-0">
                   <Users className="h-4 w-4 text-white" />
@@ -293,7 +369,17 @@ export default function FunnelPage() {
                   <p className="text-2xl font-black text-gray-900 leading-tight">{stats.totalLeads.toLocaleString("es-ES")}</p>
                 </div>
               </div>
+              <div className="bg-emerald-50 rounded-2xl border border-emerald-200 shadow-sm px-4 py-3 flex items-center gap-3">
+                <div className="h-9 w-9 rounded-xl bg-emerald-500 flex items-center justify-center shrink-0">
+                  <span className="text-white text-sm font-black">%</span>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Tasa de conversion</p>
+                  <p className="text-2xl font-black text-emerald-700 leading-tight">{stats.convLeadVenta}% <span className="text-sm font-medium text-emerald-500">lead → venta</span></p>
+                </div>
+              </div>
 
+              {/* Agendas + Tasa lead→agenda */}
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3 flex items-center gap-3">
                 <div className="h-9 w-9 rounded-xl bg-indigo-500 flex items-center justify-center shrink-0">
                   <CalendarDays className="h-4 w-4 text-white" />
@@ -303,7 +389,17 @@ export default function FunnelPage() {
                   <p className="text-2xl font-black text-gray-900 leading-tight">{stats.agendasUnicas} <span className="text-sm font-medium text-gray-400">{stats.totalAgendas} totales</span></p>
                 </div>
               </div>
+              <div className="bg-indigo-50 rounded-2xl border border-indigo-200 shadow-sm px-4 py-3 flex items-center gap-3">
+                <div className="h-9 w-9 rounded-xl bg-indigo-500 flex items-center justify-center shrink-0">
+                  <span className="text-white text-sm font-black">%</span>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Tasa de agenda</p>
+                  <p className="text-2xl font-black text-indigo-700 leading-tight">{stats.convLeadAgenda}% <span className="text-sm font-medium text-indigo-500">lead → agenda</span></p>
+                </div>
+              </div>
 
+              {/* Ventas + Tasa agenda→venta */}
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3 flex items-center gap-3">
                 <div className="h-9 w-9 rounded-xl bg-amber-400 flex items-center justify-center shrink-0">
                   <ShoppingCart className="h-4 w-4 text-white" />
@@ -313,14 +409,13 @@ export default function FunnelPage() {
                   <p className="text-2xl font-black text-gray-900 leading-tight">{stats.totalVentas}</p>
                 </div>
               </div>
-
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3 flex items-center gap-3">
-                <div className="h-9 w-9 rounded-xl bg-purple-500 flex items-center justify-center shrink-0">
-                  <TrendingUp className="h-4 w-4 text-white" />
+              <div className="bg-amber-50 rounded-2xl border border-amber-200 shadow-sm px-4 py-3 flex items-center gap-3">
+                <div className="h-9 w-9 rounded-xl bg-amber-500 flex items-center justify-center shrink-0">
+                  <span className="text-white text-sm font-black">%</span>
                 </div>
                 <div>
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Conv. Lead → Venta</p>
-                  <p className="text-2xl font-black text-gray-900 leading-tight">{stats.convLeadVenta}%</p>
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Tasa de cierre</p>
+                  <p className="text-2xl font-black text-amber-700 leading-tight">{stats.convAgendaVenta}% <span className="text-sm font-medium text-amber-500">agenda → venta</span></p>
                 </div>
               </div>
             </div>
@@ -450,6 +545,7 @@ export default function FunnelPage() {
           {/* 3. Desglose por fuente */}
           {sources.length > 0 && (<>
             <h2 className="text-lg font-bold text-gray-900 mt-2">3. Desglose por fuente</h2>
+            <p className="text-xs text-gray-400 -mt-4">Datos brutos (con untracked)</p>
 
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               <table className="w-full">
@@ -500,12 +596,64 @@ export default function FunnelPage() {
                 </tbody>
               </table>
             </div>
+            {/* Tabla ajustada */}
+            {adjustedSources.length > 0 && (<>
+              <p className="text-xs text-gray-400 mt-3">Datos ajustados (untracked distribuido proporcionalmente)</p>
+              <div className="bg-white rounded-2xl border border-emerald-100 shadow-sm overflow-hidden">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-emerald-100 bg-emerald-50/40">
+                      <th className="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Fuente</th>
+                      <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Leads</th>
+                      <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">%</th>
+                      <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Agendas</th>
+                      <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">%</th>
+                      <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Ventas</th>
+                      <th className="text-right px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">%</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {adjustedSources.map((s) => {
+                      const totalL = adjustedSources.reduce((sum, r) => sum + r.adjLeads, 0);
+                      const totalA = adjustedSources.reduce((sum, r) => sum + r.adjAgendas, 0);
+                      const totalV = adjustedSources.reduce((sum, r) => sum + r.adjVentas, 0);
+                      return (
+                        <tr key={s.key} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="px-6 py-3.5">
+                            <div className="flex items-center gap-2.5">
+                              <div className={`w-3 h-3 rounded-full ${SOURCE_COLORS[s.key] ?? "bg-gray-300"}`} />
+                              <span className="text-sm font-semibold text-gray-700">{s.key}</span>
+                            </div>
+                          </td>
+                          <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">{s.adjLeads.toLocaleString("es-ES")}</td>
+                          <td className={`text-right px-4 py-3.5 text-sm font-semibold ${SOURCE_TEXT[s.key]}`}>{totalL > 0 ? ((s.adjLeads / totalL) * 100).toFixed(1) : "0"}%</td>
+                          <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">{s.adjAgendas}</td>
+                          <td className={`text-right px-4 py-3.5 text-sm font-semibold ${SOURCE_TEXT[s.key]}`}>{totalA > 0 ? ((s.adjAgendas / totalA) * 100).toFixed(1) : "0"}%</td>
+                          <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">{s.adjVentas}</td>
+                          <td className={`text-right px-6 py-3.5 text-sm font-semibold ${SOURCE_TEXT[s.key]}`}>{totalV > 0 ? ((s.adjVentas / totalV) * 100).toFixed(1) : "0"}%</td>
+                        </tr>
+                      );
+                    })}
+                    <tr className="bg-emerald-50/40 font-bold">
+                      <td className="px-6 py-3.5 text-sm text-gray-700">Total</td>
+                      <td className="text-right px-4 py-3.5 text-sm text-gray-900">{stats.totalLeads.toLocaleString("es-ES")}</td>
+                      <td className="text-right px-4 py-3.5 text-sm text-gray-400">100%</td>
+                      <td className="text-right px-4 py-3.5 text-sm text-gray-900">{stats.totalAgendas}</td>
+                      <td className="text-right px-4 py-3.5 text-sm text-gray-400">100%</td>
+                      <td className="text-right px-4 py-3.5 text-sm text-gray-900">{stats.totalVentas}</td>
+                      <td className="text-right px-6 py-3.5 text-sm text-gray-400">100%</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </>)}
           </>)}
 
           {/* 4. Paid Media */}
           {paidMedia && paidMedia.campaigns.length > 0 && (
             <>
               <h2 className="text-lg font-bold text-gray-900 mt-2">4. Paid Media</h2>
+              <p className="text-xs text-gray-400 -mt-4">Datos brutos (con untracked)</p>
 
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 <table className="w-full">
@@ -565,12 +713,59 @@ export default function FunnelPage() {
                   </tbody>
                 </table>
               </div>
+              {/* Paid ajustada */}
+              {adjustedPaidCampaigns.length > 0 && (<>
+                <p className="text-xs text-gray-400 mt-3">Datos ajustados (untracked distribuido)</p>
+                <div className="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-blue-100 bg-blue-50/40">
+                        <th className="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Fuente</th>
+                        <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Captacion</th>
+                        <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">%</th>
+                        <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Agendas</th>
+                        <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">%</th>
+                        <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Ventas</th>
+                        <th className="text-right px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">%</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {(() => {
+                        const tL = adjustedPaidCampaigns.reduce((s, c) => s + c.adjLeads, 0);
+                        const tA = adjustedPaidCampaigns.reduce((s, c) => s + c.adjAgendas, 0);
+                        const tV = adjustedPaidCampaigns.reduce((s, c) => s + c.adjVentas, 0);
+                        return adjustedPaidCampaigns.map((c) => (
+                          <tr key={c.campaign} className="hover:bg-gray-50/50 transition-colors">
+                            <td className="px-6 py-3.5 text-sm font-semibold text-gray-700">{c.campaign}</td>
+                            <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">{c.adjLeads.toLocaleString("es-ES")}</td>
+                            <td className="text-right px-4 py-3.5 text-sm font-semibold text-blue-600">{tL > 0 ? ((c.adjLeads / tL) * 100).toFixed(1) : "0"}%</td>
+                            <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">{c.adjAgendas}</td>
+                            <td className="text-right px-4 py-3.5 text-sm font-semibold text-blue-600">{tA > 0 ? ((c.adjAgendas / tA) * 100).toFixed(1) : "0"}%</td>
+                            <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">{c.adjVentas}</td>
+                            <td className="text-right px-6 py-3.5 text-sm font-semibold text-blue-600">{tV > 0 ? ((c.adjVentas / tV) * 100).toFixed(1) : "0"}%</td>
+                          </tr>
+                        ));
+                      })()}
+                      <tr className="bg-blue-50/40 font-bold">
+                        <td className="px-6 py-3.5 text-sm text-gray-700">TOTAL</td>
+                        <td className="text-right px-4 py-3.5 text-sm text-gray-900">{paidMedia?.totalLeads?.toLocaleString("es-ES")}</td>
+                        <td className="text-right px-4 py-3.5 text-sm text-gray-400">100%</td>
+                        <td className="text-right px-4 py-3.5 text-sm text-gray-900">{paidMedia?.totalAgendas}</td>
+                        <td className="text-right px-4 py-3.5 text-sm text-gray-400">100%</td>
+                        <td className="text-right px-4 py-3.5 text-sm text-gray-900">{paidMedia?.totalVentas}</td>
+                        <td className="text-right px-6 py-3.5 text-sm text-gray-400">100%</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </>)}
             </>
           )}
           {/* 5. Afiliados */}
           {affiliateMedia && affiliateMedia.types.length > 0 && (
             <>
               <h2 className="text-lg font-bold text-gray-900 mt-2">5. Afiliados</h2>
+              <p className="text-xs text-gray-400 -mt-4">Datos brutos (con untracked)</p>
 
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 <table className="w-full">
@@ -615,11 +810,58 @@ export default function FunnelPage() {
                   </tbody>
                 </table>
               </div>
+              {/* Afiliados ajustada */}
+              {adjustedAffiliates.length > 0 && (<>
+                <p className="text-xs text-gray-400 mt-3">Datos ajustados (untracked distribuido)</p>
+                <div className="bg-white rounded-2xl border border-purple-100 shadow-sm overflow-hidden">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-purple-100 bg-purple-50/40">
+                        <th className="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Fuente</th>
+                        <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Captacion</th>
+                        <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">%</th>
+                        <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Agendas</th>
+                        <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">%</th>
+                        <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Ventas</th>
+                        <th className="text-right px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">%</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {(() => {
+                        const tL = adjustedAffiliates.reduce((s, t) => s + t.adjLeads, 0);
+                        const tA = adjustedAffiliates.reduce((s, t) => s + t.adjAgendas, 0);
+                        const tV = adjustedAffiliates.reduce((s, t) => s + t.adjVentas, 0);
+                        return adjustedAffiliates.map((t) => (
+                          <tr key={t.affiliate} className="hover:bg-gray-50/50 transition-colors">
+                            <td className="px-6 py-3.5 text-sm font-semibold text-gray-700">{t.affiliate}</td>
+                            <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">{t.adjLeads.toLocaleString("es-ES")}</td>
+                            <td className="text-right px-4 py-3.5 text-sm font-semibold text-purple-600">{tL > 0 ? ((t.adjLeads / tL) * 100).toFixed(1) : "0"}%</td>
+                            <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">{t.adjAgendas}</td>
+                            <td className="text-right px-4 py-3.5 text-sm font-semibold text-purple-600">{tA > 0 ? ((t.adjAgendas / tA) * 100).toFixed(1) : "0"}%</td>
+                            <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">{t.adjVentas}</td>
+                            <td className="text-right px-6 py-3.5 text-sm font-semibold text-purple-600">{tV > 0 ? ((t.adjVentas / tV) * 100).toFixed(1) : "0"}%</td>
+                          </tr>
+                        ));
+                      })()}
+                      <tr className="bg-purple-50/40 font-bold">
+                        <td className="px-6 py-3.5 text-sm text-gray-700">TOTAL</td>
+                        <td className="text-right px-4 py-3.5 text-sm text-gray-900">{affiliateMedia?.totalLeads?.toLocaleString("es-ES")}</td>
+                        <td className="text-right px-4 py-3.5 text-sm text-gray-400">100%</td>
+                        <td className="text-right px-4 py-3.5 text-sm text-gray-900">{affiliateMedia?.totalAgendas}</td>
+                        <td className="text-right px-4 py-3.5 text-sm text-gray-400">100%</td>
+                        <td className="text-right px-4 py-3.5 text-sm text-gray-900">{affiliateMedia?.totalVentas}</td>
+                        <td className="text-right px-6 py-3.5 text-sm text-gray-400">100%</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </>)}
             </>
           )}
           {/* 6. Estudio por comercial */}
-          {comerciales.length > 0 && (<>
+          {adjustedComerciales.length > 0 && (<>
               <h2 className="text-lg font-bold text-gray-900 mt-2">6. Estudio por comercial</h2>
+              <p className="text-xs text-gray-400 -mt-4">Untracked distribuido proporcionalmente entre Paid y Organico</p>
 
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
                 <table className="w-full min-w-[900px]">
@@ -630,8 +872,7 @@ export default function FunnelPage() {
                       <th rowSpan={2} className="text-right px-3 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Ventas</th>
                       <th rowSpan={2} className="text-right px-3 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide border-r border-gray-100">% cierre</th>
                       <th colSpan={5} className="text-center px-3 py-2 text-xs font-bold text-blue-500 uppercase tracking-wide border-r border-gray-100">Paid</th>
-                      <th colSpan={3} className="text-center px-3 py-2 text-xs font-bold text-emerald-500 uppercase tracking-wide border-r border-gray-100">Organico</th>
-                      <th colSpan={3} className="text-center px-3 py-2 text-xs font-bold text-gray-400 uppercase tracking-wide">Untracked</th>
+                      <th colSpan={3} className="text-center px-3 py-2 text-xs font-bold text-emerald-500 uppercase tracking-wide">Organico</th>
                     </tr>
                     <tr className="border-b border-gray-100 bg-gray-50/40">
                       <th className="text-right px-3 py-2 text-[10px] font-bold text-gray-400 uppercase">Ag. AV0</th>
@@ -641,14 +882,11 @@ export default function FunnelPage() {
                       <th className="text-right px-3 py-2 text-[10px] font-bold text-gray-400 uppercase border-r border-gray-100">% AV0 / AV2</th>
                       <th className="text-right px-3 py-2 text-[10px] font-bold text-gray-400 uppercase">Agendas</th>
                       <th className="text-right px-3 py-2 text-[10px] font-bold text-gray-400 uppercase">Ventas</th>
-                      <th className="text-right px-3 py-2 text-[10px] font-bold text-gray-400 uppercase border-r border-gray-100">% cierre</th>
-                      <th className="text-right px-3 py-2 text-[10px] font-bold text-gray-400 uppercase">Agendas</th>
-                      <th className="text-right px-3 py-2 text-[10px] font-bold text-gray-400 uppercase">Ventas</th>
                       <th className="text-right px-3 py-2 text-[10px] font-bold text-gray-400 uppercase">% cierre</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {comerciales.map((c) => (
+                    {adjustedComerciales.map((c) => (
                       <tr key={c.comercial} className="hover:bg-gray-50/50 transition-colors">
                         <td className="px-5 py-3 text-sm font-semibold text-gray-700 border-r border-gray-100">{c.comercial}</td>
                         <td className="text-right px-3 py-3 text-sm font-bold text-gray-900">
@@ -664,10 +902,7 @@ export default function FunnelPage() {
                         <td className="text-right px-3 py-3 text-sm font-semibold text-blue-600 border-r border-gray-100">{c.cierreAV0}% / {c.cierreAV2}%</td>
                         <td className="text-right px-3 py-3 text-sm text-gray-600">{c.orgAgendas}</td>
                         <td className="text-right px-3 py-3 text-sm text-gray-600">{c.orgVentas}</td>
-                        <td className="text-right px-3 py-3 text-sm font-semibold text-emerald-600 border-r border-gray-100">{c.cierreOrg}%</td>
-                        <td className="text-right px-3 py-3 text-sm text-gray-600">{c.untrackedAgendas}</td>
-                        <td className="text-right px-3 py-3 text-sm text-gray-600">{c.untrackedVentas}</td>
-                        <td className="text-right px-3 py-3 text-sm font-semibold text-gray-500">{c.cierreUntracked}%</td>
+                        <td className="text-right px-3 py-3 text-sm font-semibold text-emerald-600">{c.cierreOrg}%</td>
                       </tr>
                     ))}
                   </tbody>
