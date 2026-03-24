@@ -140,21 +140,6 @@ export default function HistoricoPage() {
                 </tr>
               </thead>
               <tbody>
-                {/* Fila media — referencia de ediciones cerradas */}
-                {closedCount > 0 && (
-                  <tr className="bg-indigo-50/60 border-b-2 border-indigo-200">
-                    <td className="px-6 py-3 text-sm font-black text-indigo-700">Media <span className="text-xs font-normal text-indigo-400">({closedCount} ed. cerradas)</span></td>
-                    <td className="text-right px-4 py-3 text-sm font-bold text-indigo-900">{avgLeads.toLocaleString("es-ES")}</td>
-                    <td className="text-right px-4 py-3 text-sm font-bold text-indigo-900">
-                      {avgAgendasUnicas}
-                      <span className="text-xs font-normal text-indigo-400 ml-1">({avgAgendas})</span>
-                    </td>
-                    <td className="text-right px-4 py-3 text-sm font-bold text-indigo-900">{avgVentas}</td>
-                    <td className="text-right px-4 py-3 text-sm font-black text-indigo-600">{ratioAgenda}%</td>
-                    <td className="text-right px-4 py-3 text-sm font-black text-indigo-600">{cierreLlamada}%</td>
-                    <td className="text-right px-6 py-3 text-sm font-black text-indigo-600">{convLead}%</td>
-                  </tr>
-                )}
                 {/* Filas por edicion */}
                 {data.map((d, idx) => {
                   const isEnCurso = idx === data.length - 1;
@@ -176,6 +161,21 @@ export default function HistoricoPage() {
                     </tr>
                   );
                 })}
+                {/* Fila media — referencia de ediciones cerradas */}
+                {closedCount > 0 && (
+                  <tr className="bg-indigo-50/60 border-t-2 border-indigo-200">
+                    <td className="px-6 py-3 text-sm font-black text-indigo-700">Media <span className="text-xs font-normal text-indigo-400">({closedCount} ed. cerradas)</span></td>
+                    <td className="text-right px-4 py-3 text-sm font-bold text-indigo-900">{avgLeads.toLocaleString("es-ES")}</td>
+                    <td className="text-right px-4 py-3 text-sm font-bold text-indigo-900">
+                      {avgAgendasUnicas}
+                      <span className="text-xs font-normal text-indigo-400 ml-1">({avgAgendas})</span>
+                    </td>
+                    <td className="text-right px-4 py-3 text-sm font-bold text-indigo-900">{avgVentas}</td>
+                    <td className="text-right px-4 py-3 text-sm font-black text-indigo-600">{ratioAgenda}%</td>
+                    <td className="text-right px-4 py-3 text-sm font-black text-indigo-600">{cierreLlamada}%</td>
+                    <td className="text-right px-6 py-3 text-sm font-black text-indigo-600">{convLead}%</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
