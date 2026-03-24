@@ -62,9 +62,9 @@ export default function HistoricoPage() {
 
   const conversionData = data.map((d) => ({
     edicion: d.edicion,
-    "Lead → Agenda": parseFloat(d.convLeadAgenda),
-    "Agenda → Venta": parseFloat(d.convAgendaVenta),
-    "Lead → Venta": parseFloat(d.convLeadVenta),
+    "Ratio de agenda": parseFloat(d.convLeadAgenda),
+    "Cierre de llamada": parseFloat(d.convAgendaVenta),
+    "Conv. lead → venta": parseFloat(d.convLeadVenta),
   }));
 
   const sourceLeadsData = data.map((d) => ({
@@ -117,9 +117,9 @@ export default function HistoricoPage() {
               <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Leads</th>
               <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Agendas</th>
               <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Ventas</th>
-              <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">L→A</th>
-              <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">A→V</th>
-              <th className="text-right px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">L→V</th>
+              <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">R. agenda</th>
+              <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Cierre</th>
+              <th className="text-right px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Conv. L→V</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -176,7 +176,7 @@ export default function HistoricoPage() {
 
         {/* Tasas de conversion */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <h2 className="text-sm font-bold text-gray-900 mb-1">Tasas de conversion</h2>
+          <h2 className="text-sm font-bold text-gray-900 mb-1">Ratios de conversion</h2>
           <p className="text-xs text-gray-400 mb-4">Evolucion por edicion</p>
           <ResponsiveContainer width="100%" height={260}>
             <LineChart data={conversionData}>
@@ -198,9 +198,9 @@ export default function HistoricoPage() {
                 }}
               />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Line type="monotone" dataKey="Lead → Agenda" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} />
-              <Line type="monotone" dataKey="Agenda → Venta" stroke="#6366f1" strokeWidth={2} dot={{ r: 4 }} />
-              <Line type="monotone" dataKey="Lead → Venta" stroke="#f59e0b" strokeWidth={2} dot={{ r: 4 }} />
+              <Line type="monotone" dataKey="Ratio de agenda" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} />
+              <Line type="monotone" dataKey="Cierre de llamada" stroke="#6366f1" strokeWidth={2} dot={{ r: 4 }} />
+              <Line type="monotone" dataKey="Conv. lead → venta" stroke="#f59e0b" strokeWidth={2} dot={{ r: 4 }} />
             </LineChart>
           </ResponsiveContainer>
         </div>

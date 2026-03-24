@@ -374,7 +374,7 @@ export default function FunnelPage() {
                   <span className="text-white text-sm font-black">%</span>
                 </div>
                 <div>
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Tasa de conversion</p>
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Conversion lead → venta</p>
                   <p className="text-2xl font-black text-emerald-700 leading-tight">{stats.convLeadVenta}% <span className="text-sm font-medium text-emerald-500">lead → venta</span></p>
                 </div>
               </div>
@@ -394,7 +394,7 @@ export default function FunnelPage() {
                   <span className="text-white text-sm font-black">%</span>
                 </div>
                 <div>
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Tasa de agenda</p>
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Ratio de agenda</p>
                   <p className="text-2xl font-black text-indigo-700 leading-tight">{stats.convLeadAgenda}% <span className="text-sm font-medium text-indigo-500">lead → agenda</span></p>
                 </div>
               </div>
@@ -414,7 +414,7 @@ export default function FunnelPage() {
                   <span className="text-white text-sm font-black">%</span>
                 </div>
                 <div>
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Tasa de cierre</p>
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Cierre de llamada</p>
                   <p className="text-2xl font-black text-amber-700 leading-tight">{stats.convAgendaVenta}% <span className="text-sm font-medium text-amber-500">agenda → venta</span></p>
                 </div>
               </div>
@@ -473,7 +473,7 @@ export default function FunnelPage() {
                           <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">No shows</th>
                           <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Celebradas</th>
                           <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Ventas</th>
-                          <th className="text-right px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">% cierre</th>
+                          <th className="text-right px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Cierre de llamada</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
@@ -545,317 +545,262 @@ export default function FunnelPage() {
           {/* 3. Desglose por fuente */}
           {sources.length > 0 && (<>
             <h2 className="text-lg font-bold text-gray-900 mt-2">3. Desglose por fuente</h2>
-            <p className="text-xs text-gray-400 -mt-4">Datos brutos (con untracked)</p>
 
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50/60">
-                    <th className="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Fuente</th>
+                    <th className="text-left px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Fuente</th>
                     <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Leads</th>
                     <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">%</th>
                     <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Agendas</th>
                     <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">%</th>
                     <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Ventas</th>
-                    <th className="text-right px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">%</th>
+                    <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">%</th>
+                    <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">R. agenda</th>
+                    <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Cierre</th>
+                    <th className="text-right px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Conv. L→V</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody>
+                  {/* Datos brutos */}
+                  <tr className="bg-gray-50/30"><td colSpan={10} className="px-5 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Datos brutos (con untracked)</td></tr>
                   {sources.map((s) => (
-                    <tr key={s.source} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-6 py-3.5">
-                        <div className="flex items-center gap-2.5">
-                          <div className={`w-3 h-3 rounded-full ${SOURCE_COLORS[s.source] ?? "bg-gray-300"}`} />
+                    <tr key={s.source} className="border-t border-gray-50 hover:bg-gray-50/50 transition-colors">
+                      <td className="px-5 py-2.5">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2.5 h-2.5 rounded-full ${SOURCE_COLORS[s.source] ?? "bg-gray-300"}`} />
                           <span className="text-sm font-semibold text-gray-700">{s.source}</span>
                         </div>
                       </td>
-                      <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">{s.leads.toLocaleString("es-ES")}</td>
-                      <td className={`text-right px-4 py-3.5 text-sm font-semibold ${SOURCE_TEXT[s.source]}`}>{s.leadsPct}%</td>
-                      <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">
-                        {s.agendasUnicas}
-                        <span className="text-xs font-normal text-gray-400 ml-1">({s.agendas})</span>
-                      </td>
-                      <td className={`text-right px-4 py-3.5 text-sm font-semibold ${SOURCE_TEXT[s.source]}`}>{s.agendasPct}%</td>
-                      <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">{s.ventas}</td>
-                      <td className={`text-right px-6 py-3.5 text-sm font-semibold ${SOURCE_TEXT[s.source]}`}>{s.ventasPct}%</td>
+                      <td className="text-right px-4 py-2.5 text-sm font-bold text-gray-900">{s.leads.toLocaleString("es-ES")}</td>
+                      <td className={`text-right px-4 py-2.5 text-sm font-semibold ${SOURCE_TEXT[s.source]}`}>{s.leadsPct}%</td>
+                      <td className="text-right px-4 py-2.5 text-sm font-bold text-gray-900">{s.agendas}</td>
+                      <td className={`text-right px-4 py-2.5 text-sm font-semibold ${SOURCE_TEXT[s.source]}`}>{s.agendasPct}%</td>
+                      <td className="text-right px-4 py-2.5 text-sm font-bold text-gray-900">{s.ventas}</td>
+                      <td className={`text-right px-4 py-2.5 text-sm font-semibold ${SOURCE_TEXT[s.source]}`}>{s.ventasPct}%</td>
+                      <td className="text-right px-4 py-2.5 text-sm text-gray-400">{s.leads > 0 ? ((s.agendas / s.leads) * 100).toFixed(1) : "0"}%</td>
+                      <td className="text-right px-4 py-2.5 text-sm text-gray-400">{s.agendas > 0 ? ((s.ventas / s.agendas) * 100).toFixed(1) : "0"}%</td>
+                      <td className="text-right px-5 py-2.5 text-sm text-gray-400">{s.leads > 0 ? ((s.ventas / s.leads) * 100).toFixed(1) : "0"}%</td>
                     </tr>
                   ))}
-                  {/* Total row */}
-                  <tr className="bg-gray-50/80 font-bold">
-                    <td className="px-6 py-3.5 text-sm text-gray-700">Total</td>
-                    <td className="text-right px-4 py-3.5 text-sm text-gray-900">{stats.totalLeads.toLocaleString("es-ES")}</td>
-                    <td className="text-right px-4 py-3.5 text-sm text-gray-400">100%</td>
-                    <td className="text-right px-4 py-3.5 text-sm text-gray-900">
-                      {stats.agendasUnicas}
-                      <span className="text-xs font-normal text-gray-400 ml-1">({stats.totalAgendas})</span>
-                    </td>
-                    <td className="text-right px-4 py-3.5 text-sm text-gray-400">100%</td>
-                    <td className="text-right px-4 py-3.5 text-sm text-gray-900">{stats.totalVentas}</td>
-                    <td className="text-right px-6 py-3.5 text-sm text-gray-400">100%</td>
+                  {/* Total bruto */}
+                  <tr className="border-t border-gray-200 bg-gray-50/80 font-bold">
+                    <td className="px-5 py-2.5 text-sm text-gray-700">Total</td>
+                    <td className="text-right px-4 py-2.5 text-sm text-gray-900">{stats.totalLeads.toLocaleString("es-ES")}</td>
+                    <td className="text-right px-4 py-2.5 text-sm text-gray-400">100%</td>
+                    <td className="text-right px-4 py-2.5 text-sm text-gray-900">{stats.totalAgendas}</td>
+                    <td className="text-right px-4 py-2.5 text-sm text-gray-400">100%</td>
+                    <td className="text-right px-4 py-2.5 text-sm text-gray-900">{stats.totalVentas}</td>
+                    <td className="text-right px-4 py-2.5 text-sm text-gray-400">100%</td>
+                    <td className="text-right px-4 py-2.5 text-sm text-gray-600">{stats.convLeadAgenda}%</td>
+                    <td className="text-right px-4 py-2.5 text-sm text-gray-600">{stats.convAgendaVenta}%</td>
+                    <td className="text-right px-5 py-2.5 text-sm text-gray-600">{stats.convLeadVenta}%</td>
+                  </tr>
+
+                  {/* Separador + datos ajustados */}
+                  <tr className="bg-emerald-50/50 border-t-2 border-emerald-200"><td colSpan={10} className="px-5 py-1.5 text-[10px] font-bold text-emerald-700 uppercase tracking-widest">Datos ajustados (untracked distribuido)</td></tr>
+                  {adjustedSources.map((s) => {
+                    const tL = adjustedSources.reduce((sum, r) => sum + r.adjLeads, 0);
+                    const tA = adjustedSources.reduce((sum, r) => sum + r.adjAgendas, 0);
+                    const tV = adjustedSources.reduce((sum, r) => sum + r.adjVentas, 0);
+                    return (
+                      <tr key={`adj-${s.key}`} className="border-t border-emerald-100 hover:bg-emerald-50/30 transition-colors">
+                        <td className="px-5 py-2.5">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-2.5 h-2.5 rounded-full ${SOURCE_COLORS[s.key] ?? "bg-gray-300"}`} />
+                            <span className="text-sm font-semibold text-gray-700">{s.key}</span>
+                          </div>
+                        </td>
+                        <td className="text-right px-4 py-2.5 text-sm font-bold text-gray-900">{s.adjLeads.toLocaleString("es-ES")}</td>
+                        <td className={`text-right px-4 py-2.5 text-sm font-semibold ${SOURCE_TEXT[s.key]}`}>{tL > 0 ? ((s.adjLeads / tL) * 100).toFixed(1) : "0"}%</td>
+                        <td className="text-right px-4 py-2.5 text-sm font-bold text-gray-900">{s.adjAgendas}</td>
+                        <td className={`text-right px-4 py-2.5 text-sm font-semibold ${SOURCE_TEXT[s.key]}`}>{tA > 0 ? ((s.adjAgendas / tA) * 100).toFixed(1) : "0"}%</td>
+                        <td className="text-right px-4 py-2.5 text-sm font-bold text-gray-900">{s.adjVentas}</td>
+                        <td className={`text-right px-4 py-2.5 text-sm font-semibold ${SOURCE_TEXT[s.key]}`}>{tV > 0 ? ((s.adjVentas / tV) * 100).toFixed(1) : "0"}%</td>
+                        <td className="text-right px-4 py-2.5 text-sm font-semibold text-emerald-600">{s.adjLeads > 0 ? ((s.adjAgendas / s.adjLeads) * 100).toFixed(1) : "0"}%</td>
+                        <td className="text-right px-4 py-2.5 text-sm font-semibold text-emerald-600">{s.adjAgendas > 0 ? ((s.adjVentas / s.adjAgendas) * 100).toFixed(1) : "0"}%</td>
+                        <td className="text-right px-5 py-2.5 text-sm font-semibold text-emerald-600">{s.adjLeads > 0 ? ((s.adjVentas / s.adjLeads) * 100).toFixed(1) : "0"}%</td>
+                      </tr>
+                    );
+                  })}
+                  {/* Total ajustado */}
+                  <tr className="border-t border-emerald-200 bg-emerald-50/50 font-bold">
+                    <td className="px-5 py-2.5 text-sm text-emerald-800">Total</td>
+                    <td className="text-right px-4 py-2.5 text-sm text-gray-900">{stats.totalLeads.toLocaleString("es-ES")}</td>
+                    <td className="text-right px-4 py-2.5 text-sm text-gray-400">100%</td>
+                    <td className="text-right px-4 py-2.5 text-sm text-gray-900">{stats.totalAgendas}</td>
+                    <td className="text-right px-4 py-2.5 text-sm text-gray-400">100%</td>
+                    <td className="text-right px-4 py-2.5 text-sm text-gray-900">{stats.totalVentas}</td>
+                    <td className="text-right px-4 py-2.5 text-sm text-gray-400">100%</td>
+                    <td className="text-right px-4 py-2.5 text-sm text-emerald-700">{stats.convLeadAgenda}%</td>
+                    <td className="text-right px-4 py-2.5 text-sm text-emerald-700">{stats.convAgendaVenta}%</td>
+                    <td className="text-right px-5 py-2.5 text-sm text-emerald-700">{stats.convLeadVenta}%</td>
                   </tr>
                 </tbody>
               </table>
             </div>
-            {/* Tabla ajustada */}
-            {adjustedSources.length > 0 && (<>
-              <p className="text-xs text-gray-400 mt-3">Datos ajustados (untracked distribuido proporcionalmente)</p>
-              <div className="bg-white rounded-2xl border border-emerald-100 shadow-sm overflow-hidden">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-emerald-100 bg-emerald-50/40">
-                      <th className="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Fuente</th>
-                      <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Leads</th>
-                      <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">%</th>
-                      <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Agendas</th>
-                      <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">%</th>
-                      <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Ventas</th>
-                      <th className="text-right px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">%</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {adjustedSources.map((s) => {
-                      const totalL = adjustedSources.reduce((sum, r) => sum + r.adjLeads, 0);
-                      const totalA = adjustedSources.reduce((sum, r) => sum + r.adjAgendas, 0);
-                      const totalV = adjustedSources.reduce((sum, r) => sum + r.adjVentas, 0);
-                      return (
-                        <tr key={s.key} className="hover:bg-gray-50/50 transition-colors">
-                          <td className="px-6 py-3.5">
-                            <div className="flex items-center gap-2.5">
-                              <div className={`w-3 h-3 rounded-full ${SOURCE_COLORS[s.key] ?? "bg-gray-300"}`} />
-                              <span className="text-sm font-semibold text-gray-700">{s.key}</span>
-                            </div>
-                          </td>
-                          <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">{s.adjLeads.toLocaleString("es-ES")}</td>
-                          <td className={`text-right px-4 py-3.5 text-sm font-semibold ${SOURCE_TEXT[s.key]}`}>{totalL > 0 ? ((s.adjLeads / totalL) * 100).toFixed(1) : "0"}%</td>
-                          <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">{s.adjAgendas}</td>
-                          <td className={`text-right px-4 py-3.5 text-sm font-semibold ${SOURCE_TEXT[s.key]}`}>{totalA > 0 ? ((s.adjAgendas / totalA) * 100).toFixed(1) : "0"}%</td>
-                          <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">{s.adjVentas}</td>
-                          <td className={`text-right px-6 py-3.5 text-sm font-semibold ${SOURCE_TEXT[s.key]}`}>{totalV > 0 ? ((s.adjVentas / totalV) * 100).toFixed(1) : "0"}%</td>
-                        </tr>
-                      );
-                    })}
-                    <tr className="bg-emerald-50/40 font-bold">
-                      <td className="px-6 py-3.5 text-sm text-gray-700">Total</td>
-                      <td className="text-right px-4 py-3.5 text-sm text-gray-900">{stats.totalLeads.toLocaleString("es-ES")}</td>
-                      <td className="text-right px-4 py-3.5 text-sm text-gray-400">100%</td>
-                      <td className="text-right px-4 py-3.5 text-sm text-gray-900">{stats.totalAgendas}</td>
-                      <td className="text-right px-4 py-3.5 text-sm text-gray-400">100%</td>
-                      <td className="text-right px-4 py-3.5 text-sm text-gray-900">{stats.totalVentas}</td>
-                      <td className="text-right px-6 py-3.5 text-sm text-gray-400">100%</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </>)}
           </>)}
 
           {/* 4. Paid Media */}
           {paidMedia && paidMedia.campaigns.length > 0 && (
             <>
               <h2 className="text-lg font-bold text-gray-900 mt-2">4. Paid Media</h2>
-              <p className="text-xs text-gray-400 -mt-4">Datos brutos (con untracked)</p>
 
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-100 bg-gray-50/60">
-                      <th className="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Fuente</th>
+                      <th className="text-left px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Fuente</th>
                       <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Captacion</th>
                       <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">%</th>
                       <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Agendas</th>
                       <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">%</th>
                       <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Ventas</th>
                       <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">%</th>
-                      <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Ratio agenda</th>
-                      <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Ratio venta</th>
-                      <th className="text-right px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Cierre agenda</th>
+                      <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Ratio de agenda</th>
+                      <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Conv. L→V</th>
+                      <th className="text-right px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Cierre de llamada</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody>
+                    {/* Bruto */}
+                    <tr className="bg-gray-50/30"><td colSpan={10} className="px-5 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Datos brutos (con untracked)</td></tr>
                     {paidMedia.campaigns.map((c) => (
-                      <tr key={c.campaign} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-6 py-3.5">
-                          <span className="text-sm font-semibold text-gray-700">{c.campaign}</span>
-                        </td>
-                        <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">{c.leads.toLocaleString("es-ES")}</td>
-                        <td className="text-right px-4 py-3.5 text-sm font-semibold text-blue-600">{c.leadsPct}%</td>
-                        <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">
-                          {c.agendasUnicas}
-                          <span className="text-xs font-normal text-gray-400 ml-1">({c.agendas})</span>
-                        </td>
-                        <td className="text-right px-4 py-3.5 text-sm font-semibold text-blue-600">{c.agendasPct}%</td>
-                        <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">{c.ventas}</td>
-                        <td className="text-right px-4 py-3.5 text-sm font-semibold text-blue-600">{c.ventasPct}%</td>
-                        <td className="text-right px-4 py-3.5 text-sm font-semibold text-emerald-600">{c.ratioAgenda}%</td>
-                        <td className="text-right px-4 py-3.5 text-sm font-semibold text-emerald-600">{c.ratioVenta}%</td>
-                        <td className="text-right px-6 py-3.5 text-sm font-semibold text-amber-600">{c.cierreAgenda}%</td>
+                      <tr key={c.campaign} className="border-t border-gray-50 hover:bg-gray-50/50">
+                        <td className="px-5 py-2.5 text-sm font-semibold text-gray-700">{c.campaign}</td>
+                        <td className="text-right px-4 py-2.5 text-sm font-bold text-gray-900">{c.leads.toLocaleString("es-ES")}</td>
+                        <td className="text-right px-4 py-2.5 text-sm font-semibold text-blue-600">{c.leadsPct}%</td>
+                        <td className="text-right px-4 py-2.5 text-sm font-bold text-gray-900">{c.agendas}</td>
+                        <td className="text-right px-4 py-2.5 text-sm font-semibold text-blue-600">{c.agendasPct}%</td>
+                        <td className="text-right px-4 py-2.5 text-sm font-bold text-gray-900">{c.ventas}</td>
+                        <td className="text-right px-4 py-2.5 text-sm font-semibold text-blue-600">{c.ventasPct}%</td>
+                        <td className="text-right px-4 py-2.5 text-sm text-gray-400">{c.ratioAgenda}%</td>
+                        <td className="text-right px-4 py-2.5 text-sm text-gray-400">{c.ratioVenta}%</td>
+                        <td className="text-right px-5 py-2.5 text-sm text-gray-400">{c.cierreAgenda}%</td>
                       </tr>
                     ))}
-                    {/* Total row */}
-                    <tr className="bg-gray-50/80 font-bold">
-                      <td className="px-6 py-3.5 text-sm text-gray-700">TOTAL</td>
-                      <td className="text-right px-4 py-3.5 text-sm text-gray-900">{paidMedia.totalLeads.toLocaleString("es-ES")}</td>
-                      <td className="text-right px-4 py-3.5 text-sm text-gray-400">100%</td>
-                      <td className="text-right px-4 py-3.5 text-sm text-gray-900">{paidMedia.totalAgendas}</td>
-                      <td className="text-right px-4 py-3.5 text-sm text-gray-400">100%</td>
-                      <td className="text-right px-4 py-3.5 text-sm text-gray-900">{paidMedia.totalVentas}</td>
-                      <td className="text-right px-4 py-3.5 text-sm text-gray-400">100%</td>
-                      <td className="text-right px-4 py-3.5 text-sm font-semibold text-emerald-600">
-                        {paidMedia.totalLeads > 0 ? ((paidMedia.totalAgendas / paidMedia.totalLeads) * 100).toFixed(2) : "0"}%
-                      </td>
-                      <td className="text-right px-4 py-3.5 text-sm font-semibold text-emerald-600">
-                        {paidMedia.totalLeads > 0 ? ((paidMedia.totalVentas / paidMedia.totalLeads) * 100).toFixed(2) : "0"}%
-                      </td>
-                      <td className="text-right px-6 py-3.5 text-sm font-semibold text-amber-600">
-                        {paidMedia.totalAgendas > 0 ? ((paidMedia.totalVentas / paidMedia.totalAgendas) * 100).toFixed(2) : "0"}%
-                      </td>
+                    <tr className="border-t border-gray-200 bg-gray-50/80 font-bold">
+                      <td className="px-5 py-2.5 text-sm text-gray-700">Total</td>
+                      <td className="text-right px-4 py-2.5 text-sm text-gray-900">{paidMedia.totalLeads.toLocaleString("es-ES")}</td>
+                      <td className="text-right px-4 py-2.5 text-sm text-gray-400">100%</td>
+                      <td className="text-right px-4 py-2.5 text-sm text-gray-900">{paidMedia.totalAgendas}</td>
+                      <td className="text-right px-4 py-2.5 text-sm text-gray-400">100%</td>
+                      <td className="text-right px-4 py-2.5 text-sm text-gray-900">{paidMedia.totalVentas}</td>
+                      <td className="text-right px-4 py-2.5 text-sm text-gray-400">100%</td>
+                      <td className="text-right px-4 py-2.5 text-sm text-gray-600">{paidMedia.totalLeads > 0 ? ((paidMedia.totalAgendas / paidMedia.totalLeads) * 100).toFixed(1) : "0"}%</td>
+                      <td className="text-right px-4 py-2.5 text-sm text-gray-600">{paidMedia.totalLeads > 0 ? ((paidMedia.totalVentas / paidMedia.totalLeads) * 100).toFixed(1) : "0"}%</td>
+                      <td className="text-right px-5 py-2.5 text-sm text-gray-600">{paidMedia.totalAgendas > 0 ? ((paidMedia.totalVentas / paidMedia.totalAgendas) * 100).toFixed(1) : "0"}%</td>
+                    </tr>
+                    {/* Ajustado */}
+                    <tr className="bg-blue-50/50 border-t-2 border-blue-200"><td colSpan={10} className="px-5 py-1.5 text-[10px] font-bold text-blue-700 uppercase tracking-widest">Datos ajustados (untracked distribuido)</td></tr>
+                    {(() => {
+                      const tL = adjustedPaidCampaigns.reduce((s, c) => s + c.adjLeads, 0);
+                      const tA = adjustedPaidCampaigns.reduce((s, c) => s + c.adjAgendas, 0);
+                      const tV = adjustedPaidCampaigns.reduce((s, c) => s + c.adjVentas, 0);
+                      return adjustedPaidCampaigns.map((c) => (
+                        <tr key={`adj-${c.campaign}`} className="border-t border-blue-100 hover:bg-blue-50/30">
+                          <td className="px-5 py-2.5 text-sm font-semibold text-gray-700">{c.campaign}</td>
+                          <td className="text-right px-4 py-2.5 text-sm font-bold text-gray-900">{c.adjLeads.toLocaleString("es-ES")}</td>
+                          <td className="text-right px-4 py-2.5 text-sm font-semibold text-blue-600">{tL > 0 ? ((c.adjLeads / tL) * 100).toFixed(1) : "0"}%</td>
+                          <td className="text-right px-4 py-2.5 text-sm font-bold text-gray-900">{c.adjAgendas}</td>
+                          <td className="text-right px-4 py-2.5 text-sm font-semibold text-blue-600">{tA > 0 ? ((c.adjAgendas / tA) * 100).toFixed(1) : "0"}%</td>
+                          <td className="text-right px-4 py-2.5 text-sm font-bold text-gray-900">{c.adjVentas}</td>
+                          <td className="text-right px-4 py-2.5 text-sm font-semibold text-blue-600">{tV > 0 ? ((c.adjVentas / tV) * 100).toFixed(1) : "0"}%</td>
+                          <td className="text-right px-4 py-2.5 text-sm font-semibold text-blue-600">{c.adjLeads > 0 ? ((c.adjAgendas / c.adjLeads) * 100).toFixed(1) : "0"}%</td>
+                          <td className="text-right px-4 py-2.5 text-sm font-semibold text-blue-600">{c.adjLeads > 0 ? ((c.adjVentas / c.adjLeads) * 100).toFixed(1) : "0"}%</td>
+                          <td className="text-right px-5 py-2.5 text-sm font-semibold text-blue-600">{c.adjAgendas > 0 ? ((c.adjVentas / c.adjAgendas) * 100).toFixed(1) : "0"}%</td>
+                        </tr>
+                      ));
+                    })()}
+                    <tr className="border-t border-blue-200 bg-blue-50/50 font-bold">
+                      <td className="px-5 py-2.5 text-sm text-blue-800">Total</td>
+                      <td className="text-right px-4 py-2.5 text-sm text-gray-900">{paidMedia.totalLeads.toLocaleString("es-ES")}</td>
+                      <td className="text-right px-4 py-2.5 text-sm text-gray-400">100%</td>
+                      <td className="text-right px-4 py-2.5 text-sm text-gray-900">{paidMedia.totalAgendas}</td>
+                      <td className="text-right px-4 py-2.5 text-sm text-gray-400">100%</td>
+                      <td className="text-right px-4 py-2.5 text-sm text-gray-900">{paidMedia.totalVentas}</td>
+                      <td className="text-right px-4 py-2.5 text-sm text-gray-400">100%</td>
+                      <td className="text-right px-4 py-2.5 text-sm text-blue-700">{paidMedia.totalLeads > 0 ? ((paidMedia.totalAgendas / paidMedia.totalLeads) * 100).toFixed(1) : "0"}%</td>
+                      <td className="text-right px-4 py-2.5 text-sm text-blue-700">{paidMedia.totalLeads > 0 ? ((paidMedia.totalVentas / paidMedia.totalLeads) * 100).toFixed(1) : "0"}%</td>
+                      <td className="text-right px-5 py-2.5 text-sm text-blue-700">{paidMedia.totalAgendas > 0 ? ((paidMedia.totalVentas / paidMedia.totalAgendas) * 100).toFixed(1) : "0"}%</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
-              {/* Paid ajustada */}
-              {adjustedPaidCampaigns.length > 0 && (<>
-                <p className="text-xs text-gray-400 mt-3">Datos ajustados (untracked distribuido)</p>
-                <div className="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-blue-100 bg-blue-50/40">
-                        <th className="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Fuente</th>
-                        <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Captacion</th>
-                        <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">%</th>
-                        <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Agendas</th>
-                        <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">%</th>
-                        <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Ventas</th>
-                        <th className="text-right px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">%</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                      {(() => {
-                        const tL = adjustedPaidCampaigns.reduce((s, c) => s + c.adjLeads, 0);
-                        const tA = adjustedPaidCampaigns.reduce((s, c) => s + c.adjAgendas, 0);
-                        const tV = adjustedPaidCampaigns.reduce((s, c) => s + c.adjVentas, 0);
-                        return adjustedPaidCampaigns.map((c) => (
-                          <tr key={c.campaign} className="hover:bg-gray-50/50 transition-colors">
-                            <td className="px-6 py-3.5 text-sm font-semibold text-gray-700">{c.campaign}</td>
-                            <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">{c.adjLeads.toLocaleString("es-ES")}</td>
-                            <td className="text-right px-4 py-3.5 text-sm font-semibold text-blue-600">{tL > 0 ? ((c.adjLeads / tL) * 100).toFixed(1) : "0"}%</td>
-                            <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">{c.adjAgendas}</td>
-                            <td className="text-right px-4 py-3.5 text-sm font-semibold text-blue-600">{tA > 0 ? ((c.adjAgendas / tA) * 100).toFixed(1) : "0"}%</td>
-                            <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">{c.adjVentas}</td>
-                            <td className="text-right px-6 py-3.5 text-sm font-semibold text-blue-600">{tV > 0 ? ((c.adjVentas / tV) * 100).toFixed(1) : "0"}%</td>
-                          </tr>
-                        ));
-                      })()}
-                      <tr className="bg-blue-50/40 font-bold">
-                        <td className="px-6 py-3.5 text-sm text-gray-700">TOTAL</td>
-                        <td className="text-right px-4 py-3.5 text-sm text-gray-900">{paidMedia?.totalLeads?.toLocaleString("es-ES")}</td>
-                        <td className="text-right px-4 py-3.5 text-sm text-gray-400">100%</td>
-                        <td className="text-right px-4 py-3.5 text-sm text-gray-900">{paidMedia?.totalAgendas}</td>
-                        <td className="text-right px-4 py-3.5 text-sm text-gray-400">100%</td>
-                        <td className="text-right px-4 py-3.5 text-sm text-gray-900">{paidMedia?.totalVentas}</td>
-                        <td className="text-right px-6 py-3.5 text-sm text-gray-400">100%</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </>)}
             </>
           )}
           {/* 5. Afiliados */}
           {affiliateMedia && affiliateMedia.types.length > 0 && (
             <>
               <h2 className="text-lg font-bold text-gray-900 mt-2">5. Afiliados</h2>
-              <p className="text-xs text-gray-400 -mt-4">Datos brutos (con untracked)</p>
 
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-100 bg-gray-50/60">
-                      <th className="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Fuente</th>
+                      <th className="text-left px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Fuente</th>
                       <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Captacion</th>
                       <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">%</th>
                       <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Agendas</th>
                       <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">%</th>
                       <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Ventas</th>
-                      <th className="text-right px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">%</th>
+                      <th className="text-right px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">%</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody>
+                    {/* Bruto */}
+                    <tr className="bg-gray-50/30"><td colSpan={7} className="px-5 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Datos brutos (con untracked)</td></tr>
                     {affiliateMedia.types.map((a) => (
-                      <tr key={a.affiliate} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-6 py-3.5">
-                          <span className="text-sm font-semibold text-gray-700">{a.affiliate}</span>
-                        </td>
-                        <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">{a.leads.toLocaleString("es-ES")}</td>
-                        <td className="text-right px-4 py-3.5 text-sm font-semibold text-purple-600">{a.leadsPct}%</td>
-                        <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">
-                          {a.agendasUnicas}
-                          <span className="text-xs font-normal text-gray-400 ml-1">({a.agendas})</span>
-                        </td>
-                        <td className="text-right px-4 py-3.5 text-sm font-semibold text-purple-600">{a.agendasPct}%</td>
-                        <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">{a.ventas}</td>
-                        <td className="text-right px-6 py-3.5 text-sm font-semibold text-purple-600">{a.ventasPct}%</td>
+                      <tr key={a.affiliate} className="border-t border-gray-50 hover:bg-gray-50/50">
+                        <td className="px-5 py-2.5 text-sm font-semibold text-gray-700">{a.affiliate}</td>
+                        <td className="text-right px-4 py-2.5 text-sm font-bold text-gray-900">{a.leads.toLocaleString("es-ES")}</td>
+                        <td className="text-right px-4 py-2.5 text-sm font-semibold text-purple-600">{a.leadsPct}%</td>
+                        <td className="text-right px-4 py-2.5 text-sm font-bold text-gray-900">{a.agendas}</td>
+                        <td className="text-right px-4 py-2.5 text-sm font-semibold text-purple-600">{a.agendasPct}%</td>
+                        <td className="text-right px-4 py-2.5 text-sm font-bold text-gray-900">{a.ventas}</td>
+                        <td className="text-right px-5 py-2.5 text-sm font-semibold text-purple-600">{a.ventasPct}%</td>
                       </tr>
                     ))}
-                    {/* Total row */}
-                    <tr className="bg-gray-50/80 font-bold">
-                      <td className="px-6 py-3.5 text-sm text-gray-700">TOTAL</td>
-                      <td className="text-right px-4 py-3.5 text-sm text-gray-900">{affiliateMedia.totalLeads.toLocaleString("es-ES")}</td>
-                      <td className="text-right px-4 py-3.5 text-sm text-gray-400">100%</td>
-                      <td className="text-right px-4 py-3.5 text-sm text-gray-900">{affiliateMedia.totalAgendas}</td>
-                      <td className="text-right px-4 py-3.5 text-sm text-gray-400">100%</td>
-                      <td className="text-right px-4 py-3.5 text-sm text-gray-900">{affiliateMedia.totalVentas}</td>
-                      <td className="text-right px-6 py-3.5 text-sm text-gray-400">100%</td>
+                    <tr className="border-t border-gray-200 bg-gray-50/80 font-bold">
+                      <td className="px-5 py-2.5 text-sm text-gray-700">Total</td>
+                      <td className="text-right px-4 py-2.5 text-sm text-gray-900">{affiliateMedia.totalLeads.toLocaleString("es-ES")}</td>
+                      <td className="text-right px-4 py-2.5 text-sm text-gray-400">100%</td>
+                      <td className="text-right px-4 py-2.5 text-sm text-gray-900">{affiliateMedia.totalAgendas}</td>
+                      <td className="text-right px-4 py-2.5 text-sm text-gray-400">100%</td>
+                      <td className="text-right px-4 py-2.5 text-sm text-gray-900">{affiliateMedia.totalVentas}</td>
+                      <td className="text-right px-5 py-2.5 text-sm text-gray-400">100%</td>
+                    </tr>
+                    {/* Ajustado */}
+                    <tr className="bg-purple-50/50 border-t-2 border-purple-200"><td colSpan={7} className="px-5 py-1.5 text-[10px] font-bold text-purple-700 uppercase tracking-widest">Datos ajustados (untracked distribuido)</td></tr>
+                    {(() => {
+                      const tL = adjustedAffiliates.reduce((s, t) => s + t.adjLeads, 0);
+                      const tA = adjustedAffiliates.reduce((s, t) => s + t.adjAgendas, 0);
+                      const tV = adjustedAffiliates.reduce((s, t) => s + t.adjVentas, 0);
+                      return adjustedAffiliates.map((t) => (
+                        <tr key={`adj-${t.affiliate}`} className="border-t border-purple-100 hover:bg-purple-50/30">
+                          <td className="px-5 py-2.5 text-sm font-semibold text-gray-700">{t.affiliate}</td>
+                          <td className="text-right px-4 py-2.5 text-sm font-bold text-gray-900">{t.adjLeads.toLocaleString("es-ES")}</td>
+                          <td className="text-right px-4 py-2.5 text-sm font-semibold text-purple-600">{tL > 0 ? ((t.adjLeads / tL) * 100).toFixed(1) : "0"}%</td>
+                          <td className="text-right px-4 py-2.5 text-sm font-bold text-gray-900">{t.adjAgendas}</td>
+                          <td className="text-right px-4 py-2.5 text-sm font-semibold text-purple-600">{tA > 0 ? ((t.adjAgendas / tA) * 100).toFixed(1) : "0"}%</td>
+                          <td className="text-right px-4 py-2.5 text-sm font-bold text-gray-900">{t.adjVentas}</td>
+                          <td className="text-right px-5 py-2.5 text-sm font-semibold text-purple-600">{tV > 0 ? ((t.adjVentas / tV) * 100).toFixed(1) : "0"}%</td>
+                        </tr>
+                      ));
+                    })()}
+                    <tr className="border-t border-purple-200 bg-purple-50/50 font-bold">
+                      <td className="px-5 py-2.5 text-sm text-purple-800">Total</td>
+                      <td className="text-right px-4 py-2.5 text-sm text-gray-900">{affiliateMedia.totalLeads.toLocaleString("es-ES")}</td>
+                      <td className="text-right px-4 py-2.5 text-sm text-gray-400">100%</td>
+                      <td className="text-right px-4 py-2.5 text-sm text-gray-900">{affiliateMedia.totalAgendas}</td>
+                      <td className="text-right px-4 py-2.5 text-sm text-gray-400">100%</td>
+                      <td className="text-right px-4 py-2.5 text-sm text-gray-900">{affiliateMedia.totalVentas}</td>
+                      <td className="text-right px-5 py-2.5 text-sm text-gray-400">100%</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
-              {/* Afiliados ajustada */}
-              {adjustedAffiliates.length > 0 && (<>
-                <p className="text-xs text-gray-400 mt-3">Datos ajustados (untracked distribuido)</p>
-                <div className="bg-white rounded-2xl border border-purple-100 shadow-sm overflow-hidden">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-purple-100 bg-purple-50/40">
-                        <th className="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Fuente</th>
-                        <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Captacion</th>
-                        <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">%</th>
-                        <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Agendas</th>
-                        <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">%</th>
-                        <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Ventas</th>
-                        <th className="text-right px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">%</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                      {(() => {
-                        const tL = adjustedAffiliates.reduce((s, t) => s + t.adjLeads, 0);
-                        const tA = adjustedAffiliates.reduce((s, t) => s + t.adjAgendas, 0);
-                        const tV = adjustedAffiliates.reduce((s, t) => s + t.adjVentas, 0);
-                        return adjustedAffiliates.map((t) => (
-                          <tr key={t.affiliate} className="hover:bg-gray-50/50 transition-colors">
-                            <td className="px-6 py-3.5 text-sm font-semibold text-gray-700">{t.affiliate}</td>
-                            <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">{t.adjLeads.toLocaleString("es-ES")}</td>
-                            <td className="text-right px-4 py-3.5 text-sm font-semibold text-purple-600">{tL > 0 ? ((t.adjLeads / tL) * 100).toFixed(1) : "0"}%</td>
-                            <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">{t.adjAgendas}</td>
-                            <td className="text-right px-4 py-3.5 text-sm font-semibold text-purple-600">{tA > 0 ? ((t.adjAgendas / tA) * 100).toFixed(1) : "0"}%</td>
-                            <td className="text-right px-4 py-3.5 text-sm font-bold text-gray-900">{t.adjVentas}</td>
-                            <td className="text-right px-6 py-3.5 text-sm font-semibold text-purple-600">{tV > 0 ? ((t.adjVentas / tV) * 100).toFixed(1) : "0"}%</td>
-                          </tr>
-                        ));
-                      })()}
-                      <tr className="bg-purple-50/40 font-bold">
-                        <td className="px-6 py-3.5 text-sm text-gray-700">TOTAL</td>
-                        <td className="text-right px-4 py-3.5 text-sm text-gray-900">{affiliateMedia?.totalLeads?.toLocaleString("es-ES")}</td>
-                        <td className="text-right px-4 py-3.5 text-sm text-gray-400">100%</td>
-                        <td className="text-right px-4 py-3.5 text-sm text-gray-900">{affiliateMedia?.totalAgendas}</td>
-                        <td className="text-right px-4 py-3.5 text-sm text-gray-400">100%</td>
-                        <td className="text-right px-4 py-3.5 text-sm text-gray-900">{affiliateMedia?.totalVentas}</td>
-                        <td className="text-right px-6 py-3.5 text-sm text-gray-400">100%</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </>)}
             </>
           )}
           {/* 6. Estudio por comercial */}
@@ -870,7 +815,7 @@ export default function FunnelPage() {
                       <th rowSpan={2} className="text-left px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide border-r border-gray-100">Closing</th>
                       <th rowSpan={2} className="text-right px-3 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Agendas</th>
                       <th rowSpan={2} className="text-right px-3 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Ventas</th>
-                      <th rowSpan={2} className="text-right px-3 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide border-r border-gray-100">% cierre</th>
+                      <th rowSpan={2} className="text-right px-3 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide border-r border-gray-100">Cierre de llamada</th>
                       <th colSpan={5} className="text-center px-3 py-2 text-xs font-bold text-blue-500 uppercase tracking-wide border-r border-gray-100">Paid</th>
                       <th colSpan={3} className="text-center px-3 py-2 text-xs font-bold text-emerald-500 uppercase tracking-wide">Organico</th>
                     </tr>
@@ -882,7 +827,7 @@ export default function FunnelPage() {
                       <th className="text-right px-3 py-2 text-[10px] font-bold text-gray-400 uppercase border-r border-gray-100">% AV0 / AV2</th>
                       <th className="text-right px-3 py-2 text-[10px] font-bold text-gray-400 uppercase">Agendas</th>
                       <th className="text-right px-3 py-2 text-[10px] font-bold text-gray-400 uppercase">Ventas</th>
-                      <th className="text-right px-3 py-2 text-[10px] font-bold text-gray-400 uppercase">% cierre</th>
+                      <th className="text-right px-3 py-2 text-[10px] font-bold text-gray-400 uppercase">Cierre de llamada</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
