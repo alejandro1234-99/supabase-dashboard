@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function fetchAll(query: any): Promise<any[]> {
-  const PAGE = 1000;
+  const PAGE = 5000;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const all: any[] = [];
   let from = 0;
@@ -39,13 +39,15 @@ const EDICIONES = ["Enero 2026", "Febrero 2026", "Marzo 2026"];
 export async function GET() {
   const supabase = createAdminClient();
 
-  // Fetch all data
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const leads = await fetchAll((supabase.from("leads" as any) as any).select("email, edicion, funnel, medium, test"));
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const agendas = await fetchAll((supabase.from("agendas" as any) as any).select("email, edicion"));
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sales = await fetchAll((supabase.from("purchase_approved" as any) as any).select("correo_electronico, edicion, cash_collected, status"));
+  // Fetch ALL data in PARALLEL
+  const [leads, agendas, sales] = await Promise.all([
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    fetchAll((supabase.from("leads" as any) as any).select("email, edicion, funnel, medium, test")),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    fetchAll((supabase.from("agendas" as any) as any).select("email, edicion")),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    fetchAll((supabase.from("purchase_approved" as any) as any).select("correo_electronico, edicion, cash_collected, status")),
+  ]);
 
   // Build email→source per edition
   const emailSourceByEd: Record<string, Record<string, Source>> = {};
@@ -62,24 +64,15 @@ export async function GET() {
     const edSales = sales.filter((r: { edicion: string }) => r.edicion === ed);
     const edAgendasUnicas = new Set(edAgendas.map((r: { email: string }) => r.email?.toLowerCase()).filter(Boolean)).size;
 
-    // Source breakdown for leads
     const leadsBySource: Record<Source, number> = { Paid: 0, Organico: 0, Afiliados: 0, Untracked: 0 };
-    for (const l of edLeads) {
-      leadsBySource[classifyLead(l)]++;
-    }
+    for (const l of edLeads) leadsBySource[classifyLead(l)]++;
 
-    // Source breakdown for agendas
     const emailSrc = emailSourceByEd[ed] ?? {};
     const agendasBySource: Record<Source, number> = { Paid: 0, Organico: 0, Afiliados: 0, Untracked: 0 };
-    for (const a of edAgendas) {
-      agendasBySource[emailSrc[(a.email ?? "").toLowerCase()] ?? "Untracked"]++;
-    }
+    for (const a of edAgendas) agendasBySource[emailSrc[(a.email ?? "").toLowerCase()] ?? "Untracked"]++;
 
-    // Source breakdown for sales
     const ventasBySource: Record<Source, number> = { Paid: 0, Organico: 0, Afiliados: 0, Untracked: 0 };
-    for (const s of edSales) {
-      ventasBySource[emailSrc[(s.correo_electronico ?? "").toLowerCase()] ?? "Untracked"]++;
-    }
+    for (const s of edSales) ventasBySource[emailSrc[(s.correo_electronico ?? "").toLowerCase()] ?? "Untracked"]++;
 
     const totalCash = edSales.reduce((s: number, r: { cash_collected: number | null }) => s + (r.cash_collected ?? 0), 0);
 
