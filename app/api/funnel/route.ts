@@ -462,12 +462,20 @@ export async function GET(req: NextRequest) {
     closerTotals[c] = { llamadas: 0, noShows: 0, celebradas: 0, ventas: 0 };
   }
 
-  const today = new Date().toISOString().split("T")[0];
+  const now = new Date();
+  const today = now.toISOString().split("T")[0];
 
   for (const a of agendas) {
     if (!a.fecha_llamada) continue;
     const day = a.fecha_llamada.split("T")[0];
-    if (day > today) continue; // Solo llamadas que ya se celebraron (hoy o antes)
+    if (day > today) continue; // Futuro — no contar
+
+    // Si es hoy y tiene hora real, solo contar si ya pasaron 30 min desde la hora
+    if (day === today && a.fecha_llamada.includes("T") && !a.fecha_llamada.endsWith("T00:00:00")) {
+      const callTime = new Date(a.fecha_llamada);
+      const thirtyMinAfter = new Date(callTime.getTime() + 30 * 60 * 1000);
+      if (now < thirtyMinAfter) continue; // Llamada aun no celebrada
+    }
     const closer = normComercial(a.comercial);
     if (closer === "Sin asignar") continue;
 
