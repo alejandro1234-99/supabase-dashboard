@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback, useRef, useMemo } from "react"
 import { swr, invalidateCache } from "@/lib/cached-fetch";
 import { distributeMultiPhase, distribute } from "@/lib/distribute-untracked";
 import { Loader2, Users, CalendarDays, ShoppingCart, ChevronDown, TrendingUp, Plus, Save, Edit3, Trash2, X, FileText, Lightbulb, AlertTriangle } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, LabelList, PieChart, Pie, Cell } from "recharts";
 
 type Stats = {
   totalLeads: number;
@@ -86,6 +86,54 @@ type ComercialRow = {
   cierreUntracked: string;
 };
 
+type EcoRow = {
+  sinRTG: { inversion: number; facturacion: number; roas: string };
+  conRTG: { inversion: number; facturacion: number; cpa: number | null; roas: string };
+  tiempoMedio?: string;
+};
+
+type EditionEconomics = {
+  rtgCost?: number;
+  general: { total: EcoRow | null; raw: Record<string, Partial<EcoRow>>; adjusted: Record<string, EcoRow> };
+  paid: { total: EcoRow | null; raw: Record<string, Partial<EcoRow>>; adjusted: Record<string, EcoRow> };
+  affiliates: { total: EcoRow | null; raw: Record<string, Partial<EcoRow>>; adjusted: Record<string, Partial<EcoRow>> };
+};
+
+function fmtEur(n: number | undefined | null): string {
+  if (n === undefined || n === null) return "—";
+  return n.toLocaleString("es-ES", { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + "€";
+}
+
+function fmtRoas(r: string | undefined): string {
+  if (!r) return "—";
+  return r + "x";
+}
+
+const ECO_CLS = "text-right px-2 py-0.5 text-xs";
+const ECO_BORDER = "border-l-2 border-amber-200";
+
+function EcoCells({ eco, bold, showTiempo }: { eco?: Partial<EcoRow> | null; bold?: boolean; showTiempo?: boolean }) {
+  const c = bold ? `${ECO_CLS} font-bold text-amber-800` : `${ECO_CLS} text-amber-700`;
+  const dash = `${ECO_CLS} text-gray-300`;
+  if (!eco) return <>
+    <td className={`${dash} ${ECO_BORDER}`}>—</td><td className={dash}>—</td><td className={dash}>—</td>
+    <td className={dash}>—</td><td className={dash}>—</td><td className={dash}>—</td><td className={dash}>—</td>
+    {showTiempo && <td className={dash}>—</td>}
+  </>;
+  const s = eco.sinRTG;
+  const r = eco.conRTG;
+  return <>
+    <td className={`${c} ${ECO_BORDER}`}>{s ? fmtEur(s.inversion) : "—"}</td>
+    <td className={c}>{s ? fmtEur(s.facturacion) : "—"}</td>
+    <td className={c}>{s ? fmtRoas(s.roas) : "—"}</td>
+    <td className={c}>{r ? fmtEur(r.inversion) : "—"}</td>
+    <td className={c}>{r ? fmtEur(r.facturacion) : "—"}</td>
+    <td className={c}>{r?.cpa != null ? fmtEur(r.cpa) : "—"}</td>
+    <td className={c}>{r ? fmtRoas(r.roas) : "—"}</td>
+    {showTiempo && <td className={c}>{eco.tiempoMedio ?? "—"}</td>}
+  </>;
+}
+
 const SOURCE_COLORS: Record<string, string> = {
   Paid: "bg-blue-500",
   Organico: "bg-emerald-500",
@@ -106,7 +154,10 @@ export default function FunnelPage() {
   const [paidMedia, setPaidMedia] = useState<PaidMedia | null>(null);
   const [affiliateMedia, setAffiliateMedia] = useState<AffiliateMedia | null>(null);
   const [comerciales, setComerciales] = useState<ComercialRow[]>([]);
-  const [timeline, setTimeline] = useState<{ date: string; ventas: number; agendasCreadas: number; llamadas: number }[]>([]);
+  const [economics, setEconomics] = useState<EditionEconomics>({ general: { total: null, raw: {}, adjusted: {} }, paid: { total: null, raw: {}, adjusted: {} }, affiliates: { total: null, raw: {}, adjusted: {} } });
+  const [timeline, setTimeline] = useState<{ date: string; ventas: number; agendasCreadas: number; agendasUnicas: number; llamadas: number; llamadasUnicas: number }[]>([]);
+  type QualData = Record<string, { label: string; data: { name: string; value: number }[] }>;
+  const [cualificacion, setCualificacion] = useState<QualData>({});
   const [closerPerformance, setCloserPerformance] = useState<{
     closer: string; llamadas: number; noShows: number; celebradas: number; ventas: number; cierre: string;
     days: { date: string; llamadas: number; noShows: number; celebradas: number; ventas: number }[];
@@ -168,6 +219,8 @@ export default function FunnelPage() {
       setComerciales(d.comerciales ?? []);
       setTimeline(d.timeline ?? []);
       setCloserPerformance(d.closerPerformance ?? []);
+      setCualificacion(d.cualificacion ?? {});
+      setEconomics(d.economics);
       if (!isStale) setLoading(false);
       else setLoading(false); // Show stale data, no spinner
     }));
@@ -421,40 +474,56 @@ export default function FunnelPage() {
             </div>
           </div>
 
+
+
           {/* 2. Actividad diaria */}
           <>
             <h2 className="text-lg font-bold text-gray-900 mt-2">2. Actividad diaria</h2>
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                <p className="text-xs text-gray-400 mb-4">Ventas, agendas creadas y llamadas de closers por dia</p>
-                <ResponsiveContainer width="100%" height={280}>
+                <p className="text-xs text-gray-400 mb-4">Ventas, agendas únicas creadas y llamadas únicas de closers por dia</p>
+                <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={timeline.map((d) => ({
                     dia: new Date(d.date).toLocaleDateString("es-ES", { day: "numeric", month: "short" }),
                     Ventas: d.ventas,
-                    "Agendas creadas": d.agendasCreadas,
-                    "Llamadas hoy": d.llamadas,
-                  }))} barCategoryGap="20%">
+                    "Agendas únicas creadas": d.agendasUnicas,
+                    _agendasTotal: d.agendasCreadas,
+                    "Llamadas únicas": d.llamadasUnicas,
+                    _llamadasTotal: d.llamadas,
+                  }))} barCategoryGap="20%" margin={{ top: 20 }}>
                     <XAxis dataKey="dia" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
                     <Tooltip
                       cursor={{ fill: "#f3f4f6" }}
                       content={({ active, payload, label }) => {
                         if (!active || !payload?.length) return null;
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const row = payload[0]?.payload as any;
                         return (
                           <div className="bg-white border border-gray-100 shadow-lg rounded-xl px-3 py-2 text-xs">
                             <p className="font-semibold text-gray-700 mb-1">{label}</p>
-                            {payload.map((p) => (
-                              <p key={String(p.dataKey)} style={{ color: p.color }}>
-                                {String(p.dataKey)}: {String(p.value)}
-                              </p>
-                            ))}
+                            {payload.map((p) => {
+                              const key = String(p.dataKey);
+                              if (key.startsWith("_")) return null;
+                              if (key === "Agendas únicas creadas") {
+                                return <p key={key} style={{ color: p.color }}>Agendas únicas creadas: {String(p.value)} ({row._agendasTotal} totales)</p>;
+                              }
+                              if (key === "Llamadas únicas") {
+                                return <p key={key} style={{ color: p.color }}>Llamadas únicas: {String(p.value)} ({row._llamadasTotal} totales)</p>;
+                              }
+                              return <p key={key} style={{ color: p.color }}>{key}: {String(p.value)}</p>;
+                            })}
                           </div>
                         );
                       }}
                     />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
                     <Bar dataKey="Ventas" radius={[3, 3, 0, 0]} fill="#f59e0b" />
-                    <Bar dataKey="Agendas creadas" radius={[3, 3, 0, 0]} fill="#6366f1" />
-                    <Bar dataKey="Llamadas hoy" radius={[3, 3, 0, 0]} fill="#10b981" />
+                    <Bar dataKey="Agendas únicas creadas" radius={[3, 3, 0, 0]} fill="#6366f1">
+                      <LabelList dataKey="Agendas únicas creadas" position="top" style={{ fontSize: 9, fill: "#6366f1", fontWeight: 700 }} formatter={(v: number) => v > 0 ? v : ""} />
+                    </Bar>
+                    <Bar dataKey="Llamadas únicas" radius={[3, 3, 0, 0]} fill="#10b981">
+                      <LabelList dataKey="Llamadas únicas" position="top" style={{ fontSize: 9, fill: "#10b981", fontWeight: 700 }} formatter={(v: number) => v > 0 ? v : ""} />
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -494,12 +563,66 @@ export default function FunnelPage() {
               </>
           </>
 
-          {/* 3. Desglose por fuente */}
+          {/* 3. Cualificación de agendas */}
+          {Object.keys(cualificacion).length > 0 && (
+            <>
+              <h2 className="text-lg font-bold text-gray-900 mt-2">3. Cualificación de agendas</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {Object.entries(cualificacion).map(([key, q]) => {
+                  const COLORS = ["#6366f1", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316"];
+                  const total = q.data.reduce((s, d) => s + d.value, 0);
+                  return (
+                    <div key={key} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+                      <p className="text-xs font-bold text-gray-700 mb-1 text-center">{q.label}</p>
+                      <ResponsiveContainer width="100%" height={180}>
+                        <PieChart>
+                          <Pie data={q.data} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={2} stroke="none">
+                            {q.data.map((_, i) => (
+                              <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip content={({ active, payload }) => {
+                            if (!active || !payload?.length) return null;
+                            const d = payload[0];
+                            const pct = total > 0 ? ((Number(d.value) / total) * 100).toFixed(1) : "0";
+                            return (
+                              <div className="bg-white border border-gray-100 shadow-lg rounded-xl px-3 py-2 text-xs">
+                                <p className="font-semibold text-gray-700">{String(d.name)}</p>
+                                <p className="text-gray-500">{String(d.value)} ({pct}%)</p>
+                              </div>
+                            );
+                          }} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="space-y-1 mt-1">
+                        {q.data.map((d, i) => {
+                          const pct = total > 0 ? ((d.value / total) * 100).toFixed(1) : "0";
+                          return (
+                            <div key={d.name} className="flex items-center gap-2 text-[10px]">
+                              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                              <span className="text-gray-600 truncate flex-1">{d.name}</span>
+                              <span className="font-bold text-gray-800">{d.value}</span>
+                              <span className="text-gray-400">({pct}%)</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          {/* 4. Desglose por fuente */}
           {sources.length > 0 && (<>
-            <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden mt-0.5">
-              <table className="w-full" style={{ fontSize: "11px" }}>
+            <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-x-auto mt-0.5">
+              <table className="w-full min-w-[1200px]" style={{ fontSize: "11px" }}>
                 <thead>
-                  <tr className="bg-gray-800"><td colSpan={10} className="px-3 py-0.5 text-[10px] font-bold text-white uppercase tracking-widest">3. Desglose por fuente</td></tr>
+                  <tr className="bg-gray-800"><td colSpan={17} className="px-3 py-0.5 text-[10px] font-bold text-white uppercase tracking-widest">4. Desglose por fuente</td></tr>
+                  <tr className="bg-amber-50 border-b border-amber-200">
+                    <th colSpan={10} /><th colSpan={3} className="text-center px-2 py-0.5 text-[10px] font-bold text-amber-700 uppercase border-l-2 border-amber-200">Sin RTG</th><th colSpan={4} className="text-center px-2 py-0.5 text-[10px] font-bold text-amber-700 uppercase border-l border-amber-200">Con RTG</th>
+                  </tr>
                   <tr className="border-b border-gray-100 bg-gray-50/60">
                     <th className="text-left px-3 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Fuente</th>
                     <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Leads</th>
@@ -511,11 +634,20 @@ export default function FunnelPage() {
                     <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Ratio agenda</th>
                     <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Cierre</th>
                     <th className="text-right px-3 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Conv. lead</th>
+                    <>
+                      <th className="text-right px-2 py-0.5 text-[10px] font-bold text-amber-600 uppercase border-l-2 border-amber-200">Inv.</th>
+                      <th className="text-right px-2 py-0.5 text-[10px] font-bold text-amber-600 uppercase">Fact.</th>
+                      <th className="text-right px-2 py-0.5 text-[10px] font-bold text-amber-600 uppercase">ROAS</th>
+                      <th className="text-right px-2 py-0.5 text-[10px] font-bold text-amber-600 uppercase border-l border-amber-200">Inv.</th>
+                      <th className="text-right px-2 py-0.5 text-[10px] font-bold text-amber-600 uppercase">Fact.</th>
+                      <th className="text-right px-2 py-0.5 text-[10px] font-bold text-amber-600 uppercase">CPA</th>
+                      <th className="text-right px-3 py-0.5 text-[10px] font-bold text-amber-600 uppercase">ROAS</th>
+                    </>
                   </tr>
                 </thead>
                 <tbody>
                   {/* Datos brutos */}
-                  <tr className="bg-gray-50/30"><td colSpan={10} className="px-3 py-0.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Datos brutos (con untracked)</td></tr>
+                  <tr className="bg-gray-50/30"><td colSpan={17} className="px-3 py-0.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Datos brutos (con untracked)</td></tr>
                   {sources.map((s) => (
                     <tr key={s.source} className="border-t border-gray-50 hover:bg-gray-50/50 transition-colors">
                       <td className="px-3 py-0.5">
@@ -533,6 +665,7 @@ export default function FunnelPage() {
                       <td className="text-right px-2 py-0.5 text-xs text-gray-400">{s.leads > 0 ? ((s.agendas / s.leads) * 100).toFixed(1) : "0"}%</td>
                       <td className="text-right px-2 py-0.5 text-xs text-gray-400">{s.agendas > 0 ? ((s.ventas / s.agendas) * 100).toFixed(1) : "0"}%</td>
                       <td className="text-right px-3 py-0.5 text-xs text-gray-400">{s.leads > 0 ? ((s.ventas / s.leads) * 100).toFixed(1) : "0"}%</td>
+                      <EcoCells eco={economics.general.raw[s.source]} />
                     </tr>
                   ))}
                   {/* Total bruto */}
@@ -547,10 +680,11 @@ export default function FunnelPage() {
                     <td className="text-right px-2 py-0.5 text-xs text-gray-600">{stats.convLeadAgenda}%</td>
                     <td className="text-right px-2 py-0.5 text-xs text-gray-600">{stats.convAgendaVenta}%</td>
                     <td className="text-right px-3 py-0.5 text-xs text-gray-600">{stats.convLeadVenta}%</td>
+                    <EcoCells eco={economics.general.total} bold />
                   </tr>
 
                   {/* Separador + datos ajustados */}
-                  <tr className="bg-emerald-50/50 border-t-2 border-emerald-200"><td colSpan={10} className="px-3 py-0.5 text-[10px] font-bold text-emerald-700 uppercase tracking-widest">Datos ajustados (untracked distribuido)</td></tr>
+                  <tr className="bg-emerald-50/50 border-t-2 border-emerald-200"><td colSpan={17} className="px-3 py-0.5 text-[10px] font-bold text-emerald-700 uppercase tracking-widest">Datos ajustados (untracked distribuido)</td></tr>
                   {adjustedSources.map((s) => {
                     const tL = adjustedSources.reduce((sum, r) => sum + r.adjLeads, 0);
                     const tA = adjustedSources.reduce((sum, r) => sum + r.adjAgendas, 0);
@@ -572,6 +706,7 @@ export default function FunnelPage() {
                         <td className="text-right px-2 py-0.5 text-xs font-semibold text-emerald-600">{s.adjLeads > 0 ? ((s.adjAgendas / s.adjLeads) * 100).toFixed(1) : "0"}%</td>
                         <td className="text-right px-2 py-0.5 text-xs font-semibold text-emerald-600">{s.adjAgendas > 0 ? ((s.adjVentas / s.adjAgendas) * 100).toFixed(1) : "0"}%</td>
                         <td className="text-right px-3 py-0.5 text-xs font-semibold text-emerald-600">{s.adjLeads > 0 ? ((s.adjVentas / s.adjLeads) * 100).toFixed(1) : "0"}%</td>
+                        <EcoCells eco={economics.general.adjusted[s.key]} />
                       </tr>
                     );
                   })}
@@ -587,19 +722,23 @@ export default function FunnelPage() {
                     <td className="text-right px-2 py-0.5 text-xs text-emerald-700">{stats.convLeadAgenda}%</td>
                     <td className="text-right px-2 py-0.5 text-xs text-emerald-700">{stats.convAgendaVenta}%</td>
                     <td className="text-right px-3 py-0.5 text-xs text-emerald-700">{stats.convLeadVenta}%</td>
+                    <td colSpan={7} className="border-l-2 border-amber-200" />
                   </tr>
                 </tbody>
               </table>
             </div>
           </>)}
 
-          {/* 4. Paid Media */}
+          {/* 5. Paid Media */}
           {paidMedia && paidMedia.campaigns.length > 0 && (
             <>
-              <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden mt-0.5">
-                <table className="w-full" style={{ fontSize: "11px" }}>
+              <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-x-auto mt-0.5">
+                <table className="w-full min-w-[1300px]" style={{ fontSize: "11px" }}>
                   <thead>
-                    <tr className="bg-blue-800"><td colSpan={10} className="px-3 py-0.5 text-[10px] font-bold text-white uppercase tracking-widest">4. Paid Media</td></tr>
+                    <tr className="bg-blue-800"><td colSpan={18} className="px-3 py-0.5 text-[10px] font-bold text-white uppercase tracking-widest">5. Paid Media</td></tr>
+                    <tr className="bg-amber-50 border-b border-amber-200">
+                      <th colSpan={10} /><th colSpan={3} className="text-center px-2 py-0.5 text-[10px] font-bold text-amber-700 uppercase border-l-2 border-amber-200">Sin RTG</th><th colSpan={4} className="text-center px-2 py-0.5 text-[10px] font-bold text-amber-700 uppercase border-l border-amber-200">Con RTG</th><th className="text-center px-2 py-0.5 text-[10px] font-bold text-amber-700 uppercase" />
+                    </tr>
                     <tr className="border-b border-gray-100 bg-gray-50/60">
                       <th className="text-left px-3 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Fuente</th>
                       <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Captacion</th>
@@ -611,11 +750,21 @@ export default function FunnelPage() {
                       <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Ratio agenda</th>
                       <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Conv. lead</th>
                       <th className="text-right px-3 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Cierre llamada</th>
+                      <>
+                        <th className="text-right px-2 py-0.5 text-[10px] font-bold text-amber-600 uppercase border-l-2 border-amber-200">Inv.</th>
+                        <th className="text-right px-2 py-0.5 text-[10px] font-bold text-amber-600 uppercase">Fact.</th>
+                        <th className="text-right px-2 py-0.5 text-[10px] font-bold text-amber-600 uppercase">ROAS</th>
+                        <th className="text-right px-2 py-0.5 text-[10px] font-bold text-amber-600 uppercase border-l border-amber-200">Inv.</th>
+                        <th className="text-right px-2 py-0.5 text-[10px] font-bold text-amber-600 uppercase">Fact.</th>
+                        <th className="text-right px-2 py-0.5 text-[10px] font-bold text-amber-600 uppercase">CPA</th>
+                        <th className="text-right px-2 py-0.5 text-[10px] font-bold text-amber-600 uppercase">ROAS</th>
+                        <th className="text-right px-3 py-0.5 text-[10px] font-bold text-amber-600 uppercase">t medio</th>
+                      </>
                     </tr>
                   </thead>
                   <tbody>
                     {/* Bruto */}
-                    <tr className="bg-gray-50/30"><td colSpan={10} className="px-3 py-0.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Datos brutos (con untracked)</td></tr>
+                    <tr className="bg-gray-50/30"><td colSpan={18} className="px-3 py-0.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Datos brutos (con untracked)</td></tr>
                     {paidMedia.campaigns.map((c) => (
                       <tr key={c.campaign} className="border-t border-gray-50 hover:bg-gray-50/50">
                         <td className="px-3 py-0.5 text-xs font-semibold text-gray-700">{c.campaign}</td>
@@ -628,6 +777,7 @@ export default function FunnelPage() {
                         <td className="text-right px-2 py-0.5 text-xs text-gray-400">{c.ratioAgenda}%</td>
                         <td className="text-right px-2 py-0.5 text-xs text-gray-400">{c.ratioVenta}%</td>
                         <td className="text-right px-3 py-0.5 text-xs text-gray-400">{c.cierreAgenda}%</td>
+                        <EcoCells eco={economics.paid.raw[c.campaign]} showTiempo />
                       </tr>
                     ))}
                     <tr className="border-t border-gray-200 bg-gray-50/80 font-bold">
@@ -641,9 +791,10 @@ export default function FunnelPage() {
                       <td className="text-right px-2 py-0.5 text-xs text-gray-600">{paidMedia.totalLeads > 0 ? ((paidMedia.totalAgendas / paidMedia.totalLeads) * 100).toFixed(1) : "0"}%</td>
                       <td className="text-right px-2 py-0.5 text-xs text-gray-600">{paidMedia.totalLeads > 0 ? ((paidMedia.totalVentas / paidMedia.totalLeads) * 100).toFixed(1) : "0"}%</td>
                       <td className="text-right px-3 py-0.5 text-xs text-gray-600">{paidMedia.totalAgendas > 0 ? ((paidMedia.totalVentas / paidMedia.totalAgendas) * 100).toFixed(1) : "0"}%</td>
+                      <EcoCells eco={economics.paid.total} bold showTiempo />
                     </tr>
                     {/* Ajustado */}
-                    <tr className="bg-blue-50/50 border-t-2 border-blue-200"><td colSpan={10} className="px-3 py-0.5 text-[10px] font-bold text-blue-700 uppercase tracking-widest">Datos ajustados (untracked distribuido)</td></tr>
+                    <tr className="bg-blue-50/50 border-t-2 border-blue-200"><td colSpan={18} className="px-3 py-0.5 text-[10px] font-bold text-blue-700 uppercase tracking-widest">Datos ajustados (untracked distribuido)</td></tr>
                     {(() => {
                       const tL = adjustedPaidCampaigns.reduce((s, c) => s + c.adjLeads, 0);
                       const tA = adjustedPaidCampaigns.reduce((s, c) => s + c.adjAgendas, 0);
@@ -660,6 +811,7 @@ export default function FunnelPage() {
                           <td className="text-right px-2 py-0.5 text-xs font-semibold text-blue-600">{c.adjLeads > 0 ? ((c.adjAgendas / c.adjLeads) * 100).toFixed(1) : "0"}%</td>
                           <td className="text-right px-2 py-0.5 text-xs font-semibold text-blue-600">{c.adjLeads > 0 ? ((c.adjVentas / c.adjLeads) * 100).toFixed(1) : "0"}%</td>
                           <td className="text-right px-3 py-0.5 text-xs font-semibold text-blue-600">{c.adjAgendas > 0 ? ((c.adjVentas / c.adjAgendas) * 100).toFixed(1) : "0"}%</td>
+                          <EcoCells eco={economics.paid.adjusted[c.campaign]} showTiempo />
                         </tr>
                       ));
                     })()}
@@ -674,19 +826,23 @@ export default function FunnelPage() {
                       <td className="text-right px-2 py-0.5 text-xs text-blue-700">{paidMedia.totalLeads > 0 ? ((paidMedia.totalAgendas / paidMedia.totalLeads) * 100).toFixed(1) : "0"}%</td>
                       <td className="text-right px-2 py-0.5 text-xs text-blue-700">{paidMedia.totalLeads > 0 ? ((paidMedia.totalVentas / paidMedia.totalLeads) * 100).toFixed(1) : "0"}%</td>
                       <td className="text-right px-3 py-0.5 text-xs text-blue-700">{paidMedia.totalAgendas > 0 ? ((paidMedia.totalVentas / paidMedia.totalAgendas) * 100).toFixed(1) : "0"}%</td>
+                      <td colSpan={8} className="border-l-2 border-amber-200" />
                     </tr>
                   </tbody>
                 </table>
               </div>
             </>
           )}
-          {/* 5. Afiliados */}
+          {/* 6. Afiliados */}
           {affiliateMedia && affiliateMedia.types.length > 0 && (
             <>
-              <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden mt-0.5">
-                <table className="w-full" style={{ fontSize: "11px" }}>
+              <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-x-auto mt-0.5">
+                <table className="w-full min-w-[1100px]" style={{ fontSize: "11px" }}>
                   <thead>
-                    <tr className="bg-purple-800"><td colSpan={7} className="px-3 py-0.5 text-[10px] font-bold text-white uppercase tracking-widest">5. Afiliados</td></tr>
+                    <tr className="bg-purple-800"><td colSpan={14} className="px-3 py-0.5 text-[10px] font-bold text-white uppercase tracking-widest">6. Afiliados</td></tr>
+                    <tr className="bg-amber-50 border-b border-amber-200">
+                      <th colSpan={7} /><th colSpan={3} className="text-center px-2 py-0.5 text-[10px] font-bold text-amber-700 uppercase border-l-2 border-amber-200">Sin RTG</th><th colSpan={4} className="text-center px-2 py-0.5 text-[10px] font-bold text-amber-700 uppercase border-l border-amber-200">Con RTG</th>
+                    </tr>
                     <tr className="border-b border-gray-100 bg-gray-50/60">
                       <th className="text-left px-3 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Fuente</th>
                       <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Captacion</th>
@@ -695,11 +851,20 @@ export default function FunnelPage() {
                       <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">%</th>
                       <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Ventas</th>
                       <th className="text-right px-3 py-0.5 text-[10px] font-bold text-gray-400 uppercase">%</th>
+                      <>
+                        <th className="text-right px-2 py-0.5 text-[10px] font-bold text-amber-600 uppercase border-l-2 border-amber-200">Inv.</th>
+                        <th className="text-right px-2 py-0.5 text-[10px] font-bold text-amber-600 uppercase">Fact.</th>
+                        <th className="text-right px-2 py-0.5 text-[10px] font-bold text-amber-600 uppercase">ROAS</th>
+                        <th className="text-right px-2 py-0.5 text-[10px] font-bold text-amber-600 uppercase border-l border-amber-200">Inv.</th>
+                        <th className="text-right px-2 py-0.5 text-[10px] font-bold text-amber-600 uppercase">Fact.</th>
+                        <th className="text-right px-2 py-0.5 text-[10px] font-bold text-amber-600 uppercase">CPA</th>
+                        <th className="text-right px-3 py-0.5 text-[10px] font-bold text-amber-600 uppercase">ROAS</th>
+                      </>
                     </tr>
                   </thead>
                   <tbody>
                     {/* Bruto */}
-                    <tr className="bg-gray-50/30"><td colSpan={7} className="px-3 py-0.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Datos brutos (con untracked)</td></tr>
+                    <tr className="bg-gray-50/30"><td colSpan={14} className="px-3 py-0.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Datos brutos (con untracked)</td></tr>
                     {affiliateMedia.types.map((a) => (
                       <tr key={a.affiliate} className="border-t border-gray-50 hover:bg-gray-50/50">
                         <td className="px-3 py-0.5 text-xs font-semibold text-gray-700">{a.affiliate}</td>
@@ -709,6 +874,7 @@ export default function FunnelPage() {
                         <td className="text-right px-2 py-0.5 text-xs font-semibold text-purple-600">{a.agendasPct}%</td>
                         <td className="text-right px-2 py-0.5 text-xs font-bold text-gray-900">{a.ventas}</td>
                         <td className="text-right px-3 py-0.5 text-xs font-semibold text-purple-600">{a.ventasPct}%</td>
+                        <EcoCells eco={economics.affiliates.raw[a.affiliate]} />
                       </tr>
                     ))}
                     <tr className="border-t border-gray-200 bg-gray-50/80 font-bold">
@@ -719,9 +885,10 @@ export default function FunnelPage() {
                       <td className="text-right px-2 py-0.5 text-xs text-gray-400">100%</td>
                       <td className="text-right px-2 py-0.5 text-xs text-gray-900">{affiliateMedia.totalVentas}</td>
                       <td className="text-right px-3 py-0.5 text-xs text-gray-400">100%</td>
+                      <EcoCells eco={economics.affiliates.total} bold />
                     </tr>
                     {/* Ajustado */}
-                    <tr className="bg-purple-50/50 border-t-2 border-purple-200"><td colSpan={7} className="px-3 py-0.5 text-[10px] font-bold text-purple-700 uppercase tracking-widest">Datos ajustados (untracked distribuido)</td></tr>
+                    <tr className="bg-purple-50/50 border-t-2 border-purple-200"><td colSpan={14} className="px-3 py-0.5 text-[10px] font-bold text-purple-700 uppercase tracking-widest">Datos ajustados (untracked distribuido)</td></tr>
                     {(() => {
                       const tL = adjustedAffiliates.reduce((s, t) => s + t.adjLeads, 0);
                       const tA = adjustedAffiliates.reduce((s, t) => s + t.adjAgendas, 0);
@@ -735,6 +902,7 @@ export default function FunnelPage() {
                           <td className="text-right px-2 py-0.5 text-xs font-semibold text-purple-600">{tA > 0 ? ((t.adjAgendas / tA) * 100).toFixed(1) : "0"}%</td>
                           <td className="text-right px-2 py-0.5 text-xs font-bold text-gray-900">{t.adjVentas}</td>
                           <td className="text-right px-3 py-0.5 text-xs font-semibold text-purple-600">{tV > 0 ? ((t.adjVentas / tV) * 100).toFixed(1) : "0"}%</td>
+                          <EcoCells eco={economics.affiliates.adjusted[t.affiliate]} />
                         </tr>
                       ));
                     })()}
@@ -746,6 +914,7 @@ export default function FunnelPage() {
                       <td className="text-right px-2 py-0.5 text-xs text-gray-400">100%</td>
                       <td className="text-right px-2 py-0.5 text-xs text-gray-900">{affiliateMedia.totalVentas}</td>
                       <td className="text-right px-3 py-0.5 text-xs text-gray-400">100%</td>
+                      <td colSpan={7} className="border-l-2 border-amber-200" />
                     </tr>
                   </tbody>
                 </table>

@@ -51,6 +51,202 @@ function classifyLead(lead: { funnel: string | null; medium: string | null; test
   return "Untracked";
 }
 
+// --- Economic data (manual, from Meta Ads / Sheets reports) ---
+// Each row mirrors the Excel structure: SIN RTG (inv, fac, roas) + CON RTG (inv, fac, cpa, roas)
+type EcoRow = {
+  sinRTG: { inversion: number; facturacion: number; roas: string };
+  conRTG: { inversion: number; facturacion: number; cpa: number | null; roas: string };
+  tiempoMedio?: string;
+};
+
+type EditionEconomics = {
+  rtgCost?: number;
+  general: {
+    total: EcoRow;
+    raw: Record<string, Partial<EcoRow>>;
+    adjusted: Record<string, EcoRow>;
+  };
+  paid: {
+    total: EcoRow;
+    raw: Record<string, Partial<EcoRow>>;
+    adjusted: Record<string, EcoRow>;
+  };
+  affiliates: {
+    total: EcoRow;
+    raw: Record<string, Partial<EcoRow>>;
+    adjusted: Record<string, Partial<EcoRow>>;
+  };
+};
+
+const ECONOMIC_DATA: Record<string, EditionEconomics> = {
+  "Febrero 2026": {
+    rtgCost: 1531.92,
+    general: {
+      total: {
+        sinRTG: { inversion: 42320, facturacion: 165751, roas: "3.92" },
+        conRTG: { inversion: 43852, facturacion: 165751, cpa: 528.34, roas: "3.78" },
+      },
+      raw: {
+        Paid:      { sinRTG: { inversion: 42320, facturacion: 0, roas: "" }, conRTG: { inversion: 43285.74, facturacion: 0, cpa: null, roas: "" } },
+        Organico:  { conRTG: { inversion: 530.95, facturacion: 0, cpa: null, roas: "" } },
+        Afiliados: { conRTG: { inversion: 20.13, facturacion: 0, cpa: null, roas: "" } },
+        Untracked: { conRTG: { inversion: 15.10, facturacion: 0, cpa: null, roas: "" } },
+      },
+      adjusted: {
+        Paid: {
+          sinRTG: { inversion: 42320, facturacion: 121645, roas: "2.87" },
+          conRTG: { inversion: 43295, facturacion: 121645, cpa: 710.77, roas: "2.81" },
+        },
+        Organico: {
+          sinRTG: { inversion: 0, facturacion: 43736, roas: "" },
+          conRTG: { inversion: 536, facturacion: 43736, cpa: 24.49, roas: "81.56" },
+        },
+        Afiliados: {
+          sinRTG: { inversion: 0, facturacion: 371, roas: "" },
+          conRTG: { inversion: 20, facturacion: 371, cpa: 109, roas: "18.25" },
+        },
+      },
+    },
+    paid: {
+      total: {
+        sinRTG: { inversion: 42320, facturacion: 121645, roas: "2.87" },
+        conRTG: { inversion: 43295, facturacion: 103844, cpa: 710.77, roas: "2.40" },
+      },
+      raw: {
+        AV0: {
+          sinRTG: { inversion: 23019, facturacion: 47928, roas: "2.08" },
+          conRTG: { inversion: 23542, facturacion: 47928, cpa: 980.91, roas: "2.04" },
+        },
+        AVV: {
+          sinRTG: { inversion: 0, facturacion: 0, roas: "" },
+          conRTG: { inversion: 0, facturacion: 0, cpa: null, roas: "" },
+        },
+        AV2: {
+          sinRTG: { inversion: 19301, facturacion: 55916, roas: "2.90" },
+          conRTG: { inversion: 19726, facturacion: 55916, cpa: 704.52, roas: "2.83" },
+        },
+        untracked: { conRTG: { inversion: 27, facturacion: 0, cpa: null, roas: "" } },
+      },
+      adjusted: {
+        AV0: {
+          sinRTG: { inversion: 23019, facturacion: 56144, roas: "2.44" },
+          conRTG: { inversion: 23557, facturacion: 56144, cpa: 837.90, roas: "2.38" },
+          tiempoMedio: "7.20",
+        },
+        AVV: {
+          sinRTG: { inversion: 0, facturacion: 0, roas: "" },
+          conRTG: { inversion: 0, facturacion: 0, cpa: null, roas: "" },
+        },
+        AV2: {
+          sinRTG: { inversion: 19301, facturacion: 65501, roas: "3.39" },
+          conRTG: { inversion: 19739, facturacion: 65501, cpa: 601.79, roas: "3.32" },
+          tiempoMedio: "6.96",
+        },
+      },
+    },
+    affiliates: {
+      total: {
+        sinRTG: { inversion: 5500, facturacion: 0, roas: "0.00" },
+        conRTG: { inversion: 8196, facturacion: 0, cpa: null, roas: "0.00" },
+      },
+      raw: {
+        Worldcast:     { sinRTG: { inversion: 0, facturacion: 0, roas: "" }, conRTG: { inversion: 2097, facturacion: 0, cpa: null, roas: "" } },
+        vidascontadas: { sinRTG: { inversion: 4500, facturacion: 0, roas: "0.00" }, conRTG: { inversion: 5099, facturacion: 0, cpa: null, roas: "0.00" } },
+        "No Limits":   { sinRTG: { inversion: 1000, facturacion: 0, roas: "0.00" }, conRTG: { inversion: 1000, facturacion: 0, cpa: null, roas: "0.00" } },
+        untracked:     { conRTG: { inversion: 146, facturacion: 0, cpa: null, roas: "" } },
+      },
+      adjusted: {
+        Worldcast:     { conRTG: { inversion: 282, facturacion: 0, cpa: null, roas: "" } },
+        vidascontadas: { conRTG: { inversion: 58, facturacion: 0, cpa: null, roas: "" } },
+        "No Limits":   { conRTG: { inversion: 2, facturacion: 0, cpa: null, roas: "" } },
+      },
+    },
+  },
+  "Enero 2026": {
+    general: {
+      total: {
+        sinRTG: { inversion: 51424, facturacion: 217673, roas: "4.23" },
+        conRTG: { inversion: 53751, facturacion: 217673, cpa: 493.13, roas: "4.05" },
+      },
+      raw: {
+        Paid:      { sinRTG: { inversion: 0, facturacion: 0, roas: "" }, conRTG: { inversion: 0, facturacion: 0, cpa: null, roas: "" } },
+        Organico:  {},
+        Afiliados: {},
+        Untracked: {},
+      },
+      adjusted: {
+        Paid: {
+          sinRTG: { inversion: 36924, facturacion: 149733, roas: "4.06" },
+          conRTG: { inversion: 38548, facturacion: 149733, cpa: 514.12, roas: "3.88" },
+        },
+        Organico: {
+          sinRTG: { inversion: 0, facturacion: 18790, roas: "" },
+          conRTG: { inversion: 476, facturacion: 18790, cpa: 50.59, roas: "39.48" },
+        },
+        Afiliados: {
+          sinRTG: { inversion: 14500, facturacion: 49150, roas: "3.39" },
+          conRTG: { inversion: 17196, facturacion: 49150, cpa: 699, roas: "2.86" },
+        },
+      },
+    },
+    paid: {
+      total: {
+        sinRTG: { inversion: 36924, facturacion: 149775, roas: "4.06" },
+        conRTG: { inversion: 38548, facturacion: 149775, cpa: 514.12, roas: "3.89" },
+      },
+      raw: {
+        AV0: {
+          sinRTG: { inversion: 30771, facturacion: 119820, roas: "3.89" },
+          conRTG: { inversion: 32127, facturacion: 119820, cpa: 535.45, roas: "3.73" },
+        },
+        AVV: {
+          sinRTG: { inversion: 2163, facturacion: 11982, roas: "5.54" },
+          conRTG: { inversion: 2285, facturacion: 11982, cpa: 380.83, roas: "5.24" },
+        },
+        AV2: {
+          sinRTG: { inversion: 3990, facturacion: 17973, roas: "4.50" },
+          conRTG: { inversion: 4136, facturacion: 17973, cpa: 459.56, roas: "4.35" },
+        },
+        untracked: { conRTG: { inversion: 146, facturacion: 0, cpa: null, roas: "" } },
+      },
+      adjusted: {
+        AV0: {
+          sinRTG: { inversion: 30771, facturacion: 119787, roas: "3.89" },
+          conRTG: { inversion: 32127, facturacion: 119787, cpa: 535.60, roas: "3.73" },
+          tiempoMedio: "6.95",
+        },
+        AVV: {
+          sinRTG: { inversion: 2163, facturacion: 11979, roas: "5.54" },
+          conRTG: { inversion: 2285, facturacion: 11979, cpa: 380.93, roas: "5.24" },
+          tiempoMedio: "5.43",
+        },
+        AV2: {
+          sinRTG: { inversion: 3990, facturacion: 17968, roas: "4.50" },
+          conRTG: { inversion: 4136, facturacion: 17968, cpa: 459.73, roas: "4.34" },
+          tiempoMedio: "8.35",
+        },
+      },
+    },
+    affiliates: {
+      total: {
+        sinRTG: { inversion: 14500, facturacion: 49925, roas: "3.44" },
+        conRTG: { inversion: 17196, facturacion: 49925, cpa: 687.84, roas: "2.90" },
+      },
+      raw: {
+        Worldcast:        { sinRTG: { inversion: 9000, facturacion: 29955, roas: "3.33" }, conRTG: { inversion: 11223, facturacion: 29955, cpa: 748.22, roas: "2.67" } },
+        "Vidas Contadas":  { sinRTG: { inversion: 4500, facturacion: 17973, roas: "3.99" }, conRTG: { inversion: 4957, facturacion: 17973, cpa: 550.79, roas: "3.63" } },
+        "No Limits":       { sinRTG: { inversion: 1000, facturacion: 1997, roas: "2.00" }, conRTG: { inversion: 1016, facturacion: 1997, cpa: 1015.61, roas: "1.97" } },
+        untracked:         { conRTG: { inversion: 146, facturacion: 0, cpa: null, roas: "" } },
+      },
+      adjusted: {
+        Worldcast:        { sinRTG: { inversion: 10200, facturacion: 33949, roas: "3.33" }, conRTG: { inversion: 10505, facturacion: 33949, cpa: 617.96, roas: "3.23" } },
+        "Vidas Contadas":  { sinRTG: { inversion: 4500, facturacion: 13979, roas: "3.11" }, conRTG: { inversion: 4563, facturacion: 13979, cpa: 651.83, roas: "3.06" } },
+        "No Limits":       { sinRTG: { inversion: 1000, facturacion: 1997, roas: "2.00" }, conRTG: { inversion: 1002, facturacion: 1997, cpa: 1002.14, roas: "1.99" } },
+      },
+    },
+  },
+};
+
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
@@ -70,14 +266,14 @@ export async function GET(req: NextRequest) {
   const buildAgendas = () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let q = (supabase.from("agendas" as any) as any)
-      .select("email, edicion, comercial, no_show, fecha_llamada, creada");
+      .select("email, edicion, comercial, no_show, fecha_llamada, creada, situacion_actual, objetivo, inversion");
     if (edicion) q = q.eq("edicion", edicion);
     return q;
   };
   const buildSales = () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let q = (supabase.from("purchase_approved" as any) as any)
-      .select("correo_electronico, edicion, status, cash_collected, nombre_comercial, fecha_compra");
+      .select("correo_electronico, edicion, status, cash_collected, nombre_comercial, fecha_compra, date_added");
     if (edicion) q = q.eq("edicion", edicion);
     return q;
   };
@@ -96,6 +292,7 @@ export async function GET(req: NextRequest) {
   const agendas = agendasData as {
     email: string | null; edicion: string | null; comercial: string | null;
     no_show: boolean; fecha_llamada: string | null; creada: string | null;
+    situacion_actual: string | null; objetivo: string | null; inversion: string | null;
   }[];
   const sales = salesData as {
     correo_electronico: string | null;
@@ -104,6 +301,7 @@ export async function GET(req: NextRequest) {
     cash_collected: number | null;
     nombre_comercial: string | null;
     fecha_compra: string | null;
+    date_added: string | null;
   }[];
 
   // Build email → source map from leads
@@ -397,7 +595,8 @@ export async function GET(req: NextRequest) {
     "Marzo 2026": { start: "2026-03-24", days: 8 },
   };
 
-  const dailyMap: Record<string, { ventas: number; agendasCreadas: number; llamadas: number }> = {};
+  const dailyMap: Record<string, { ventas: number; agendasCreadas: number; agendasUnicas: number; llamadas: number; llamadasUnicas: number }> = {};
+  const dailyEmailsSets: Record<string, { agendas: Set<string>; llamadas: Set<string> }> = {};
 
   // Pre-fill days for the edition
   const edRange = edicion ? EDITION_DATE_RANGES[edicion] : null;
@@ -407,36 +606,52 @@ export async function GET(req: NextRequest) {
       const d = new Date(start);
       d.setDate(d.getDate() + i);
       const key = d.toISOString().split("T")[0];
-      dailyMap[key] = { ventas: 0, agendasCreadas: 0, llamadas: 0 };
+      dailyMap[key] = { ventas: 0, agendasCreadas: 0, agendasUnicas: 0, llamadas: 0, llamadasUnicas: 0 };
+      dailyEmailsSets[key] = { agendas: new Set(), llamadas: new Set() };
     }
   }
 
-  function getDay(map: Record<string, { ventas: number; agendasCreadas: number; llamadas: number }>, date: string) {
-    if (!map[date]) map[date] = { ventas: 0, agendasCreadas: 0, llamadas: 0 };
+  const rangeStart = edRange ? edRange.start : null;
+  const rangeEnd = edRange ? (() => { const d = new Date(edRange.start); d.setDate(d.getDate() + edRange.days - 1); return d.toISOString().split("T")[0]; })() : null;
+
+  function getDay(map: typeof dailyMap, date: string) {
+    if (!map[date]) {
+      map[date] = { ventas: 0, agendasCreadas: 0, agendasUnicas: 0, llamadas: 0, llamadasUnicas: 0 };
+      dailyEmailsSets[date] = { agendas: new Set(), llamadas: new Set() };
+    }
     return map[date];
   }
 
   for (const s of sales) {
-    if (s.fecha_compra) {
-      const day = s.fecha_compra.split("T")[0];
+    const saleDate = s.date_added ?? s.fecha_compra;
+    if (saleDate) {
+      const day = saleDate.split("T")[0];
       getDay(dailyMap, day).ventas++;
     }
   }
   for (const a of agendas) {
+    const email = (a.email ?? "").toLowerCase();
     if (a.creada) {
       const day = a.creada.split("T")[0];
       getDay(dailyMap, day).agendasCreadas++;
+      if (email) dailyEmailsSets[day].agendas.add(email);
     }
     if (a.fecha_llamada) {
       const day = a.fecha_llamada.split("T")[0];
       getDay(dailyMap, day).llamadas++;
+      if (email) dailyEmailsSets[day].llamadas.add(email);
+    }
+  }
+
+  // Compute unique counts from sets
+  for (const [day, sets] of Object.entries(dailyEmailsSets)) {
+    if (dailyMap[day]) {
+      dailyMap[day].agendasUnicas = sets.agendas.size;
+      dailyMap[day].llamadasUnicas = sets.llamadas.size;
     }
   }
 
   // Only include days within the edition range
-  const rangeStart = edRange ? edRange.start : null;
-  const rangeEnd = edRange ? (() => { const d = new Date(edRange.start); d.setDate(d.getDate() + edRange.days - 1); return d.toISOString().split("T")[0]; })() : null;
-
   const timeline = Object.entries(dailyMap)
     .filter(([date]) => {
       if (rangeStart && rangeEnd) return date >= rangeStart && date <= rangeEnd;
@@ -526,6 +741,34 @@ export async function GET(req: NextRequest) {
     };
   });
 
+  // Qualification breakdown
+  const qualFields = ["situacion_actual", "objetivo", "inversion"] as const;
+  const qualLabels: Record<string, string> = {
+    situacion_actual: "Situación actual",
+    objetivo: "Objetivo",
+    inversion: "Inversión",
+  };
+
+  function buildQualification(rows: typeof agendas) {
+    const result: Record<string, { label: string; data: { name: string; value: number }[] }> = {};
+    for (const field of qualFields) {
+      const counts: Record<string, number> = {};
+      for (const a of rows) {
+        const val = a[field] || "(vacío)";
+        counts[val] = (counts[val] || 0) + 1;
+      }
+      result[field] = {
+        label: qualLabels[field],
+        data: Object.entries(counts)
+          .map(([name, value]) => ({ name, value }))
+          .sort((a, b) => b.value - a.value),
+      };
+    }
+    return result;
+  }
+
+  const cualificacion = buildQualification(agendas);
+
   return NextResponse.json({
     stats: {
       totalLeads,
@@ -552,5 +795,7 @@ export async function GET(req: NextRequest) {
     comerciales,
     timeline,
     closerPerformance,
+    cualificacion,
+    economics: ECONOMIC_DATA[edicion ?? ""] ?? { general: { total: null, raw: {}, adjusted: {} }, paid: { total: null, raw: {}, adjusted: {} }, affiliates: { total: null, raw: {}, adjusted: {} } },
   });
 }

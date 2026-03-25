@@ -10,6 +10,7 @@ import {
   Star, Award, MessageSquare,
   ShoppingCart, CalendarDays, ClipboardList, Trophy, PlayCircle,
   Headphones, HelpCircle, Globe, ChevronDown, LogOut, Briefcase, GitMerge, TrendingUp, FileText, Presentation,
+  PanelLeftClose, PanelLeftOpen,
 } from "lucide-react";
 
 const SECTION_STYLES: Record<string, { bg: string; text: string; border: string; activeBg: string; activeText: string; activeBar: string; number: string }> = {
@@ -67,6 +68,7 @@ const navSections = [
 export default function Sidebar({ role = "admin" }: { role?: string }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [collapsed, setCollapsed] = useState(false);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     "Cruce de ventas": true,
     "Panel de producto": false,
@@ -92,16 +94,37 @@ export default function Sidebar({ role = "admin" }: { role?: string }) {
     ? [{ label: "Operativa producto", number: "3", items: navSections.flatMap(s => s.items).filter(i => i.href === "/dashboard/qa") }]
     : navSections;
 
+  if (collapsed) {
+    return (
+      <aside className="w-12 min-h-screen flex flex-col border-r border-gray-200 bg-slate-50 shrink-0">
+        <button
+          onClick={() => setCollapsed(false)}
+          className="p-3 hover:bg-gray-100 transition-colors border-b border-gray-100"
+          title="Expandir menu"
+        >
+          <PanelLeftOpen className="h-5 w-5 text-gray-400" />
+        </button>
+      </aside>
+    );
+  }
+
   return (
-    <aside className="w-[260px] min-h-screen flex flex-col border-r border-gray-200 bg-slate-50">
-      {/* Logo */}
-      <div className="px-5 py-5 border-b border-gray-100">
+    <aside className="w-[260px] min-h-screen flex flex-col border-r border-gray-200 bg-slate-50 shrink-0">
+      {/* Logo + collapse */}
+      <div className="px-5 py-5 border-b border-gray-100 flex items-center justify-between">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/logo.png"
           alt="Revolutia"
           className="h-6 w-auto object-contain"
         />
+        <button
+          onClick={() => setCollapsed(true)}
+          className="p-1.5 rounded-lg hover:bg-gray-200 transition-colors"
+          title="Ocultar menu"
+        >
+          <PanelLeftClose className="h-4 w-4 text-gray-400" />
+        </button>
       </div>
 
       {/* Nav */}

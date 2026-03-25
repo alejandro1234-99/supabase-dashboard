@@ -62,7 +62,7 @@ export async function GET() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     fetchAll(() => (supabase.from("leads" as any) as any).select("email, edicion, funnel, medium, test")),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    fetchAll(() => (supabase.from("agendas" as any) as any).select("email, edicion")),
+    fetchAll(() => (supabase.from("agendas" as any) as any).select("email, edicion, situacion_actual, objetivo, inversion")),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     fetchAll(() => (supabase.from("purchase_approved" as any) as any).select("correo_electronico, edicion, cash_collected, status")),
   ]);
@@ -116,5 +116,32 @@ export async function GET() {
     };
   });
 
-  return NextResponse.json({ ediciones });
+  // Qualification breakdown per edition (except Noviembre which has no data)
+  const qualFields = ["situacion_actual", "objetivo", "inversion"] as const;
+  const qualLabels: Record<string, string> = {
+    situacion_actual: "Situación actual",
+    objetivo: "Objetivo",
+    inversion: "Inversión",
+  };
+  const cualificacionPorEdicion: Record<string, Record<string, { label: string; data: { name: string; value: number }[] }>> = {};
+  for (const ed of EDICIONES) {
+    if (ed === "Noviembre 2025") continue;
+    const edAgendas = agendas.filter((r: { edicion: string }) => r.edicion === ed);
+    if (edAgendas.length === 0) continue;
+    const qual: Record<string, { label: string; data: { name: string; value: number }[] }> = {};
+    for (const field of qualFields) {
+      const counts: Record<string, number> = {};
+      for (const a of edAgendas) {
+        const val = (a as Record<string, string | null>)[field] || "(vacío)";
+        counts[val] = (counts[val] || 0) + 1;
+      }
+      qual[field] = {
+        label: qualLabels[field],
+        data: Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value),
+      };
+    }
+    cualificacionPorEdicion[ed] = qual;
+  }
+
+  return NextResponse.json({ ediciones, cualificacionPorEdicion });
 }

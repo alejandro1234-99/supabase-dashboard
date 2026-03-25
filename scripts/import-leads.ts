@@ -21,7 +21,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
 
 // CSV files to import
 const CSV_FILES = [
-  resolve(process.env.HOME!, "Downloads/Leads Registro Marzo 2025 Revolutia - MAR26.csv"),
+  resolve(process.env.HOME!, "Downloads/Leads Registro Marzo 2025 Revolutia - MAR26 (1).csv"),
 ];
 
 /**
@@ -192,11 +192,36 @@ function parseFile(filePath: string): LeadRow[] {
   return rows;
 }
 
+async function deleteEdicion(edicion: string) {
+  console.log(`\n🗑️  Borrando leads de "${edicion}"...`);
+  let deleted = 0;
+  // Delete in batches (Supabase has row limits on delete)
+  while (true) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.from("leads" as any) as any)
+      .delete()
+      .eq("edicion", edicion)
+      .select("id")
+      .limit(5000);
+    if (error) {
+      console.error("   ❌ Error borrando:", error.message);
+      break;
+    }
+    if (!data || data.length === 0) break;
+    deleted += data.length;
+    process.stdout.write(`   🗑️  ${deleted} borrados...\r`);
+  }
+  console.log(`   🗑️  ${deleted} leads de "${edicion}" borrados`);
+}
+
 async function main() {
   if (!SUPABASE_KEY) {
     console.error("❌ Falta SUPABASE_SERVICE_ROLE_KEY en .env.local");
     process.exit(1);
   }
+
+  // Delete existing Marzo 2026 leads before importing
+  await deleteEdicion("Marzo 2026");
 
   let totalInserted = 0;
 
