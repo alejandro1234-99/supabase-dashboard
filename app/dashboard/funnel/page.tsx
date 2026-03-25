@@ -519,10 +519,10 @@ export default function FunnelPage() {
                     <Legend wrapperStyle={{ fontSize: 11 }} />
                     <Bar dataKey="Ventas" radius={[3, 3, 0, 0]} fill="#f59e0b" />
                     <Bar dataKey="Agendas únicas creadas" radius={[3, 3, 0, 0]} fill="#6366f1">
-                      <LabelList dataKey="Agendas únicas creadas" position="top" style={{ fontSize: 9, fill: "#6366f1", fontWeight: 700 }} formatter={(v: number) => v > 0 ? v : ""} />
+                      <LabelList dataKey="Agendas únicas creadas" position="top" style={{ fontSize: 9, fill: "#6366f1", fontWeight: 700 }} formatter={(v) => { const n = Number(v); return n > 0 ? n : ""; }} />
                     </Bar>
                     <Bar dataKey="Llamadas únicas" radius={[3, 3, 0, 0]} fill="#10b981">
-                      <LabelList dataKey="Llamadas únicas" position="top" style={{ fontSize: 9, fill: "#10b981", fontWeight: 700 }} formatter={(v: number) => v > 0 ? v : ""} />
+                      <LabelList dataKey="Llamadas únicas" position="top" style={{ fontSize: 9, fill: "#10b981", fontWeight: 700 }} formatter={(v) => { const n = Number(v); return n > 0 ? n : ""; }} />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
