@@ -237,7 +237,7 @@ export default function FunnelPage() {
   const adjustedSources = useMemo(() => {
     if (!sources.length) return [];
     return distributeMultiPhase(
-      sources.map((s) => ({ key: s.source, leads: s.leads, agendas: s.agendas, ventas: s.ventas }))
+      sources.map((s) => ({ key: s.source, leads: s.leads, agendas: s.agendasUnicas, ventas: s.ventas }))
     );
   }, [sources]);
 
@@ -246,9 +246,9 @@ export default function FunnelPage() {
     if (!paidMedia) return [];
     const tracked = paidMedia.campaigns.filter((c) => c.campaign !== "untracked");
     const untracked = paidMedia.campaigns.find((c) => c.campaign === "untracked");
-    if (!untracked) return tracked.map((c) => ({ ...c, adjLeads: c.leads, adjAgendas: c.agendas, adjVentas: c.ventas }));
+    if (!untracked) return tracked.map((c) => ({ ...c, adjLeads: c.leads, adjAgendas: c.agendasUnicas, adjVentas: c.ventas }));
     const adjL = distribute(tracked.map((c) => ({ key: c.campaign, value: c.leads })), untracked.leads);
-    const adjA = distribute(tracked.map((c) => ({ key: c.campaign, value: c.agendas })), untracked.agendas);
+    const adjA = distribute(tracked.map((c) => ({ key: c.campaign, value: c.agendasUnicas })), untracked.agendasUnicas);
     const adjV = distribute(tracked.map((c) => ({ key: c.campaign, value: c.ventas })), untracked.ventas);
     return tracked.map((c) => ({
       ...c,
@@ -263,9 +263,9 @@ export default function FunnelPage() {
     if (!affiliateMedia) return [];
     const tracked = affiliateMedia.types.filter((t) => t.affiliate !== "untracked");
     const untracked = affiliateMedia.types.find((t) => t.affiliate === "untracked");
-    if (!untracked) return tracked.map((t) => ({ ...t, adjLeads: t.leads, adjAgendas: t.agendas, adjVentas: t.ventas }));
+    if (!untracked) return tracked.map((t) => ({ ...t, adjLeads: t.leads, adjAgendas: t.agendasUnicas, adjVentas: t.ventas }));
     const adjL = distribute(tracked.map((t) => ({ key: t.affiliate, value: t.leads })), untracked.leads);
-    const adjA = distribute(tracked.map((t) => ({ key: t.affiliate, value: t.agendas })), untracked.agendas);
+    const adjA = distribute(tracked.map((t) => ({ key: t.affiliate, value: t.agendasUnicas })), untracked.agendasUnicas);
     const adjV = distribute(tracked.map((t) => ({ key: t.affiliate, value: t.ventas })), untracked.ventas);
     return tracked.map((t) => ({
       ...t,
@@ -541,6 +541,7 @@ export default function FunnelPage() {
                           <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Llamadas</th>
                           <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">No shows</th>
                           <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Celebradas</th>
+                          <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">% Show</th>
                           <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Ventas</th>
                           <th className="text-right px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Cierre llamada</th>
                         </tr>
@@ -552,12 +553,31 @@ export default function FunnelPage() {
                             <td className="text-right px-4 py-3 text-sm text-gray-600">{c.llamadas}</td>
                             <td className="text-right px-4 py-3 text-sm text-red-500 font-medium">{c.noShows}</td>
                             <td className="text-right px-4 py-3 text-sm font-bold text-gray-900">{c.celebradas}</td>
+                            <td className="text-right px-4 py-3 text-sm text-gray-600">{c.llamadas > 0 ? ((c.celebradas / c.llamadas) * 100).toFixed(1) : "0"}%</td>
                             <td className="text-right px-4 py-3 text-sm font-bold text-emerald-600">{c.ventas}</td>
                             <td className="text-right px-5 py-3 text-sm font-black text-gray-900">{c.cierre}%</td>
                           </tr>
                         ))}
+                        {(() => {
+                          const tLlamadas = closerPerformance.reduce((s, c) => s + c.llamadas, 0);
+                          const tNoShows = closerPerformance.reduce((s, c) => s + c.noShows, 0);
+                          const tCelebradas = closerPerformance.reduce((s, c) => s + c.celebradas, 0);
+                          const tVentas = closerPerformance.reduce((s, c) => s + c.ventas, 0);
+                          return (
+                            <tr className="border-t-2 border-gray-200 bg-gray-50/80">
+                              <td className="px-5 py-3 text-sm font-black text-gray-900">Total</td>
+                              <td className="text-right px-4 py-3 text-sm font-bold text-gray-900">{tLlamadas}</td>
+                              <td className="text-right px-4 py-3 text-sm font-bold text-red-500">{tNoShows}</td>
+                              <td className="text-right px-4 py-3 text-sm font-black text-gray-900">{tCelebradas}</td>
+                              <td className="text-right px-4 py-3 text-sm font-bold text-gray-600">{tLlamadas > 0 ? ((tCelebradas / tLlamadas) * 100).toFixed(1) : "0"}%</td>
+                              <td className="text-right px-4 py-3 text-sm font-black text-emerald-600">{tVentas}</td>
+                              <td className="text-right px-5 py-3 text-sm font-black text-gray-900">{tLlamadas > 0 ? ((tVentas / tLlamadas) * 100).toFixed(1) : "0"}%</td>
+                            </tr>
+                          );
+                        })()}
                       </tbody>
                     </table>
+                    <p className="text-[11px] text-gray-400 italic px-5 py-2">*Los valores reflejan agendas únicas. Las llamadas se suman a esta tabla 30 minutos después de la hora de inicio</p>
                   </div>
 
               </>
@@ -611,6 +631,7 @@ export default function FunnelPage() {
                   );
                 })}
               </div>
+              <p className="text-[11px] text-gray-400 italic">*Los valores reflejan agendas únicas.</p>
             </>
           )}
 
@@ -658,12 +679,12 @@ export default function FunnelPage() {
                       </td>
                       <td className="text-right px-2 py-0.5 text-xs font-bold text-gray-900">{s.leads.toLocaleString("es-ES")}</td>
                       <td className={`text-right px-2 py-0.5 text-xs font-semibold ${SOURCE_TEXT[s.source]}`}>{s.leadsPct}%</td>
-                      <td className="text-right px-2 py-0.5 text-xs font-bold text-gray-900">{s.agendas}</td>
+                      <td className="text-right px-2 py-0.5 text-xs font-bold text-gray-900">{s.agendasUnicas}</td>
                       <td className={`text-right px-2 py-0.5 text-xs font-semibold ${SOURCE_TEXT[s.source]}`}>{s.agendasPct}%</td>
                       <td className="text-right px-2 py-0.5 text-xs font-bold text-gray-900">{s.ventas}</td>
                       <td className={`text-right px-2 py-0.5 text-xs font-semibold ${SOURCE_TEXT[s.source]}`}>{s.ventasPct}%</td>
-                      <td className="text-right px-2 py-0.5 text-xs text-gray-400">{s.leads > 0 ? ((s.agendas / s.leads) * 100).toFixed(1) : "0"}%</td>
-                      <td className="text-right px-2 py-0.5 text-xs text-gray-400">{s.agendas > 0 ? ((s.ventas / s.agendas) * 100).toFixed(1) : "0"}%</td>
+                      <td className="text-right px-2 py-0.5 text-xs text-gray-400">{s.leads > 0 ? ((s.agendasUnicas / s.leads) * 100).toFixed(1) : "0"}%</td>
+                      <td className="text-right px-2 py-0.5 text-xs text-gray-400">{s.agendasUnicas > 0 ? ((s.ventas / s.agendasUnicas) * 100).toFixed(1) : "0"}%</td>
                       <td className="text-right px-3 py-0.5 text-xs text-gray-400">{s.leads > 0 ? ((s.ventas / s.leads) * 100).toFixed(1) : "0"}%</td>
                       <EcoCells eco={economics.general.raw[s.source]} />
                     </tr>
@@ -673,7 +694,7 @@ export default function FunnelPage() {
                     <td className="px-3 py-0.5 text-xs text-gray-700">Total</td>
                     <td className="text-right px-2 py-0.5 text-xs text-gray-900">{stats.totalLeads.toLocaleString("es-ES")}</td>
                     <td className="text-right px-2 py-0.5 text-xs text-gray-400">100%</td>
-                    <td className="text-right px-2 py-0.5 text-xs text-gray-900">{stats.totalAgendas}</td>
+                    <td className="text-right px-2 py-0.5 text-xs text-gray-900">{stats.agendasUnicas}</td>
                     <td className="text-right px-2 py-0.5 text-xs text-gray-400">100%</td>
                     <td className="text-right px-2 py-0.5 text-xs text-gray-900">{stats.totalVentas}</td>
                     <td className="text-right px-2 py-0.5 text-xs text-gray-400">100%</td>
@@ -715,7 +736,7 @@ export default function FunnelPage() {
                     <td className="px-3 py-0.5 text-xs text-emerald-800">Total</td>
                     <td className="text-right px-2 py-0.5 text-xs text-gray-900">{stats.totalLeads.toLocaleString("es-ES")}</td>
                     <td className="text-right px-2 py-0.5 text-xs text-gray-400">100%</td>
-                    <td className="text-right px-2 py-0.5 text-xs text-gray-900">{stats.totalAgendas}</td>
+                    <td className="text-right px-2 py-0.5 text-xs text-gray-900">{stats.agendasUnicas}</td>
                     <td className="text-right px-2 py-0.5 text-xs text-gray-400">100%</td>
                     <td className="text-right px-2 py-0.5 text-xs text-gray-900">{stats.totalVentas}</td>
                     <td className="text-right px-2 py-0.5 text-xs text-gray-400">100%</td>
@@ -770,7 +791,7 @@ export default function FunnelPage() {
                         <td className="px-3 py-0.5 text-xs font-semibold text-gray-700">{c.campaign}</td>
                         <td className="text-right px-2 py-0.5 text-xs font-bold text-gray-900">{c.leads.toLocaleString("es-ES")}</td>
                         <td className="text-right px-2 py-0.5 text-xs font-semibold text-blue-600">{c.leadsPct}%</td>
-                        <td className="text-right px-2 py-0.5 text-xs font-bold text-gray-900">{c.agendas}</td>
+                        <td className="text-right px-2 py-0.5 text-xs font-bold text-gray-900">{c.agendasUnicas}</td>
                         <td className="text-right px-2 py-0.5 text-xs font-semibold text-blue-600">{c.agendasPct}%</td>
                         <td className="text-right px-2 py-0.5 text-xs font-bold text-gray-900">{c.ventas}</td>
                         <td className="text-right px-2 py-0.5 text-xs font-semibold text-blue-600">{c.ventasPct}%</td>
@@ -870,7 +891,7 @@ export default function FunnelPage() {
                         <td className="px-3 py-0.5 text-xs font-semibold text-gray-700">{a.affiliate}</td>
                         <td className="text-right px-2 py-0.5 text-xs font-bold text-gray-900">{a.leads.toLocaleString("es-ES")}</td>
                         <td className="text-right px-2 py-0.5 text-xs font-semibold text-purple-600">{a.leadsPct}%</td>
-                        <td className="text-right px-2 py-0.5 text-xs font-bold text-gray-900">{a.agendas}</td>
+                        <td className="text-right px-2 py-0.5 text-xs font-bold text-gray-900">{a.agendasUnicas}</td>
                         <td className="text-right px-2 py-0.5 text-xs font-semibold text-purple-600">{a.agendasPct}%</td>
                         <td className="text-right px-2 py-0.5 text-xs font-bold text-gray-900">{a.ventas}</td>
                         <td className="text-right px-3 py-0.5 text-xs font-semibold text-purple-600">{a.ventasPct}%</td>
@@ -952,10 +973,7 @@ export default function FunnelPage() {
                     {adjustedComerciales.map((c) => (
                       <tr key={c.comercial} className="hover:bg-gray-50/50 transition-colors">
                         <td className="px-3 py-0.5 text-xs font-semibold text-gray-700 border-r border-gray-100">{c.comercial}</td>
-                        <td className="text-right px-2 py-0.5 text-xs font-bold text-gray-900">
-                          {c.agendasUnicas}
-                          <span className="text-xs font-normal text-gray-400 ml-1">({c.agendas})</span>
-                        </td>
+                        <td className="text-right px-2 py-0.5 text-xs font-bold text-gray-900">{c.agendasUnicas}</td>
                         <td className="text-right px-2 py-0.5 text-xs font-bold text-gray-900">{c.ventas}</td>
                         <td className="text-right px-2 py-0.5 text-xs font-bold text-gray-900 border-r border-gray-100">{c.cierre}%</td>
                         <td className="text-right px-2 py-0.5 text-xs text-gray-600">{c.paidAV0Agendas}</td>
@@ -988,7 +1006,7 @@ export default function FunnelPage() {
                       return (
                         <tr className="border-t-2 border-gray-200 bg-gray-50/80 font-bold">
                           <td className="px-5 py-2 text-sm text-gray-700 border-r border-gray-100">TOTAL</td>
-                          <td className="text-right px-3 py-2 text-sm text-gray-900">{t.agendasUnicas} <span className="text-xs font-normal text-gray-400">({t.agendas})</span></td>
+                          <td className="text-right px-3 py-2 text-sm text-gray-900">{t.agendasUnicas}</td>
                           <td className="text-right px-3 py-2 text-sm text-gray-900">{t.ventas}</td>
                           <td className="text-right px-3 py-2 text-sm text-gray-900 border-r border-gray-100">{t.agendasUnicas > 0 ? ((t.ventas / t.agendasUnicas) * 100).toFixed(1) : "0"}%</td>
                           <td className="text-right px-3 py-2 text-sm text-gray-600">{t.av0Ag}</td>

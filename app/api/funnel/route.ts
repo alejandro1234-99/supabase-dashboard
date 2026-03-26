@@ -409,14 +409,14 @@ export async function GET(req: NextRequest) {
     leadsPct: totalLeads > 0 ? ((leadsBySource[src] / totalLeads) * 100).toFixed(1) : "0",
     agendas: agendasBySource[src],
     agendasUnicas: agendasUnicasBySource[src].size,
-    agendasPct: totalAgendas > 0 ? ((agendasBySource[src] / totalAgendas) * 100).toFixed(1) : "0",
+    agendasPct: agendasUnicas > 0 ? ((agendasUnicasBySource[src].size / agendasUnicas) * 100).toFixed(1) : "0",
     ventas: ventasBySource[src],
     ventasPct: totalVentas > 0 ? ((ventasBySource[src] / totalVentas) * 100).toFixed(1) : "0",
   }));
 
   // Paid media breakdown
   const totalPaidLeads = leadsBySource.Paid;
-  const totalPaidAgendas = paidAgendasByCampaign.AV0 + paidAgendasByCampaign.AV1 + paidAgendasByCampaign.AV2 + paidAgendasByCampaign.untracked;
+  const totalPaidAgendas = paidAgendasUnicasByCampaign.AV0.size + paidAgendasUnicasByCampaign.AV1.size + paidAgendasUnicasByCampaign.AV2.size + paidAgendasUnicasByCampaign.untracked.size;
   const totalPaidVentas = paidVentasByCampaign.AV0 + paidVentasByCampaign.AV1 + paidVentasByCampaign.AV2 + paidVentasByCampaign.untracked;
   const paidCampaigns = (["AV0", "AV1", "AV2", "untracked"] as PaidCampaign[]).map((camp) => {
     const campLeads = paidLeadsByCampaign[camp];
@@ -429,7 +429,7 @@ export async function GET(req: NextRequest) {
       leadsPct: totalPaidLeads > 0 ? ((campLeads / totalPaidLeads) * 100).toFixed(1) : "0",
       agendas: campAgendas,
       agendasUnicas: campAgendasUnicas,
-      agendasPct: totalPaidAgendas > 0 ? ((campAgendas / totalPaidAgendas) * 100).toFixed(1) : "0",
+      agendasPct: totalPaidAgendas > 0 ? ((campAgendasUnicas / totalPaidAgendas) * 100).toFixed(1) : "0",
       ventas: campVentas,
       ventasPct: totalPaidVentas > 0 ? ((campVentas / totalPaidVentas) * 100).toFixed(1) : "0",
       ratioAgenda: campLeads > 0 ? ((campAgendasUnicas / campLeads) * 100).toFixed(2) : "0",
@@ -440,7 +440,7 @@ export async function GET(req: NextRequest) {
 
   // Affiliate breakdown
   const totalAffLeads = leadsBySource.Afiliados;
-  const totalAffAgendas = Object.values(affiliateAgendasByType).reduce((s, n) => s + n, 0);
+  const totalAffAgendas = Object.values(affiliateAgendasUnicasByType).reduce((s, set) => s + set.size, 0);
   const totalAffVentas = Object.values(affiliateVentasByType).reduce((s, n) => s + n, 0);
   const affiliateTypes = (["Worldcast", "vidascontadas", "No Limits", "untracked"] as AffiliateType[]).map((aff) => {
     const affLeads = affiliateLeadsByType[aff];
@@ -453,7 +453,7 @@ export async function GET(req: NextRequest) {
       leadsPct: totalAffLeads > 0 ? ((affLeads / totalAffLeads) * 100).toFixed(1) : "0",
       agendas: affAgendas,
       agendasUnicas: affAgendasUnicas,
-      agendasPct: totalAffAgendas > 0 ? ((affAgendas / totalAffAgendas) * 100).toFixed(1) : "0",
+      agendasPct: totalAffAgendas > 0 ? ((affAgendasUnicas / totalAffAgendas) * 100).toFixed(1) : "0",
       ventas: affVentas,
       ventasPct: totalAffVentas > 0 ? ((affVentas / totalAffVentas) * 100).toFixed(1) : "0",
     };
@@ -476,6 +476,7 @@ export async function GET(req: NextRequest) {
     "Nacho": "Nacho",
     "Nacho Revolutia": "Nacho",
     "Nacho Laguna": "Nacho",
+    "Nacho Laguna": "Nacho",
   };
   function normComercial(name: string | null): string {
     if (!name) return "Sin asignar";
@@ -487,10 +488,10 @@ export async function GET(req: NextRequest) {
     agendas: number;
     agendasUnicas: Set<string>;
     ventas: number;
-    paidAV0Agendas: number; paidAV2Agendas: number;
+    paidAV0Agendas: Set<string>; paidAV2Agendas: Set<string>;
     paidAV0Ventas: number; paidAV2Ventas: number;
-    orgAgendas: number; orgVentas: number;
-    untrackedAgendas: number; untrackedVentas: number;
+    orgAgendas: Set<string>; orgVentas: number;
+    untrackedAgendas: Set<string>; untrackedVentas: number;
   };
   const COMERCIALES_FIJOS = ["Nacho", "Arnau", "Hector", "Alberto"];
   const EDITION_COMERCIALES: Record<string, string[]> = {
@@ -503,10 +504,10 @@ export async function GET(req: NextRequest) {
   function getComercial(name: string): ComercialStats {
     if (!comercialMap[name]) comercialMap[name] = {
       agendas: 0, agendasUnicas: new Set(), ventas: 0,
-      paidAV0Agendas: 0, paidAV2Agendas: 0,
+      paidAV0Agendas: new Set(), paidAV2Agendas: new Set(),
       paidAV0Ventas: 0, paidAV2Ventas: 0,
-      orgAgendas: 0, orgVentas: 0,
-      untrackedAgendas: 0, untrackedVentas: 0,
+      orgAgendas: new Set(), orgVentas: 0,
+      untrackedAgendas: new Set(), untrackedVentas: 0,
     };
     return comercialMap[name];
   }
@@ -527,22 +528,27 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Count agendas using emailCloserMap so each email is attributed to ONE closer only
+  const countedAgendaEmails = new Set<string>();
   for (const a of agendas) {
-    const c = normComercial(a.comercial);
-    const cm = getComercial(c);
-    cm.agendas++;
     const email = (a.email ?? "").toLowerCase();
-    if (email) {
-      cm.agendasUnicas.add(email);
-      const src = emailSource[email];
-      if (src === "Paid") {
-        const camp = emailPaidCampaign[email] ?? "untracked";
-        if (camp === "AV0") cm.paidAV0Agendas++;
-        if (camp === "AV2") cm.paidAV2Agendas++;
-      }
-      if (src === "Organico") cm.orgAgendas++;
-      if (src === "Untracked" || !src) cm.untrackedAgendas++;
+    if (!email || countedAgendaEmails.has(email)) continue;
+
+    // Attribute to the closer from emailCloserMap (prioritizes non-no_show)
+    const assignedCloser = emailCloserMap[email] ?? normComercial(a.comercial);
+    const cm = getComercial(assignedCloser);
+    countedAgendaEmails.add(email);
+    cm.agendas++;
+    cm.agendasUnicas.add(email);
+    const src = emailSource[email];
+    if (src === "Paid") {
+      const camp = emailPaidCampaign[email] ?? "untracked";
+      if (camp === "AV0") cm.paidAV0Agendas.add(email);
+      else cm.paidAV2Agendas.add(email);
     }
+    if (src === "Organico") cm.orgAgendas.add(email);
+    if (src === "Afiliados") cm.orgAgendas.add(email);
+    if (src === "Untracked" || !src) cm.untrackedAgendas.add(email);
   }
 
   // Ventas: attribute to the closer from the non-cancelled agenda
@@ -557,35 +563,41 @@ export async function GET(req: NextRequest) {
       if (src === "Paid") {
         const camp = emailPaidCampaign[email] ?? "untracked";
         if (camp === "AV0") cm.paidAV0Ventas++;
-        if (camp === "AV2") cm.paidAV2Ventas++;
+        else cm.paidAV2Ventas++;
       }
       if (src === "Organico") cm.orgVentas++;
+      if (src === "Afiliados") cm.orgVentas++;
       if (src === "Untracked" || !src) cm.untrackedVentas++;
     }
   }
 
+  const comercialesIncluded = [...edicionComerciales, ...Object.keys(comercialMap).filter((name) => name !== "Sin asignar" && !edicionComerciales.includes(name) && comercialMap[name].ventas > 0)];
   const comerciales = Object.entries(comercialMap)
-    .filter(([name]) => edicionComerciales.includes(name))
+    .filter(([name]) => comercialesIncluded.includes(name))
     .map(([name, d]) => ({
       comercial: name,
       agendas: d.agendas,
       agendasUnicas: d.agendasUnicas.size,
       ventas: d.ventas,
       cierre: d.agendasUnicas.size > 0 ? ((d.ventas / d.agendasUnicas.size) * 100).toFixed(1) : "0",
-      paidAV0Agendas: d.paidAV0Agendas,
-      paidAV2Agendas: d.paidAV2Agendas,
+      paidAV0Agendas: d.paidAV0Agendas.size,
+      paidAV2Agendas: d.paidAV2Agendas.size,
       paidAV0Ventas: d.paidAV0Ventas,
       paidAV2Ventas: d.paidAV2Ventas,
-      cierreAV0: d.paidAV0Agendas > 0 ? ((d.paidAV0Ventas / d.paidAV0Agendas) * 100).toFixed(1) : "0",
-      cierreAV2: d.paidAV2Agendas > 0 ? ((d.paidAV2Ventas / d.paidAV2Agendas) * 100).toFixed(1) : "0",
-      orgAgendas: d.orgAgendas,
+      cierreAV0: d.paidAV0Agendas.size > 0 ? ((d.paidAV0Ventas / d.paidAV0Agendas.size) * 100).toFixed(1) : "0",
+      cierreAV2: d.paidAV2Agendas.size > 0 ? ((d.paidAV2Ventas / d.paidAV2Agendas.size) * 100).toFixed(1) : "0",
+      orgAgendas: d.orgAgendas.size,
       orgVentas: d.orgVentas,
-      cierreOrg: d.orgAgendas > 0 ? ((d.orgVentas / d.orgAgendas) * 100).toFixed(1) : "0",
-      untrackedAgendas: d.untrackedAgendas,
+      cierreOrg: d.orgAgendas.size > 0 ? ((d.orgVentas / d.orgAgendas.size) * 100).toFixed(1) : "0",
+      untrackedAgendas: d.untrackedAgendas.size,
       untrackedVentas: d.untrackedVentas,
-      cierreUntracked: d.untrackedAgendas > 0 ? ((d.untrackedVentas / d.untrackedAgendas) * 100).toFixed(1) : "0",
+      cierreUntracked: d.untrackedAgendas.size > 0 ? ((d.untrackedVentas / d.untrackedAgendas.size) * 100).toFixed(1) : "0",
     }))
-    .sort((a, b) => edicionComerciales.indexOf(a.comercial) - edicionComerciales.indexOf(b.comercial));
+    .sort((a, b) => {
+      const iA = comercialesIncluded.indexOf(a.comercial);
+      const iB = comercialesIncluded.indexOf(b.comercial);
+      return iA - iB;
+    });
 
   // Daily timeline: ventas por dia, agendas creadas por dia, llamadas por dia
   // Fixed date ranges per edition so the chart always shows the launch window
@@ -690,9 +702,13 @@ export async function GET(req: NextRequest) {
   };
   const closerDailyMap: Record<string, Record<string, CloserDayStats>> = {};
   const closerTotals: Record<string, CloserDayStats> = {};
+  // Track unique emails per closer to deduplicate
+  const closerSeenEmails: Record<string, Set<string>> = {};
+  const closerDaySeenEmails: Record<string, Record<string, Set<string>>> = {};
 
   for (const c of edicionComerciales) {
     closerTotals[c] = { llamadas: 0, noShows: 0, celebradas: 0, ventas: 0 };
+    closerSeenEmails[c] = new Set();
   }
 
   const now = new Date();
@@ -712,8 +728,16 @@ export async function GET(req: NextRequest) {
     const closer = normComercial(a.comercial);
     if (closer === "Sin asignar") continue;
 
+    const email = (a.email ?? "").toLowerCase();
+    // Deduplicate: only count each unique email once per closer
+    if (!email || closerSeenEmails[closer]?.has(email)) continue;
+    if (!closerSeenEmails[closer]) closerSeenEmails[closer] = new Set();
+    closerSeenEmails[closer].add(email);
+
     if (!closerDailyMap[closer]) closerDailyMap[closer] = {};
     if (!closerDailyMap[closer][day]) closerDailyMap[closer][day] = { llamadas: 0, noShows: 0, celebradas: 0, ventas: 0 };
+    if (!closerDaySeenEmails[closer]) closerDaySeenEmails[closer] = {};
+    if (!closerDaySeenEmails[closer][day]) closerDaySeenEmails[closer][day] = new Set();
     if (!closerTotals[closer]) closerTotals[closer] = { llamadas: 0, noShows: 0, celebradas: 0, ventas: 0 };
 
     const cd = closerDailyMap[closer][day];
@@ -729,7 +753,6 @@ export async function GET(req: NextRequest) {
       cd.celebradas++;
       ct.celebradas++;
 
-      const email = (a.email ?? "").toLowerCase();
       if (email && saleEmails.has(email)) {
         cd.ventas++;
         ct.ventas++;
@@ -785,7 +808,15 @@ export async function GET(req: NextRequest) {
     return result;
   }
 
-  const cualificacion = buildQualification(agendas);
+  // Deduplicate agendas by email for qualification (unique agendas only)
+  const seenQualEmails = new Set<string>();
+  const uniqueAgendas = agendas.filter((a) => {
+    const email = (a.email ?? "").toLowerCase();
+    if (!email || seenQualEmails.has(email)) return false;
+    seenQualEmails.add(email);
+    return true;
+  });
+  const cualificacion = buildQualification(uniqueAgendas);
 
   return NextResponse.json({
     stats: {
