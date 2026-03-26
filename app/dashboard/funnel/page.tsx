@@ -480,7 +480,7 @@ export default function FunnelPage() {
           <>
             <h2 className="text-lg font-bold text-gray-900 mt-2">2. Actividad diaria</h2>
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                <p className="text-xs text-gray-400 mb-4">Ventas, agendas únicas creadas y llamadas únicas de closers por dia</p>
+                <p className="text-xs text-gray-400 mb-4">Ventas, nuevas agendas únicas y nuevas llamadas únicas por día (incrementales, suman al total)</p>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={timeline.map((d) => ({
                     dia: new Date(d.date).toLocaleDateString("es-ES", { day: "numeric", month: "short" }),

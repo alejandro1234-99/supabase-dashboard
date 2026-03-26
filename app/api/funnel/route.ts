@@ -643,7 +643,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Compute unique counts from sets
+  // Compute unique counts from sets (per-day, for tooltip)
   for (const [day, sets] of Object.entries(dailyEmailsSets)) {
     if (dailyMap[day]) {
       dailyMap[day].agendasUnicas = sets.agendas.size;
@@ -652,13 +652,31 @@ export async function GET(req: NextRequest) {
   }
 
   // Only include days within the edition range
-  const timeline = Object.entries(dailyMap)
+  const timelineRaw = Object.entries(dailyMap)
     .filter(([date]) => {
       if (rangeStart && rangeEnd) return date >= rangeStart && date <= rangeEnd;
       return true;
     })
     .map(([date, d]) => ({ date, ...d }))
     .sort((a, b) => a.date.localeCompare(b.date));
+
+  // Compute incremental uniques: only count new emails not seen in previous days
+  // This ensures the sum of daily bars matches the global unique totals
+  const seenAgendaEmails = new Set<string>();
+  const seenLlamadaEmails = new Set<string>();
+  const timeline = timelineRaw.map((d) => {
+    const dayAgendaSets = dailyEmailsSets[d.date]?.agendas ?? new Set();
+    const dayLlamadaSets = dailyEmailsSets[d.date]?.llamadas ?? new Set();
+    let newAgendas = 0;
+    for (const email of dayAgendaSets) {
+      if (!seenAgendaEmails.has(email)) { seenAgendaEmails.add(email); newAgendas++; }
+    }
+    let newLlamadas = 0;
+    for (const email of dayLlamadaSets) {
+      if (!seenLlamadaEmails.has(email)) { seenLlamadaEmails.add(email); newLlamadas++; }
+    }
+    return { ...d, agendasUnicas: newAgendas, llamadasUnicas: newLlamadas };
+  });
 
   // Closer daily performance: calls done, no-shows, ventas closed, close rate
   // We match agenda email → sale email to attribute conversions to the closer
