@@ -476,7 +476,6 @@ export async function GET(req: NextRequest) {
     "Nacho": "Nacho",
     "Nacho Revolutia": "Nacho",
     "Nacho Laguna": "Nacho",
-    "Nacho Laguna": "Nacho",
   };
   function normComercial(name: string | null): string {
     if (!name) return "Sin asignar";
