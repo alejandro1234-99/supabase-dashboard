@@ -754,7 +754,7 @@ export async function GET(req: NextRequest) {
       noShows: t.noShows,
       celebradas: t.celebradas,
       ventas: t.ventas,
-      cierre: t.celebradas > 0 ? ((t.ventas / t.celebradas) * 100).toFixed(1) : "0",
+      cierre: t.llamadas > 0 ? ((t.ventas / t.llamadas) * 100).toFixed(1) : "0",
       days,
     };
   });
