@@ -603,19 +603,18 @@ export async function GET(req: NextRequest) {
   const EDITION_DATE_RANGES: Record<string, { start: string; days: number }> = {
     "Enero 2026": { start: "2026-01-27", days: 8 },
     "Febrero 2026": { start: "2026-02-24", days: 8 },
-    "Marzo 2026": { start: "2026-03-24", days: 8 },
+    "Marzo 2026": { start: "2026-03-24", days: 9 },
   };
 
   const dailyMap: Record<string, { ventas: number; agendasCreadas: number; agendasUnicas: number; llamadas: number; llamadasUnicas: number }> = {};
   const dailyEmailsSets: Record<string, { agendas: Set<string>; llamadas: Set<string> }> = {};
 
-  // Pre-fill days for the edition
+  // Pre-fill days for the edition (use UTC to avoid DST issues)
   const edRange = edicion ? EDITION_DATE_RANGES[edicion] : null;
   if (edRange) {
-    const start = new Date(edRange.start);
+    const [sy, sm, sd] = edRange.start.split("-").map(Number);
     for (let i = 0; i < edRange.days; i++) {
-      const d = new Date(start);
-      d.setDate(d.getDate() + i);
+      const d = new Date(Date.UTC(sy, sm - 1, sd + i));
       const key = d.toISOString().split("T")[0];
       dailyMap[key] = { ventas: 0, agendasCreadas: 0, agendasUnicas: 0, llamadas: 0, llamadasUnicas: 0 };
       dailyEmailsSets[key] = { agendas: new Set(), llamadas: new Set() };
@@ -623,7 +622,7 @@ export async function GET(req: NextRequest) {
   }
 
   const rangeStart = edRange ? edRange.start : null;
-  const rangeEnd = edRange ? (() => { const d = new Date(edRange.start); d.setDate(d.getDate() + edRange.days - 1); return d.toISOString().split("T")[0]; })() : null;
+  const rangeEnd = edRange ? (() => { const [y, m, d] = edRange.start.split("-").map(Number); return new Date(Date.UTC(y, m - 1, d + edRange.days - 1)).toISOString().split("T")[0]; })() : null;
 
   function getDay(map: typeof dailyMap, date: string) {
     if (!map[date]) {
