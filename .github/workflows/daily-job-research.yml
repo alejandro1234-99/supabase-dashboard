@@ -26,7 +26,7 @@ jobs:
         run: npm ci
 
       - name: Run job research agent
-         run: npm run jobs:research
+        run: npm run jobs:research
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
