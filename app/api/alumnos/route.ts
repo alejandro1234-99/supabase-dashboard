@@ -11,9 +11,11 @@ export async function GET(req: NextRequest) {
   const from = (page - 1) * pageSize;
 
   const supabase = createAdminClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sb = supabase as any;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query = (supabase.from("alumnos" as any) as any)
+  let query = (sb.from("alumnos") as any)
     .select("*", { count: "exact" })
     .order("fecha_union", { ascending: false })
     .range(from, from + pageSize - 1);
@@ -24,6 +26,48 @@ export async function GET(req: NextRequest) {
 
   const { data, error, count } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Incluir compradores de purchase_approved que no estén en alumnos
+  if (search) {
+    const alumnoEmails = new Set(
+      ((data ?? []) as { email: string | null }[]).map((r) => r.email?.toLowerCase()).filter(Boolean)
+    );
+
+    const { data: allAlumnoEmails } = await sb
+      .from("alumnos")
+      .select("email");
+    const allAlumnoEmailSet = new Set(
+      ((allAlumnoEmails ?? []) as { email: string | null }[]).map((r) => r.email?.toLowerCase()).filter(Boolean)
+    );
+
+    const { data: purchases } = await sb
+      .from("purchase_approved")
+      .select("id, nombre_completo, correo_electronico, edicion")
+      .neq("status", "Rembolsado")
+      .or(`nombre_completo.ilike.%${search}%,correo_electronico.ilike.%${search}%`)
+      .limit(10);
+
+    const newFromPurchases = ((purchases ?? []) as {
+      id: string;
+      nombre_completo: string | null;
+      correo_electronico: string | null;
+      edicion: string | null;
+    }[])
+      .filter((p) => p.correo_electronico && !allAlumnoEmailSet.has(p.correo_electronico.toLowerCase()))
+      .filter((p) => !alumnoEmails.has(p.correo_electronico?.toLowerCase() ?? ""))
+      .map((p) => ({
+        id: p.id,
+        nombre_completo: p.nombre_completo,
+        email: p.correo_electronico,
+        tags: p.edicion ?? null,
+        caso_exito: null,
+        _from_purchases: true,
+      }));
+
+    if (newFromPurchases.length > 0) {
+      (data as unknown[]).push(...newFromPurchases);
+    }
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: allData } = await (supabase.from("alumnos" as any) as any)

@@ -50,14 +50,47 @@ export async function PATCH(req: NextRequest) {
   if (!id) return NextResponse.json({ error: "id requerido" }, { status: 400 });
 
   const supabase = createAdminClient();
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase.from("alumnos" as any) as any)
+  const sb = supabase as any;
+
+  // Intentar actualizar en alumnos
+  const { data, error } = await sb
+    .from("alumnos")
     .update(updates)
     .eq("id", id)
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Si no existe en alumnos, puede venir de purchase_approved
+  if (!data) {
+    const { data: purchase } = await sb
+      .from("purchase_approved")
+      .select("id, nombre_completo, correo_electronico, edicion, fecha_compra")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (!purchase) return NextResponse.json({ error: "Alumno no encontrado" }, { status: 404 });
+
+    const newAlumno = {
+      airtable_id: `purchase_${purchase.id}`,
+      nombre_completo: purchase.nombre_completo,
+      email: purchase.correo_electronico,
+      fecha_union: purchase.fecha_compra,
+      tags: purchase.edicion,
+      ...updates,
+    };
+
+    const { data: inserted, error: insertErr } = await sb
+      .from("alumnos")
+      .insert(newAlumno)
+      .select()
+      .single();
+
+    if (insertErr) return NextResponse.json({ error: insertErr.message }, { status: 500 });
+    return NextResponse.json({ data: inserted });
+  }
+
   return NextResponse.json({ data });
 }
