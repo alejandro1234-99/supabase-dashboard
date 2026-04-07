@@ -10,7 +10,6 @@ jobs:
   research:
     name: Investigar ofertas de trabajo
     runs-on: ubuntu-latest
-    environment: Production
     timeout-minutes: 20
 
     steps:
