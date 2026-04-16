@@ -252,6 +252,11 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const edicion = searchParams.get("edicion");
+  const edicionesParam = searchParams.get("ediciones");
+  const filterSource = searchParams.get("source") as Source | null;
+  const filterSub = searchParams.get("sub");
+
+  const edicionesList = edicionesParam ? edicionesParam.split(",").map((e) => e.trim()).filter(Boolean) : edicion ? [edicion] : [];
 
   const supabase = createAdminClient();
 
@@ -260,21 +265,24 @@ export async function GET(req: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let q = (supabase.from("leads" as any) as any)
       .select("email, edicion, funnel, medium, test, campaign, fuente_medio, fecha_registro");
-    if (edicion) q = q.eq("edicion", edicion);
+    if (edicionesList.length === 1) q = q.eq("edicion", edicionesList[0]);
+    else if (edicionesList.length > 1) q = q.in("edicion", edicionesList);
     return q;
   };
   const buildAgendas = () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let q = (supabase.from("agendas" as any) as any)
       .select("email, edicion, comercial, no_show, fecha_llamada, creada, situacion_actual, objetivo, inversion");
-    if (edicion) q = q.eq("edicion", edicion);
+    if (edicionesList.length === 1) q = q.eq("edicion", edicionesList[0]);
+    else if (edicionesList.length > 1) q = q.in("edicion", edicionesList);
     return q;
   };
   const buildSales = () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let q = (supabase.from("purchase_approved" as any) as any)
       .select("correo_electronico, edicion, status, cash_collected, nombre_comercial, fecha_compra, date_added");
-    if (edicion) q = q.eq("edicion", edicion);
+    if (edicionesList.length === 1) q = q.eq("edicion", edicionesList[0]);
+    else if (edicionesList.length > 1) q = q.in("edicion", edicionesList);
     return q;
   };
 
@@ -314,6 +322,21 @@ export async function GET(req: NextRequest) {
     return "untracked";
   }
 
+  type OrganicChannel = "Instagram" | "TikTok" | "YouTube" | "Facebook" | "Web/Bio" | "Lead Magnet" | "BBDD/Email" | "Otro";
+  const ORGANIC_CHANNELS: OrganicChannel[] = ["Instagram", "TikTok", "YouTube", "Facebook", "Web/Bio", "Lead Magnet", "BBDD/Email", "Otro"];
+  function classifyOrganicChannel(lead: { medium: string | null; test: string | null }): OrganicChannel {
+    const medium = (lead.medium ?? "").toLowerCase();
+    const test = (lead.test ?? "").toLowerCase();
+    if (medium.includes("instagram") || medium === "winstagram" || medium === "winstagramrevolutia" || medium.startsWith("reelp") || test === "instagram" || test === "ig") return "Instagram";
+    if (medium === "wtiktok" || test === "tiktok") return "TikTok";
+    if (medium === "wyoutube" || test === "youtube") return "YouTube";
+    if (test === "fb" || test === "fb_ad") return "Facebook";
+    if (medium === "bio" || medium === "home" || test === "home") return "Web/Bio";
+    if (medium === "leadmagnetx") return "Lead Magnet";
+    if (test === "bbdd" || test === "waitlist" || test === "com_anteriores" || test.startsWith("email")) return "BBDD/Email";
+    return "Otro";
+  }
+
   type AffiliateType = "Worldcast" | "vidascontadas" | "No Limits" | "untracked";
   function classifyAffiliate(lead: { medium: string | null }): AffiliateType {
     const medium = (lead.medium ?? "").toLowerCase();
@@ -326,9 +349,11 @@ export async function GET(req: NextRequest) {
   const emailSource: Record<string, Source> = {};
   const emailPaidCampaign: Record<string, PaidCampaign> = {};
   const emailAffiliateType: Record<string, AffiliateType> = {};
+  const emailOrganicChannel: Record<string, OrganicChannel> = {};
   const leadsBySource: Record<Source, number> = { Paid: 0, Organico: 0, Afiliados: 0, Untracked: 0 };
   const paidLeadsByCampaign: Record<PaidCampaign, number> = { AV0: 0, AV1: 0, AV2: 0, untracked: 0 };
   const affiliateLeadsByType: Record<AffiliateType, number> = { Worldcast: 0, vidascontadas: 0, "No Limits": 0, untracked: 0 };
+  const organicLeadsByChannel: Record<OrganicChannel, number> = { Instagram: 0, TikTok: 0, YouTube: 0, Facebook: 0, "Web/Bio": 0, "Lead Magnet": 0, "BBDD/Email": 0, Otro: 0 };
   for (const l of leads) {
     const src = classifyLead(l);
     leadsBySource[src]++;
@@ -343,6 +368,11 @@ export async function GET(req: NextRequest) {
         const aff = classifyAffiliate(l);
         affiliateLeadsByType[aff]++;
         emailAffiliateType[l.email.toLowerCase()] = aff;
+      }
+      if (src === "Organico") {
+        const ch = classifyOrganicChannel(l);
+        organicLeadsByChannel[ch]++;
+        emailOrganicChannel[l.email.toLowerCase()] = ch;
       }
     }
   }
@@ -360,6 +390,10 @@ export async function GET(req: NextRequest) {
   const affiliateAgendasUnicasByType: Record<AffiliateType, Set<string>> = {
     Worldcast: new Set(), vidascontadas: new Set(), "No Limits": new Set(), untracked: new Set(),
   };
+  const organicAgendasByChannel: Record<OrganicChannel, number> = { Instagram: 0, TikTok: 0, YouTube: 0, Facebook: 0, "Web/Bio": 0, "Lead Magnet": 0, "BBDD/Email": 0, Otro: 0 };
+  const organicAgendasUnicasByChannel: Record<OrganicChannel, Set<string>> = {
+    Instagram: new Set(), TikTok: new Set(), YouTube: new Set(), Facebook: new Set(), "Web/Bio": new Set(), "Lead Magnet": new Set(), "BBDD/Email": new Set(), Otro: new Set(),
+  };
   for (const a of agendas) {
     const email = (a.email ?? "").toLowerCase();
     const src = emailSource[email] ?? "Untracked";
@@ -369,6 +403,11 @@ export async function GET(req: NextRequest) {
       const camp = emailPaidCampaign[email] ?? "untracked";
       paidAgendasByCampaign[camp]++;
       paidAgendasUnicasByCampaign[camp].add(email);
+    }
+    if (src === "Organico") {
+      const ch = emailOrganicChannel[email] ?? "Otro";
+      organicAgendasByChannel[ch]++;
+      organicAgendasUnicasByChannel[ch].add(email);
     }
     if (src === "Afiliados") {
       const aff = emailAffiliateType[email] ?? "untracked";
@@ -380,6 +419,7 @@ export async function GET(req: NextRequest) {
   const ventasBySource: Record<Source, number> = { Paid: 0, Organico: 0, Afiliados: 0, Untracked: 0 };
   const paidVentasByCampaign: Record<PaidCampaign, number> = { AV0: 0, AV2: 0, AV1: 0, untracked: 0 };
   const affiliateVentasByType: Record<AffiliateType, number> = { Worldcast: 0, vidascontadas: 0, "No Limits": 0, untracked: 0 };
+  const organicVentasByChannel: Record<OrganicChannel, number> = { Instagram: 0, TikTok: 0, YouTube: 0, Facebook: 0, "Web/Bio": 0, "Lead Magnet": 0, "BBDD/Email": 0, Otro: 0 };
   for (const s of sales) {
     const email = (s.correo_electronico ?? "").toLowerCase();
     const src = emailSource[email] ?? "Untracked";
@@ -389,6 +429,9 @@ export async function GET(req: NextRequest) {
     }
     if (src === "Afiliados") {
       affiliateVentasByType[emailAffiliateType[email] ?? "untracked"]++;
+    }
+    if (src === "Organico") {
+      organicVentasByChannel[emailOrganicChannel[email] ?? "Otro"]++;
     }
   }
 
@@ -459,6 +502,27 @@ export async function GET(req: NextRequest) {
     };
   });
 
+  // Organic channel breakdown
+  const totalOrgLeads = leadsBySource.Organico;
+  const totalOrgAgendas = Object.values(organicAgendasUnicasByChannel).reduce((s, set) => s + set.size, 0);
+  const totalOrgVentas = Object.values(organicVentasByChannel).reduce((s, n) => s + n, 0);
+  const organicChannels = ORGANIC_CHANNELS.map((ch) => {
+    const chLeads = organicLeadsByChannel[ch];
+    const chAgendas = organicAgendasByChannel[ch];
+    const chAgendasUnicas = organicAgendasUnicasByChannel[ch].size;
+    const chVentas = organicVentasByChannel[ch];
+    return {
+      channel: ch,
+      leads: chLeads,
+      leadsPct: totalOrgLeads > 0 ? ((chLeads / totalOrgLeads) * 100).toFixed(1) : "0",
+      agendas: chAgendas,
+      agendasUnicas: chAgendasUnicas,
+      agendasPct: totalOrgAgendas > 0 ? ((chAgendasUnicas / totalOrgAgendas) * 100).toFixed(1) : "0",
+      ventas: chVentas,
+      ventasPct: totalOrgVentas > 0 ? ((chVentas / totalOrgVentas) * 100).toFixed(1) : "0",
+    };
+  }).filter((ch) => ch.leads > 0 || ch.agendas > 0 || ch.ventas > 0);
+
   // Commercial name normalization
   const COMERCIAL_MAP: Record<string, string> = {
     "Arnau Revolutia": "Arnau",
@@ -490,6 +554,7 @@ export async function GET(req: NextRequest) {
     paidAV0Agendas: Set<string>; paidAV2Agendas: Set<string>;
     paidAV0Ventas: number; paidAV2Ventas: number;
     orgAgendas: Set<string>; orgVentas: number;
+    affAgendas: Set<string>; affVentas: number;
     untrackedAgendas: Set<string>; untrackedVentas: number;
   };
   const COMERCIALES_FIJOS = ["Nacho", "Arnau", "Hector", "Alberto"];
@@ -498,7 +563,9 @@ export async function GET(req: NextRequest) {
     "Febrero 2026": ["Arnau", "Hector", "Alberto", "Raúl"],
     "Marzo 2026": ["Nacho", "Arnau", "Hector", "Alberto"],
   };
-  const edicionComerciales = edicion ? (EDITION_COMERCIALES[edicion] ?? COMERCIALES_FIJOS) : COMERCIALES_FIJOS;
+  const edicionComerciales = edicionesList.length > 0
+    ? [...new Set(edicionesList.flatMap((ed) => EDITION_COMERCIALES[ed] ?? COMERCIALES_FIJOS))]
+    : COMERCIALES_FIJOS;
   const comercialMap: Record<string, ComercialStats> = {};
   function getComercial(name: string): ComercialStats {
     if (!comercialMap[name]) comercialMap[name] = {
@@ -506,6 +573,7 @@ export async function GET(req: NextRequest) {
       paidAV0Agendas: new Set(), paidAV2Agendas: new Set(),
       paidAV0Ventas: 0, paidAV2Ventas: 0,
       orgAgendas: new Set(), orgVentas: 0,
+      affAgendas: new Set(), affVentas: 0,
       untrackedAgendas: new Set(), untrackedVentas: 0,
     };
     return comercialMap[name];
@@ -546,7 +614,7 @@ export async function GET(req: NextRequest) {
       else cm.paidAV2Agendas.add(email);
     }
     if (src === "Organico") cm.orgAgendas.add(email);
-    if (src === "Afiliados") cm.orgAgendas.add(email);
+    if (src === "Afiliados") cm.affAgendas.add(email);
     if (src === "Untracked" || !src) cm.untrackedAgendas.add(email);
   }
 
@@ -565,12 +633,80 @@ export async function GET(req: NextRequest) {
         else cm.paidAV2Ventas++;
       }
       if (src === "Organico") cm.orgVentas++;
-      if (src === "Afiliados") cm.orgVentas++;
+      if (src === "Afiliados") cm.affVentas++;
       if (src === "Untracked" || !src) cm.untrackedVentas++;
     }
   }
 
   const comercialesIncluded = [...edicionComerciales, ...Object.keys(comercialMap).filter((name) => name !== "Sin asignar" && !edicionComerciales.includes(name) && comercialMap[name].ventas > 0)];
+
+  // Distribute unattributed sales (from "Sin asignar" or excluded closers) proportionally
+  // Also distribute sub-ventas (by source) so they sum to the adjusted total
+  const includedVentas = comercialesIncluded.reduce((s, name) => s + (comercialMap[name]?.ventas ?? 0), 0);
+  const totalSalesCount = sales.length;
+  const unattributedVentas = totalSalesCount - includedVentas;
+  if (unattributedVentas > 0 && includedVentas > 0) {
+    function distVentas(getName: (name: string) => number): Record<string, number> {
+      const tracked = comercialesIncluded.map((name) => ({ key: name, value: getName(name) }));
+      const trackedSum = tracked.reduce((s, e) => s + e.value, 0);
+      if (trackedSum === 0) return Object.fromEntries(comercialesIncluded.map((n) => [n, 0]));
+      const total = Math.round(trackedSum * totalSalesCount / includedVentas);
+      const extra = total - trackedSum;
+      if (extra <= 0) return Object.fromEntries(tracked.map((e) => [e.key, e.value]));
+      const coefficient = total / trackedSum;
+      const floats = tracked.map((e) => ({ key: e.key, exact: e.value * coefficient, floor: Math.floor(e.value * coefficient), remainder: (e.value * coefficient) % 1 }));
+      let remaining = total - floats.reduce((s, f) => s + f.floor, 0);
+      const sorted = [...floats].sort((a, b) => b.remainder - a.remainder);
+      for (const f of sorted) { if (remaining <= 0) break; f.floor += 1; remaining -= 1; }
+      return Object.fromEntries(floats.map((f) => [f.key, f.floor]));
+    }
+
+    const adjTotal = distVentas((name) => comercialMap[name]?.ventas ?? 0);
+    const adjAV0 = distVentas((name) => comercialMap[name]?.paidAV0Ventas ?? 0);
+    const adjAV2 = distVentas((name) => comercialMap[name]?.paidAV2Ventas ?? 0);
+    const adjOrg = distVentas((name) => comercialMap[name]?.orgVentas ?? 0);
+    const adjAff = distVentas((name) => comercialMap[name]?.affVentas ?? 0);
+    const adjUnt = distVentas((name) => comercialMap[name]?.untrackedVentas ?? 0);
+
+    for (const name of comercialesIncluded) {
+      const cm = comercialMap[name];
+      if (!cm) continue;
+      const newTotal = adjTotal[name] ?? cm.ventas;
+      let av0 = adjAV0[name] ?? cm.paidAV0Ventas;
+      let av2 = adjAV2[name] ?? cm.paidAV2Ventas;
+      let org = adjOrg[name] ?? cm.orgVentas;
+      let aff = adjAff[name] ?? cm.affVentas;
+      let unt = adjUnt[name] ?? cm.untrackedVentas;
+      // Fix rounding: ensure sub-ventas sum to newTotal
+      const subSum = av0 + av2 + org + aff + unt;
+      let diff = newTotal - subSum;
+      if (diff !== 0) {
+        const parts = [
+          { key: "av2", val: av2 }, { key: "av0", val: av0 },
+          { key: "org", val: org }, { key: "unt", val: unt }, { key: "aff", val: aff },
+        ].sort((a, b) => b.val - a.val);
+        for (const p of parts) {
+          if (diff === 0) break;
+          const delta = diff > 0 ? 1 : -1;
+          if (p.val + delta >= 0) { p.val += delta; diff -= delta; }
+        }
+        for (const p of parts) {
+          if (p.key === "av0") av0 = p.val;
+          if (p.key === "av2") av2 = p.val;
+          if (p.key === "org") org = p.val;
+          if (p.key === "aff") aff = p.val;
+          if (p.key === "unt") unt = p.val;
+        }
+      }
+      cm.ventas = newTotal;
+      cm.paidAV0Ventas = av0;
+      cm.paidAV2Ventas = av2;
+      cm.orgVentas = org;
+      cm.affVentas = aff;
+      cm.untrackedVentas = unt;
+    }
+  }
+
   const comerciales = Object.entries(comercialMap)
     .filter(([name]) => comercialesIncluded.includes(name))
     .map(([name, d]) => ({
@@ -588,6 +724,9 @@ export async function GET(req: NextRequest) {
       orgAgendas: d.orgAgendas.size,
       orgVentas: d.orgVentas,
       cierreOrg: d.orgAgendas.size > 0 ? ((d.orgVentas / d.orgAgendas.size) * 100).toFixed(1) : "0",
+      affAgendas: d.affAgendas.size,
+      affVentas: d.affVentas,
+      cierreAff: d.affAgendas.size > 0 ? ((d.affVentas / d.affAgendas.size) * 100).toFixed(1) : "0",
       untrackedAgendas: d.untrackedAgendas.size,
       untrackedVentas: d.untrackedVentas,
       cierreUntracked: d.untrackedAgendas.size > 0 ? ((d.untrackedVentas / d.untrackedAgendas.size) * 100).toFixed(1) : "0",
@@ -598,6 +737,20 @@ export async function GET(req: NextRequest) {
       return iA - iB;
     });
 
+  // Filter agendas/sales by source for timeline, closerPerformance, cualificacion
+  function emailMatchesFilter(email: string): boolean {
+    if (!filterSource || filterSource === "Todos") return true;
+    const src = emailSource[email];
+    if (src !== filterSource) return false;
+    if (!filterSub) return true;
+    if (filterSource === "Paid") return (emailPaidCampaign[email] ?? "untracked") === filterSub;
+    if (filterSource === "Afiliados") return (emailAffiliateType[email] ?? "untracked") === filterSub;
+    if (filterSource === "Organico") return (emailOrganicChannel[email] ?? "Otro") === filterSub;
+    return true;
+  }
+  const filteredAgendas = agendas.filter((a) => emailMatchesFilter((a.email ?? "").toLowerCase()));
+  const filteredSales = sales.filter((s) => emailMatchesFilter((s.correo_electronico ?? "").toLowerCase()));
+
   // Daily timeline: ventas por dia, agendas creadas por dia, llamadas por dia
   // Fixed date ranges per edition so the chart always shows the launch window
   const EDITION_DATE_RANGES: Record<string, { start: string; days: number }> = {
@@ -606,91 +759,192 @@ export async function GET(req: NextRequest) {
     "Marzo 2026": { start: "2026-03-24", days: 9 },
   };
 
-  const dailyMap: Record<string, { ventas: number; agendasCreadas: number; agendasUnicas: number; llamadas: number; llamadasUnicas: number }> = {};
-  const dailyEmailsSets: Record<string, { agendas: Set<string>; llamadas: Set<string> }> = {};
+  const isMultiEdition = edicionesList.length > 1;
+  const allEdRanges = edicionesList.map((ed) => EDITION_DATE_RANGES[ed]).filter(Boolean);
+  const rangeStart = allEdRanges.length > 0 ? allEdRanges.map((r) => r.start).sort()[0] : null;
+  const rangeEnd = allEdRanges.length > 0 ? allEdRanges.map((r) => { const [y, m, d] = r.start.split("-").map(Number); return new Date(Date.UTC(y, m - 1, d + r.days - 1)).toISOString().split("T")[0]; }).sort().pop()! : null;
 
-  // Pre-fill days for the edition (use UTC to avoid DST issues)
-  const edRange = edicion ? EDITION_DATE_RANGES[edicion] : null;
-  if (edRange) {
-    const [sy, sm, sd] = edRange.start.split("-").map(Number);
-    for (let i = 0; i < edRange.days; i++) {
-      const d = new Date(Date.UTC(sy, sm - 1, sd + i));
-      const key = d.toISOString().split("T")[0];
-      dailyMap[key] = { ventas: 0, agendasCreadas: 0, agendasUnicas: 0, llamadas: 0, llamadasUnicas: 0 };
-      dailyEmailsSets[key] = { agendas: new Set(), llamadas: new Set() };
-    }
+  // Map a date string to its launch day offset (0-based) for a given edition
+  function dateToDayOffset(date: string, edStart: string): number {
+    const d = new Date(date + "T00:00:00Z");
+    const s = new Date(edStart + "T00:00:00Z");
+    return Math.round((d.getTime() - s.getTime()) / (86400000));
   }
 
-  const rangeStart = edRange ? edRange.start : null;
-  const rangeEnd = edRange ? (() => { const [y, m, d] = edRange.start.split("-").map(Number); return new Date(Date.UTC(y, m - 1, d + edRange.days - 1)).toISOString().split("T")[0]; })() : null;
+  // Determine which edition a record belongs to (by edicion field)
+  function editionRange(ed: string) { return EDITION_DATE_RANGES[ed] ?? null; }
 
-  function getDay(map: typeof dailyMap, date: string) {
-    if (!map[date]) {
-      map[date] = { ventas: 0, agendasCreadas: 0, agendasUnicas: 0, llamadas: 0, llamadasUnicas: 0 };
-      dailyEmailsSets[date] = { agendas: new Set(), llamadas: new Set() };
+  let timeline: { date: string; ventas: number; agendasCreadas: number; agendasUnicas: number; llamadas: number; llamadasUnicas: number }[];
+
+  if (isMultiEdition) {
+    // Quarter mode: compute per-edition timelines, then average by day offset
+    const maxDays = Math.max(...edicionesList.map((ed) => EDITION_DATE_RANGES[ed]?.days ?? 0));
+    const editionsWithRanges = edicionesList.filter((ed) => EDITION_DATE_RANGES[ed]);
+    const numEditions = editionsWithRanges.length;
+
+    type DayAcc = { ventas: number; agendasCreadas: number; agendasUnicas: number; llamadas: number; llamadasUnicas: number };
+    const perEditionDays: Record<string, DayAcc[]> = {};
+
+    for (const ed of editionsWithRanges) {
+      const range = EDITION_DATE_RANGES[ed];
+      const dayMap: DayAcc[] = Array.from({ length: range.days }, () => ({ ventas: 0, agendasCreadas: 0, agendasUnicas: 0, llamadas: 0, llamadasUnicas: 0 }));
+      const dayAgendaEmails: Set<string>[] = Array.from({ length: range.days }, () => new Set());
+      const dayLlamadaEmails: Set<string>[] = Array.from({ length: range.days }, () => new Set());
+
+      const edSales = filteredSales.filter((s) => s.edicion === ed);
+      const edAgendas = filteredAgendas.filter((a) => a.edicion === ed);
+
+      for (const s of edSales) {
+        const saleDate = s.date_added ?? s.fecha_compra;
+        if (!saleDate) continue;
+        const day = saleDate.split("T")[0];
+        const offset = dateToDayOffset(day, range.start);
+        if (offset >= 0 && offset < range.days) dayMap[offset].ventas++;
+      }
+
+      for (const a of edAgendas) {
+        const email = (a.email ?? "").toLowerCase();
+        if (a.creada) {
+          const day = a.creada.split("T")[0];
+          const offset = dateToDayOffset(day, range.start);
+          if (offset >= 0 && offset < range.days) {
+            dayMap[offset].agendasCreadas++;
+            if (email) dayAgendaEmails[offset].add(email);
+          }
+        }
+        if (a.fecha_llamada) {
+          const day = a.fecha_llamada.split("T")[0];
+          const offset = dateToDayOffset(day, range.start);
+          if (offset >= 0 && offset < range.days) {
+            dayMap[offset].llamadas++;
+            if (email) dayLlamadaEmails[offset].add(email);
+          }
+        }
+      }
+
+      // Incremental uniques per edition
+      const seenAg = new Set<string>();
+      const seenLl = new Set<string>();
+      for (let i = 0; i < range.days; i++) {
+        let newAg = 0;
+        for (const em of dayAgendaEmails[i]) { if (!seenAg.has(em)) { seenAg.add(em); newAg++; } }
+        let newLl = 0;
+        for (const em of dayLlamadaEmails[i]) { if (!seenLl.has(em)) { seenLl.add(em); newLl++; } }
+        dayMap[i].agendasUnicas = newAg;
+        dayMap[i].llamadasUnicas = newLl;
+      }
+
+      perEditionDays[ed] = dayMap;
     }
-    return map[date];
+
+    // Average across editions for each day offset
+    timeline = Array.from({ length: maxDays }, (_, i) => {
+      let ventas = 0, agendasCreadas = 0, agendasUnicas = 0, llamadas = 0, llamadasUnicas = 0;
+      let count = 0;
+      for (const ed of editionsWithRanges) {
+        const days = perEditionDays[ed];
+        if (i < days.length) {
+          ventas += days[i].ventas;
+          agendasCreadas += days[i].agendasCreadas;
+          agendasUnicas += days[i].agendasUnicas;
+          llamadas += days[i].llamadas;
+          llamadasUnicas += days[i].llamadasUnicas;
+          count++;
+        }
+      }
+      return {
+        date: `Día ${i + 1}`,
+        ventas: Math.round(ventas / (count || 1)),
+        agendasCreadas: Math.round(agendasCreadas / (count || 1)),
+        agendasUnicas: Math.round(agendasUnicas / (count || 1)),
+        llamadas: Math.round(llamadas / (count || 1)),
+        llamadasUnicas: Math.round(llamadasUnicas / (count || 1)),
+      };
+    });
+  } else {
+    // Single edition mode: original logic
+    const dailyMap: Record<string, { ventas: number; agendasCreadas: number; agendasUnicas: number; llamadas: number; llamadasUnicas: number }> = {};
+    const dailyEmailsSets: Record<string, { agendas: Set<string>; llamadas: Set<string> }> = {};
+
+    const edRanges = edicionesList.map((ed) => EDITION_DATE_RANGES[ed]).filter(Boolean);
+    for (const edRange of edRanges) {
+      const [sy, sm, sd] = edRange.start.split("-").map(Number);
+      for (let i = 0; i < edRange.days; i++) {
+        const d = new Date(Date.UTC(sy, sm - 1, sd + i));
+        const key = d.toISOString().split("T")[0];
+        if (!dailyMap[key]) {
+          dailyMap[key] = { ventas: 0, agendasCreadas: 0, agendasUnicas: 0, llamadas: 0, llamadasUnicas: 0 };
+          dailyEmailsSets[key] = { agendas: new Set(), llamadas: new Set() };
+        }
+      }
+    }
+
+    // rangeStart/rangeEnd already computed in outer scope
+
+    function getDay(map: typeof dailyMap, date: string) {
+      if (!map[date]) {
+        map[date] = { ventas: 0, agendasCreadas: 0, agendasUnicas: 0, llamadas: 0, llamadasUnicas: 0 };
+        dailyEmailsSets[date] = { agendas: new Set(), llamadas: new Set() };
+      }
+      return map[date];
+    }
+
+    for (const s of filteredSales) {
+      const saleDate = s.date_added ?? s.fecha_compra;
+      if (saleDate) {
+        const day = saleDate.split("T")[0];
+        getDay(dailyMap, day).ventas++;
+      }
+    }
+    for (const a of filteredAgendas) {
+      const email = (a.email ?? "").toLowerCase();
+      if (a.creada) {
+        const day = a.creada.split("T")[0];
+        getDay(dailyMap, day).agendasCreadas++;
+        if (email) dailyEmailsSets[day].agendas.add(email);
+      }
+      if (a.fecha_llamada) {
+        const day = a.fecha_llamada.split("T")[0];
+        getDay(dailyMap, day).llamadas++;
+        if (email) dailyEmailsSets[day].llamadas.add(email);
+      }
+    }
+
+    for (const [day, sets] of Object.entries(dailyEmailsSets)) {
+      if (dailyMap[day]) {
+        dailyMap[day].agendasUnicas = sets.agendas.size;
+        dailyMap[day].llamadasUnicas = sets.llamadas.size;
+      }
+    }
+
+    const timelineRaw = Object.entries(dailyMap)
+      .filter(([date]) => {
+        if (rangeStart && rangeEnd) return date >= rangeStart && date <= rangeEnd;
+        return true;
+      })
+      .map(([date, d]) => ({ date, ...d }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    const seenAgendaEmails = new Set<string>();
+    const seenLlamadaEmails = new Set<string>();
+    timeline = timelineRaw.map((d) => {
+      const dayAgendaSets = dailyEmailsSets[d.date]?.agendas ?? new Set();
+      const dayLlamadaSets = dailyEmailsSets[d.date]?.llamadas ?? new Set();
+      let newAgendas = 0;
+      for (const email of dayAgendaSets) {
+        if (!seenAgendaEmails.has(email)) { seenAgendaEmails.add(email); newAgendas++; }
+      }
+      let newLlamadas = 0;
+      for (const email of dayLlamadaSets) {
+        if (!seenLlamadaEmails.has(email)) { seenLlamadaEmails.add(email); newLlamadas++; }
+      }
+      return { ...d, agendasUnicas: newAgendas, llamadasUnicas: newLlamadas };
+    });
   }
-
-  for (const s of sales) {
-    const saleDate = s.date_added ?? s.fecha_compra;
-    if (saleDate) {
-      const day = saleDate.split("T")[0];
-      getDay(dailyMap, day).ventas++;
-    }
-  }
-  for (const a of agendas) {
-    const email = (a.email ?? "").toLowerCase();
-    if (a.creada) {
-      const day = a.creada.split("T")[0];
-      getDay(dailyMap, day).agendasCreadas++;
-      if (email) dailyEmailsSets[day].agendas.add(email);
-    }
-    if (a.fecha_llamada) {
-      const day = a.fecha_llamada.split("T")[0];
-      getDay(dailyMap, day).llamadas++;
-      if (email) dailyEmailsSets[day].llamadas.add(email);
-    }
-  }
-
-  // Compute unique counts from sets (per-day, for tooltip)
-  for (const [day, sets] of Object.entries(dailyEmailsSets)) {
-    if (dailyMap[day]) {
-      dailyMap[day].agendasUnicas = sets.agendas.size;
-      dailyMap[day].llamadasUnicas = sets.llamadas.size;
-    }
-  }
-
-  // Only include days within the edition range
-  const timelineRaw = Object.entries(dailyMap)
-    .filter(([date]) => {
-      if (rangeStart && rangeEnd) return date >= rangeStart && date <= rangeEnd;
-      return true;
-    })
-    .map(([date, d]) => ({ date, ...d }))
-    .sort((a, b) => a.date.localeCompare(b.date));
-
-  // Compute incremental uniques: only count new emails not seen in previous days
-  // This ensures the sum of daily bars matches the global unique totals
-  const seenAgendaEmails = new Set<string>();
-  const seenLlamadaEmails = new Set<string>();
-  const timeline = timelineRaw.map((d) => {
-    const dayAgendaSets = dailyEmailsSets[d.date]?.agendas ?? new Set();
-    const dayLlamadaSets = dailyEmailsSets[d.date]?.llamadas ?? new Set();
-    let newAgendas = 0;
-    for (const email of dayAgendaSets) {
-      if (!seenAgendaEmails.has(email)) { seenAgendaEmails.add(email); newAgendas++; }
-    }
-    let newLlamadas = 0;
-    for (const email of dayLlamadaSets) {
-      if (!seenLlamadaEmails.has(email)) { seenLlamadaEmails.add(email); newLlamadas++; }
-    }
-    return { ...d, agendasUnicas: newAgendas, llamadasUnicas: newLlamadas };
-  });
 
   // Closer daily performance: calls done, no-shows, ventas closed, close rate
   // We match agenda email → sale email to attribute conversions to the closer
-  const saleEmails = new Set(sales.map((s) => (s.correo_electronico ?? "").toLowerCase()).filter(Boolean));
+  const saleEmails = new Set(filteredSales.map((s) => (s.correo_electronico ?? "").toLowerCase()).filter(Boolean));
 
   type CloserDayStats = {
     llamadas: number;
@@ -712,7 +966,7 @@ export async function GET(req: NextRequest) {
   const now = new Date();
   const today = now.toISOString().split("T")[0];
 
-  for (const a of agendas) {
+  for (const a of filteredAgendas) {
     if (!a.fecha_llamada) continue;
     const day = a.fecha_llamada.split("T")[0];
     if (day > today) continue; // Futuro — no contar
@@ -808,7 +1062,7 @@ export async function GET(req: NextRequest) {
 
   // Deduplicate agendas by email for qualification (unique agendas only)
   const seenQualEmails = new Set<string>();
-  const uniqueAgendas = agendas.filter((a) => {
+  const uniqueAgendas = filteredAgendas.filter((a) => {
     const email = (a.email ?? "").toLowerCase();
     if (!email || seenQualEmails.has(email)) return false;
     seenQualEmails.add(email);
@@ -839,10 +1093,16 @@ export async function GET(req: NextRequest) {
       totalVentas: totalAffVentas,
       types: affiliateTypes,
     },
+    organicMedia: {
+      totalLeads: totalOrgLeads,
+      totalAgendas: totalOrgAgendas,
+      totalVentas: totalOrgVentas,
+      channels: organicChannels,
+    },
     comerciales,
     timeline,
     closerPerformance,
     cualificacion,
-    economics: ECONOMIC_DATA[edicion ?? ""] ?? { general: { total: null, raw: {}, adjusted: {} }, paid: { total: null, raw: {}, adjusted: {} }, affiliates: { total: null, raw: {}, adjusted: {} } },
+    economics: (edicionesList.length === 1 ? ECONOMIC_DATA[edicionesList[0]] : null) ?? { general: { total: null, raw: {}, adjusted: {} }, paid: { total: null, raw: {}, adjusted: {} }, affiliates: { total: null, raw: {}, adjusted: {} } },
   });
 }

@@ -66,6 +66,24 @@ type AffiliateMedia = {
   types: AffiliateRow[];
 };
 
+type OrganicChannelRow = {
+  channel: string;
+  leads: number;
+  leadsPct: string;
+  agendas: number;
+  agendasUnicas: number;
+  agendasPct: string;
+  ventas: number;
+  ventasPct: string;
+};
+
+type OrganicMedia = {
+  totalLeads: number;
+  totalAgendas: number;
+  totalVentas: number;
+  channels: OrganicChannelRow[];
+};
+
 type ComercialRow = {
   comercial: string;
   agendas: number;
@@ -81,6 +99,9 @@ type ComercialRow = {
   orgAgendas: number;
   orgVentas: number;
   cierreOrg: string;
+  affAgendas: number;
+  affVentas: number;
+  cierreAff: string;
   untrackedAgendas: number;
   untrackedVentas: number;
   cierreUntracked: string;
@@ -153,6 +174,7 @@ export default function FunnelPage() {
   const [sources, setSources] = useState<SourceRow[]>([]);
   const [paidMedia, setPaidMedia] = useState<PaidMedia | null>(null);
   const [affiliateMedia, setAffiliateMedia] = useState<AffiliateMedia | null>(null);
+  const [organicMedia, setOrganicMedia] = useState<OrganicMedia | null>(null);
   const [comerciales, setComerciales] = useState<ComercialRow[]>([]);
   const [economics, setEconomics] = useState<EditionEconomics>({ general: { total: null, raw: {}, adjusted: {} }, paid: { total: null, raw: {}, adjusted: {} }, affiliates: { total: null, raw: {}, adjusted: {} } });
   const [timeline, setTimeline] = useState<{ date: string; ventas: number; agendasCreadas: number; agendasUnicas: number; llamadas: number; llamadasUnicas: number }[]>([]);
@@ -173,6 +195,9 @@ export default function FunnelPage() {
   const [editTipo, setEditTipo] = useState("conclusion");
   const [ediciones, setEdiciones] = useState<string[]>([]);
   const [edicionFilter, setEdicionFilter] = useState<string | null>(null);
+  const [quarterFilter, setQuarterFilter] = useState<string | null>(null);
+  const [sourceFilter, setSourceFilter] = useState<"Todos" | "Organico" | "Paid" | "Afiliados">("Todos");
+  const [subFilter, setSubFilter] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
 
@@ -199,16 +224,51 @@ export default function FunnelPage() {
       });
   }, []);
 
+  const QUARTER_MONTHS: Record<string, string[]> = {
+    Q1: ["Enero", "Febrero", "Marzo"],
+    Q2: ["Abril", "Mayo", "Junio"],
+    Q3: ["Julio", "Agosto", "Septiembre"],
+    Q4: ["Octubre", "Noviembre", "Diciembre"],
+  };
+
+  const availableQuarters = useMemo(() => {
+    const qs = new Set<string>();
+    for (const ed of ediciones) {
+      const month = ed.split(" ")[0];
+      for (const [q, months] of Object.entries(QUARTER_MONTHS)) {
+        if (months.includes(month)) { qs.add(q); break; }
+      }
+    }
+    // Siempre incluir el quarter siguiente al último con datos
+    const all = ["Q1", "Q2", "Q3", "Q4"];
+    const lastIdx = all.findLastIndex((q) => qs.has(q));
+    if (lastIdx >= 0 && lastIdx < 3) qs.add(all[lastIdx + 1]);
+    return all.filter((q) => qs.has(q));
+  }, [ediciones]);
+
+  const quarterEdiciones = useMemo(() => {
+    if (!quarterFilter) return [];
+    const months = QUARTER_MONTHS[quarterFilter] ?? [];
+    return ediciones.filter((ed) => months.includes(ed.split(" ")[0]));
+  }, [quarterFilter, ediciones]);
+
   const cancelRef = useRef<(() => void)[]>([]);
 
   const fetchData = useCallback(() => {
-    if (!edicionFilter) return;
+    if (!edicionFilter && !quarterFilter) return;
     // Cancel previous SWR subscriptions
     cancelRef.current.forEach((c) => c());
     cancelRef.current = [];
 
-    const funnelUrl = `/api/funnel?edicion=${encodeURIComponent(edicionFilter)}`;
-    const notasUrl = `/api/notas?edicion=${encodeURIComponent(edicionFilter)}`;
+    const sourceParam = sourceFilter !== "Todos" ? `&source=${encodeURIComponent(sourceFilter)}` : "";
+    const subParam = subFilter ? `&sub=${encodeURIComponent(subFilter)}` : "";
+    const edParam = quarterFilter
+      ? `ediciones=${encodeURIComponent(quarterEdiciones.join(","))}`
+      : `edicion=${encodeURIComponent(edicionFilter!)}`;
+    const funnelUrl = `/api/funnel?${edParam}${sourceParam}${subParam}`;
+    const notasUrl = quarterFilter
+      ? `/api/notas?edicion=${encodeURIComponent(quarterEdiciones[quarterEdiciones.length - 1] ?? "")}`
+      : `/api/notas?edicion=${encodeURIComponent(edicionFilter!)}`;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     cancelRef.current.push(swr<any>(funnelUrl, (d, isStale) => {
@@ -216,6 +276,7 @@ export default function FunnelPage() {
       setSources(d.sources ?? []);
       setPaidMedia(d.paidMedia ?? null);
       setAffiliateMedia(d.affiliateMedia ?? null);
+      setOrganicMedia(d.organicMedia ?? null);
       setComerciales(d.comerciales ?? []);
       setTimeline(d.timeline ?? []);
       setCloserPerformance(d.closerPerformance ?? []);
@@ -229,7 +290,7 @@ export default function FunnelPage() {
     cancelRef.current.push(swr<any>(notasUrl, (d) => {
       setNotas(d.data ?? []);
     }));
-  }, [edicionFilter]);
+  }, [edicionFilter, quarterFilter, quarterEdiciones, sourceFilter, subFilter]);
 
   useEffect(() => { if (initialized) fetchData(); }, [fetchData, initialized]);
 
@@ -241,68 +302,136 @@ export default function FunnelPage() {
     );
   }, [sources]);
 
-  // Adjusted Paid campaigns
+  // Adjusted Paid campaigns (includes global untracked assigned to Paid)
   const adjustedPaidCampaigns = useMemo(() => {
     if (!paidMedia) return [];
     const tracked = paidMedia.campaigns.filter((c) => c.campaign !== "untracked");
-    const untracked = paidMedia.campaigns.find((c) => c.campaign === "untracked");
-    if (!untracked) return tracked.map((c) => ({ ...c, adjLeads: c.leads, adjAgendas: c.agendasUnicas, adjVentas: c.ventas }));
-    const adjL = distribute(tracked.map((c) => ({ key: c.campaign, value: c.leads })), untracked.leads);
-    const adjA = distribute(tracked.map((c) => ({ key: c.campaign, value: c.agendasUnicas })), untracked.agendasUnicas);
-    const adjV = distribute(tracked.map((c) => ({ key: c.campaign, value: c.ventas })), untracked.ventas);
+    const paidInternalUntracked = paidMedia.campaigns.find((c) => c.campaign === "untracked");
+    const paidAdj = adjustedSources.find((s) => s.key === "Paid");
+    const globalExtraLeads = paidAdj ? paidAdj.adjLeads - paidMedia.totalLeads : 0;
+    const globalExtraAgendas = paidAdj ? paidAdj.adjAgendas - paidMedia.totalAgendas : 0;
+    const globalExtraVentas = paidAdj ? paidAdj.adjVentas - paidMedia.totalVentas : 0;
+    const totalUntrackedL = (paidInternalUntracked?.leads ?? 0) + globalExtraLeads;
+    const totalUntrackedA = (paidInternalUntracked?.agendasUnicas ?? 0) + globalExtraAgendas;
+    const totalUntrackedV = (paidInternalUntracked?.ventas ?? 0) + globalExtraVentas;
+    if (totalUntrackedL === 0 && totalUntrackedA === 0 && totalUntrackedV === 0) {
+      return tracked.map((c) => ({ ...c, adjLeads: c.leads, adjAgendas: c.agendasUnicas, adjVentas: c.ventas }));
+    }
+    const adjL = distribute(tracked.map((c) => ({ key: c.campaign, value: c.leads })), totalUntrackedL);
+    const adjA = distribute(tracked.map((c) => ({ key: c.campaign, value: c.agendasUnicas })), totalUntrackedA);
+    const adjV = distribute(tracked.map((c) => ({ key: c.campaign, value: c.ventas })), totalUntrackedV);
     return tracked.map((c) => ({
       ...c,
       adjLeads: adjL.find((a) => a.key === c.campaign)?.adjusted ?? c.leads,
-      adjAgendas: adjA.find((a) => a.key === c.campaign)?.adjusted ?? c.agendas,
+      adjAgendas: adjA.find((a) => a.key === c.campaign)?.adjusted ?? c.agendasUnicas,
       adjVentas: adjV.find((a) => a.key === c.campaign)?.adjusted ?? c.ventas,
     }));
-  }, [paidMedia]);
+  }, [paidMedia, adjustedSources]);
 
-  // Adjusted Affiliates
+  // Adjusted Affiliates (includes global untracked assigned to Afiliados)
   const adjustedAffiliates = useMemo(() => {
     if (!affiliateMedia) return [];
     const tracked = affiliateMedia.types.filter((t) => t.affiliate !== "untracked");
-    const untracked = affiliateMedia.types.find((t) => t.affiliate === "untracked");
-    if (!untracked) return tracked.map((t) => ({ ...t, adjLeads: t.leads, adjAgendas: t.agendasUnicas, adjVentas: t.ventas }));
-    const adjL = distribute(tracked.map((t) => ({ key: t.affiliate, value: t.leads })), untracked.leads);
-    const adjA = distribute(tracked.map((t) => ({ key: t.affiliate, value: t.agendasUnicas })), untracked.agendasUnicas);
-    const adjV = distribute(tracked.map((t) => ({ key: t.affiliate, value: t.ventas })), untracked.ventas);
+    const affInternalUntracked = affiliateMedia.types.find((t) => t.affiliate === "untracked");
+    const affAdj = adjustedSources.find((s) => s.key === "Afiliados");
+    const globalExtraLeads = affAdj ? affAdj.adjLeads - affiliateMedia.totalLeads : 0;
+    const globalExtraAgendas = affAdj ? affAdj.adjAgendas - affiliateMedia.totalAgendas : 0;
+    const globalExtraVentas = affAdj ? affAdj.adjVentas - affiliateMedia.totalVentas : 0;
+    const totalUntrackedL = (affInternalUntracked?.leads ?? 0) + globalExtraLeads;
+    const totalUntrackedA = (affInternalUntracked?.agendasUnicas ?? 0) + globalExtraAgendas;
+    const totalUntrackedV = (affInternalUntracked?.ventas ?? 0) + globalExtraVentas;
+    if (totalUntrackedL === 0 && totalUntrackedA === 0 && totalUntrackedV === 0) {
+      return tracked.map((t) => ({ ...t, adjLeads: t.leads, adjAgendas: t.agendasUnicas, adjVentas: t.ventas }));
+    }
+    const adjL = distribute(tracked.map((t) => ({ key: t.affiliate, value: t.leads })), totalUntrackedL);
+    const adjA = distribute(tracked.map((t) => ({ key: t.affiliate, value: t.agendasUnicas })), totalUntrackedA);
+    const adjV = distribute(tracked.map((t) => ({ key: t.affiliate, value: t.ventas })), totalUntrackedV);
     return tracked.map((t) => ({
       ...t,
       adjLeads: adjL.find((a) => a.key === t.affiliate)?.adjusted ?? t.leads,
-      adjAgendas: adjA.find((a) => a.key === t.affiliate)?.adjusted ?? t.agendas,
+      adjAgendas: adjA.find((a) => a.key === t.affiliate)?.adjusted ?? t.agendasUnicas,
       adjVentas: adjV.find((a) => a.key === t.affiliate)?.adjusted ?? t.ventas,
     }));
-  }, [affiliateMedia]);
+  }, [affiliateMedia, adjustedSources]);
+
+  // Stats filtradas por fuente y sub-filtro
+  const filteredStats = useMemo((): Stats | null => {
+    if (!stats) return null;
+    if (sourceFilter === "Todos") return stats;
+
+    // Si hay sub-filtro, buscar datos del sub-desglose
+    if (subFilter) {
+      let leads = 0, agendas = 0, agendasTotal = 0, ventas = 0;
+      if (sourceFilter === "Paid" && paidMedia) {
+        const camp = paidMedia.campaigns.find((c) => c.campaign === subFilter);
+        if (!camp) return null;
+        leads = camp.leads; agendas = camp.agendasUnicas; agendasTotal = camp.agendas; ventas = camp.ventas;
+      } else if (sourceFilter === "Afiliados" && affiliateMedia) {
+        const aff = affiliateMedia.types.find((t) => t.affiliate === subFilter);
+        if (!aff) return null;
+        leads = aff.leads; agendas = aff.agendasUnicas; agendasTotal = aff.agendas; ventas = aff.ventas;
+      } else if (sourceFilter === "Organico" && organicMedia) {
+        const ch = organicMedia.channels.find((c) => c.channel === subFilter);
+        if (!ch) return null;
+        leads = ch.leads; agendas = ch.agendasUnicas; agendasTotal = ch.agendas; ventas = ch.ventas;
+      }
+      return {
+        totalLeads: leads,
+        totalAgendas: agendasTotal,
+        agendasUnicas: agendas,
+        totalVentas: ventas,
+        convLeadAgenda: leads > 0 ? ((agendas / leads) * 100).toFixed(1) : "0",
+        convAgendaVenta: agendas > 0 ? ((ventas / agendas) * 100).toFixed(1) : "0",
+        convLeadVenta: leads > 0 ? ((ventas / leads) * 100).toFixed(1) : "0",
+      };
+    }
+
+    const row = sources.find((s) => s.source === sourceFilter);
+    if (!row) return null;
+    const leads = row.leads;
+    const agendas = row.agendasUnicas;
+    const agendasTotal = row.agendas;
+    const ventas = row.ventas;
+    return {
+      totalLeads: leads,
+      totalAgendas: agendasTotal,
+      agendasUnicas: agendas,
+      totalVentas: ventas,
+      convLeadAgenda: leads > 0 ? ((agendas / leads) * 100).toFixed(1) : "0",
+      convAgendaVenta: agendas > 0 ? ((ventas / agendas) * 100).toFixed(1) : "0",
+      convLeadVenta: leads > 0 ? ((ventas / leads) * 100).toFixed(1) : "0",
+    };
+  }, [stats, sources, sourceFilter, subFilter, paidMedia, affiliateMedia, organicMedia]);
 
   // Adjusted Comerciales (untracked distributed, no untracked columns)
   const adjustedComerciales = useMemo(() => {
     return comerciales.map((c) => {
-      const trackedAg = c.paidAV0Agendas + c.paidAV2Agendas + c.orgAgendas;
       const untrackedAg = c.untrackedAgendas;
       const adjAg = distribute(
-        [{ key: "paidAV0", value: c.paidAV0Agendas }, { key: "paidAV2", value: c.paidAV2Agendas }, { key: "org", value: c.orgAgendas }],
+        [{ key: "paidAV0", value: c.paidAV0Agendas }, { key: "paidAV2", value: c.paidAV2Agendas }, { key: "org", value: c.orgAgendas }, { key: "aff", value: c.affAgendas }],
         untrackedAg
       );
-      const trackedVe = c.paidAV0Ventas + c.paidAV2Ventas + c.orgVentas;
       const untrackedVe = c.untrackedVentas;
       const adjVe = distribute(
-        [{ key: "paidAV0", value: c.paidAV0Ventas }, { key: "paidAV2", value: c.paidAV2Ventas }, { key: "org", value: c.orgVentas }],
+        [{ key: "paidAV0", value: c.paidAV0Ventas }, { key: "paidAV2", value: c.paidAV2Ventas }, { key: "org", value: c.orgVentas }, { key: "aff", value: c.affVentas }],
         untrackedVe
       );
       const av0Ag = adjAg.find((a) => a.key === "paidAV0")?.adjusted ?? 0;
       const av2Ag = adjAg.find((a) => a.key === "paidAV2")?.adjusted ?? 0;
       const orgAg = adjAg.find((a) => a.key === "org")?.adjusted ?? 0;
+      const affAg = adjAg.find((a) => a.key === "aff")?.adjusted ?? 0;
       const av0Ve = adjVe.find((a) => a.key === "paidAV0")?.adjusted ?? 0;
       const av2Ve = adjVe.find((a) => a.key === "paidAV2")?.adjusted ?? 0;
       const orgVe = adjVe.find((a) => a.key === "org")?.adjusted ?? 0;
+      const affVe = adjVe.find((a) => a.key === "aff")?.adjusted ?? 0;
       return {
         ...c,
-        paidAV0Agendas: av0Ag, paidAV2Agendas: av2Ag, orgAgendas: orgAg,
-        paidAV0Ventas: av0Ve, paidAV2Ventas: av2Ve, orgVentas: orgVe,
+        paidAV0Agendas: av0Ag, paidAV2Agendas: av2Ag, orgAgendas: orgAg, affAgendas: affAg,
+        paidAV0Ventas: av0Ve, paidAV2Ventas: av2Ve, orgVentas: orgVe, affVentas: affVe,
         cierreAV0: av0Ag > 0 ? ((av0Ve / av0Ag) * 100).toFixed(1) : "0",
         cierreAV2: av2Ag > 0 ? ((av2Ve / av2Ag) * 100).toFixed(1) : "0",
         cierreOrg: orgAg > 0 ? ((orgVe / orgAg) * 100).toFixed(1) : "0",
+        cierreAff: affAg > 0 ? ((affVe / affAg) * 100).toFixed(1) : "0",
       };
     });
   }, [comerciales]);
@@ -341,17 +470,44 @@ export default function FunnelPage() {
         <p className="text-gray-400 text-sm mt-0.5">Embudo completo: Leads → Agendas → Ventas</p>
       </div>
 
+      {/* Selector de quarter */}
+      {availableQuarters.length > 0 && (
+        <div className="flex items-center gap-1.5">
+          {availableQuarters.map((q) => (
+            <button
+              key={q}
+              onClick={() => {
+                if (quarterFilter === q) {
+                  setQuarterFilter(null);
+                  if (!edicionFilter && ediciones.length) setEdicionFilter(ediciones[ediciones.length - 1]);
+                } else {
+                  setQuarterFilter(q);
+                  setEdicionFilter(null);
+                }
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${quarterFilter === q
+                ? "bg-indigo-500 text-white shadow-sm"
+                : "text-gray-400 hover:text-indigo-600"
+              }`}
+            >
+              {q}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Selector de edición */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
-        <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-3">Selecciona la edicion</p>
         <div className="flex items-center gap-2 flex-wrap">
           {ediciones.map((ed) => (
             <button
               key={ed}
-              onClick={() => setEdicionFilter(ed)}
-              className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${edicionFilter === ed
+              onClick={() => { setEdicionFilter(ed); setQuarterFilter(null); }}
+              className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${!quarterFilter && edicionFilter === ed
                 ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/25 scale-[1.02]"
-                : "bg-gray-50 border border-gray-200 text-gray-500 hover:border-emerald-300 hover:text-emerald-600 hover:bg-emerald-50"
+                : quarterFilter && quarterEdiciones.includes(ed)
+                  ? "bg-indigo-100 border border-indigo-300 text-indigo-700"
+                  : "bg-gray-50 border border-gray-200 text-gray-500 hover:border-emerald-300 hover:text-emerald-600 hover:bg-emerald-50"
               }`}
             >
               {ed}
@@ -360,6 +516,7 @@ export default function FunnelPage() {
         </div>
       </div>
 
+
       {loading ? (
         <div className="flex justify-center py-16">
           <Loader2 className="h-7 w-7 animate-spin text-emerald-500" />
@@ -367,9 +524,68 @@ export default function FunnelPage() {
       ) : stats && (
         <>
           {/* Resumen general */}
-          <h2 className="text-lg font-bold text-gray-900">1. Resumen general</h2>
+          <div className="flex items-end justify-between flex-wrap gap-3">
+            <h2 className="text-lg font-bold text-gray-900">1. Resumen general</h2>
+            <div className="flex flex-col items-end gap-1.5">
+              <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-xl p-1">
+                {(["Todos", "Organico", "Paid", "Afiliados"] as const).map((s) => {
+                  const active = sourceFilter === s;
+                  const colors: Record<string, string> = {
+                    Todos: "bg-gray-800 text-white shadow-sm",
+                    Organico: "bg-emerald-500 text-white shadow-sm",
+                    Paid: "bg-blue-500 text-white shadow-sm",
+                    Afiliados: "bg-purple-500 text-white shadow-sm",
+                  };
+                  return (
+                    <button
+                      key={s}
+                      onClick={() => { setSourceFilter(s); setSubFilter(null); }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${active ? colors[s] : "text-gray-500 hover:text-gray-700"}`}
+                    >
+                      {s}
+                    </button>
+                  );
+                })}
+              </div>
+              {sourceFilter !== "Todos" && (() => {
+                let items: { key: string; label: string }[] = [];
+                if (sourceFilter === "Organico" && organicMedia) {
+                  items = organicMedia.channels.map((c) => ({ key: c.channel, label: c.channel }));
+                } else if (sourceFilter === "Paid" && paidMedia) {
+                  items = paidMedia.campaigns.filter((c) => c.campaign !== "untracked").map((c) => ({ key: c.campaign, label: c.campaign }));
+                } else if (sourceFilter === "Afiliados" && affiliateMedia) {
+                  items = affiliateMedia.types.filter((t) => t.affiliate !== "untracked").map((t) => ({ key: t.affiliate, label: t.affiliate }));
+                }
+                if (!items.length) return null;
+                const sourceColor: Record<string, string> = {
+                  Organico: "bg-emerald-500 text-white shadow-sm",
+                  Paid: "bg-blue-500 text-white shadow-sm",
+                  Afiliados: "bg-purple-500 text-white shadow-sm",
+                };
+                return (
+                  <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-xl p-1">
+                    <button
+                      onClick={() => setSubFilter(null)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${!subFilter ? "bg-gray-700 text-white shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+                    >
+                      Todos
+                    </button>
+                    {items.map((item) => (
+                      <button
+                        key={item.key}
+                        onClick={() => setSubFilter(item.key)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${subFilter === item.key ? sourceColor[sourceFilter] : "text-gray-500 hover:text-gray-700"}`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
 
-          <div className="flex gap-6">
+          {filteredStats ? <div className="flex gap-6">
             {/* Funnel visual — izquierda */}
             <div className="flex flex-col items-center gap-0 w-64 shrink-0">
               <div className="w-full bg-emerald-500 rounded-3xl border-2 border-white shadow-sm px-4 py-2.5 flex items-center justify-between">
@@ -377,12 +593,12 @@ export default function FunnelPage() {
                   <Users className="h-3.5 w-3.5 text-white/80" />
                   <span className="text-[11px] font-semibold text-white/70 uppercase">Leads</span>
                 </div>
-                <p className="text-lg font-black text-white">{stats.totalLeads.toLocaleString("es-ES")}</p>
+                <p className="text-lg font-black text-white">{filteredStats.totalLeads.toLocaleString("es-ES")}</p>
               </div>
 
               <div className="py-1 flex items-center gap-1">
                 <ChevronDown className="h-3 w-3 text-gray-300" />
-                <span className="text-[10px] font-bold text-emerald-600">{stats.convLeadAgenda}%</span>
+                <span className="text-[10px] font-bold text-emerald-600">{filteredStats.convLeadAgenda}%</span>
               </div>
 
               <div className="w-[78%] bg-indigo-500 rounded-3xl border-2 border-white shadow-sm px-4 py-2.5 flex items-center justify-between">
@@ -391,14 +607,14 @@ export default function FunnelPage() {
                   <span className="text-[11px] font-semibold text-white/70 uppercase">Agendas</span>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-black text-white">{stats.agendasUnicas}</p>
-                  <p className="text-[9px] text-white/60">{stats.totalAgendas} totales</p>
+                  <p className="text-lg font-black text-white">{filteredStats.agendasUnicas}</p>
+                  <p className="text-[9px] text-white/60">{filteredStats.totalAgendas} totales</p>
                 </div>
               </div>
 
               <div className="py-1 flex items-center gap-1">
                 <ChevronDown className="h-3 w-3 text-gray-300" />
-                <span className="text-[10px] font-bold text-indigo-600">{stats.convAgendaVenta}%</span>
+                <span className="text-[10px] font-bold text-indigo-600">{filteredStats.convAgendaVenta}%</span>
               </div>
 
               <div className="w-[54%] bg-amber-400 rounded-3xl border-2 border-white shadow-sm px-4 py-2.5 flex items-center justify-between">
@@ -406,7 +622,7 @@ export default function FunnelPage() {
                   <ShoppingCart className="h-3.5 w-3.5 text-white/80" />
                   <span className="text-[11px] font-semibold text-white/70 uppercase">Ventas</span>
                 </div>
-                <p className="text-lg font-black text-white">{stats.totalVentas}</p>
+                <p className="text-lg font-black text-white">{filteredStats.totalVentas}</p>
               </div>
             </div>
 
@@ -419,7 +635,7 @@ export default function FunnelPage() {
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Leads</p>
-                  <p className="text-2xl font-black text-gray-900 leading-tight">{stats.totalLeads.toLocaleString("es-ES")}</p>
+                  <p className="text-2xl font-black text-gray-900 leading-tight">{filteredStats.totalLeads.toLocaleString("es-ES")}</p>
                 </div>
               </div>
               <div className="bg-emerald-50 rounded-2xl border border-emerald-200 shadow-sm px-4 py-3 flex items-center gap-3">
@@ -428,7 +644,7 @@ export default function FunnelPage() {
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Conv. lead → venta</p>
-                  <p className="text-2xl font-black text-emerald-700 leading-tight">{stats.convLeadVenta}% <span className="text-sm font-medium text-emerald-500">lead → venta</span></p>
+                  <p className="text-2xl font-black text-emerald-700 leading-tight">{filteredStats.convLeadVenta}% <span className="text-sm font-medium text-emerald-500">lead → venta</span></p>
                 </div>
               </div>
 
@@ -439,7 +655,7 @@ export default function FunnelPage() {
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Agendas unicas</p>
-                  <p className="text-2xl font-black text-gray-900 leading-tight">{stats.agendasUnicas} <span className="text-sm font-medium text-gray-400">{stats.totalAgendas} totales</span></p>
+                  <p className="text-2xl font-black text-gray-900 leading-tight">{filteredStats.agendasUnicas} <span className="text-sm font-medium text-gray-400">{filteredStats.totalAgendas} totales</span></p>
                 </div>
               </div>
               <div className="bg-indigo-50 rounded-2xl border border-indigo-200 shadow-sm px-4 py-3 flex items-center gap-3">
@@ -448,7 +664,7 @@ export default function FunnelPage() {
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Ratio agenda</p>
-                  <p className="text-2xl font-black text-indigo-700 leading-tight">{stats.convLeadAgenda}% <span className="text-sm font-medium text-indigo-500">lead → agenda</span></p>
+                  <p className="text-2xl font-black text-indigo-700 leading-tight">{filteredStats.convLeadAgenda}% <span className="text-sm font-medium text-indigo-500">lead → agenda</span></p>
                 </div>
               </div>
 
@@ -459,7 +675,7 @@ export default function FunnelPage() {
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Ventas</p>
-                  <p className="text-2xl font-black text-gray-900 leading-tight">{stats.totalVentas}</p>
+                  <p className="text-2xl font-black text-gray-900 leading-tight">{filteredStats.totalVentas}</p>
                 </div>
               </div>
               <div className="bg-amber-50 rounded-2xl border border-amber-200 shadow-sm px-4 py-3 flex items-center gap-3">
@@ -468,11 +684,15 @@ export default function FunnelPage() {
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Cierre llamada</p>
-                  <p className="text-2xl font-black text-amber-700 leading-tight">{stats.convAgendaVenta}% <span className="text-sm font-medium text-amber-500">agenda → venta</span></p>
+                  <p className="text-2xl font-black text-amber-700 leading-tight">{filteredStats.convAgendaVenta}% <span className="text-sm font-medium text-amber-500">agenda → venta</span></p>
                 </div>
               </div>
             </div>
-          </div>
+          </div> : (
+            <div className="bg-gray-50 border border-gray-200 rounded-2xl px-6 py-8 text-center text-sm text-gray-400">
+              No hay datos para la fuente <span className="font-bold text-gray-600">{sourceFilter}</span> en esta edición.
+            </div>
+          )}
 
 
 
@@ -480,10 +700,10 @@ export default function FunnelPage() {
           <>
             <h2 className="text-lg font-bold text-gray-900 mt-2">2. Actividad diaria</h2>
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                <p className="text-xs text-gray-400 mb-4">Ventas, nuevas agendas únicas y nuevas llamadas únicas por día (incrementales, suman al total)</p>
+                <p className="text-xs text-gray-400 mb-4">{quarterFilter ? "Media por día de lanzamiento entre ediciones del quarter" : "Ventas, nuevas agendas únicas y nuevas llamadas únicas por día (incrementales, suman al total)"}</p>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={timeline.map((d) => ({
-                    dia: new Date(d.date).toLocaleDateString("es-ES", { day: "numeric", month: "short" }),
+                    dia: d.date.startsWith("Día") ? d.date : new Date(d.date).toLocaleDateString("es-ES", { day: "numeric", month: "short" }),
                     Ventas: d.ventas,
                     "Agendas únicas creadas": d.agendasUnicas,
                     _agendasTotal: d.agendasCreadas,
@@ -836,19 +1056,26 @@ export default function FunnelPage() {
                         </tr>
                       ));
                     })()}
-                    <tr className="border-t border-blue-200 bg-blue-50/50 font-bold">
-                      <td className="px-3 py-0.5 text-xs text-blue-800">Total</td>
-                      <td className="text-right px-2 py-0.5 text-xs text-gray-900">{paidMedia.totalLeads.toLocaleString("es-ES")}</td>
-                      <td className="text-right px-2 py-0.5 text-xs text-gray-400">100%</td>
-                      <td className="text-right px-2 py-0.5 text-xs text-gray-900">{paidMedia.totalAgendas}</td>
-                      <td className="text-right px-2 py-0.5 text-xs text-gray-400">100%</td>
-                      <td className="text-right px-2 py-0.5 text-xs text-gray-900">{paidMedia.totalVentas}</td>
-                      <td className="text-right px-2 py-0.5 text-xs text-gray-400">100%</td>
-                      <td className="text-right px-2 py-0.5 text-xs text-blue-700">{paidMedia.totalLeads > 0 ? ((paidMedia.totalAgendas / paidMedia.totalLeads) * 100).toFixed(1) : "0"}%</td>
-                      <td className="text-right px-2 py-0.5 text-xs text-blue-700">{paidMedia.totalLeads > 0 ? ((paidMedia.totalVentas / paidMedia.totalLeads) * 100).toFixed(1) : "0"}%</td>
-                      <td className="text-right px-3 py-0.5 text-xs text-blue-700">{paidMedia.totalAgendas > 0 ? ((paidMedia.totalVentas / paidMedia.totalAgendas) * 100).toFixed(1) : "0"}%</td>
-                      <td colSpan={8} className="border-l-2 border-amber-200" />
-                    </tr>
+                    {(() => {
+                      const tL = adjustedPaidCampaigns.reduce((s, c) => s + c.adjLeads, 0);
+                      const tA = adjustedPaidCampaigns.reduce((s, c) => s + c.adjAgendas, 0);
+                      const tV = adjustedPaidCampaigns.reduce((s, c) => s + c.adjVentas, 0);
+                      return (
+                        <tr className="border-t border-blue-200 bg-blue-50/50 font-bold">
+                          <td className="px-3 py-0.5 text-xs text-blue-800">Total</td>
+                          <td className="text-right px-2 py-0.5 text-xs text-gray-900">{tL.toLocaleString("es-ES")}</td>
+                          <td className="text-right px-2 py-0.5 text-xs text-gray-400">100%</td>
+                          <td className="text-right px-2 py-0.5 text-xs text-gray-900">{tA}</td>
+                          <td className="text-right px-2 py-0.5 text-xs text-gray-400">100%</td>
+                          <td className="text-right px-2 py-0.5 text-xs text-gray-900">{tV}</td>
+                          <td className="text-right px-2 py-0.5 text-xs text-gray-400">100%</td>
+                          <td className="text-right px-2 py-0.5 text-xs text-blue-700">{tL > 0 ? ((tA / tL) * 100).toFixed(1) : "0"}%</td>
+                          <td className="text-right px-2 py-0.5 text-xs text-blue-700">{tL > 0 ? ((tV / tL) * 100).toFixed(1) : "0"}%</td>
+                          <td className="text-right px-3 py-0.5 text-xs text-blue-700">{tA > 0 ? ((tV / tA) * 100).toFixed(1) : "0"}%</td>
+                          <td colSpan={8} className="border-l-2 border-amber-200" />
+                        </tr>
+                      );
+                    })()}
                   </tbody>
                 </table>
               </div>
@@ -927,105 +1154,97 @@ export default function FunnelPage() {
                         </tr>
                       ));
                     })()}
-                    <tr className="border-t border-purple-200 bg-purple-50/50 font-bold">
-                      <td className="px-3 py-0.5 text-xs text-purple-800">Total</td>
-                      <td className="text-right px-2 py-0.5 text-xs text-gray-900">{affiliateMedia.totalLeads.toLocaleString("es-ES")}</td>
-                      <td className="text-right px-2 py-0.5 text-xs text-gray-400">100%</td>
-                      <td className="text-right px-2 py-0.5 text-xs text-gray-900">{affiliateMedia.totalAgendas}</td>
-                      <td className="text-right px-2 py-0.5 text-xs text-gray-400">100%</td>
-                      <td className="text-right px-2 py-0.5 text-xs text-gray-900">{affiliateMedia.totalVentas}</td>
-                      <td className="text-right px-3 py-0.5 text-xs text-gray-400">100%</td>
-                      <td colSpan={7} className="border-l-2 border-amber-200" />
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-          {/* 6. Estudio por comercial */}
-          {adjustedComerciales.length > 0 && (<>
-              <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-x-auto mt-0.5">
-                <table className="w-full min-w-[900px]" style={{ fontSize: "11px" }}>
-                  <thead>
-                    <tr className="bg-amber-700"><td colSpan={14} className="px-3 py-0.5 text-[10px] font-bold text-white uppercase tracking-widest">6. Estudio por comercial <span className="font-normal opacity-70">· untracked distribuido</span></td></tr>
-                    <tr className="border-b border-gray-100 bg-gray-50/60">
-                      <th rowSpan={2} className="text-left px-3 py-0.5 text-[10px] font-bold text-gray-400 uppercase border-r border-gray-100">Closing</th>
-                      <th rowSpan={2} className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Agendas</th>
-                      <th rowSpan={2} className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Ventas</th>
-                      <th rowSpan={2} className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase border-r border-gray-100">Cierre llamada</th>
-                      <th colSpan={7} className="text-center px-2 py-0.5 text-xs font-bold text-blue-500 uppercase tracking-wide border-r border-gray-100">Paid</th>
-                      <th colSpan={3} className="text-center px-2 py-0.5 text-xs font-bold text-emerald-500 uppercase tracking-wide">Organico</th>
-                    </tr>
-                    <tr className="border-b border-gray-100 bg-gray-50/40">
-                      <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Ag. AV0</th>
-                      <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Ag. AV2</th>
-                      <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">V. AV0</th>
-                      <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">V. AV2</th>
-                      <th className="text-right px-2 py-0.5 text-[10px] font-bold text-blue-500 uppercase bg-blue-50/50">Total Ag</th>
-                      <th className="text-right px-2 py-0.5 text-[10px] font-bold text-blue-500 uppercase bg-blue-50/50">Total V</th>
-                      <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase border-r border-gray-100">% AV0 / AV2</th>
-                      <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Agendas</th>
-                      <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Ventas</th>
-                      <th className="text-right px-2 py-0.5 text-[10px] font-bold text-gray-400 uppercase">Cierre llamada</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {adjustedComerciales.map((c) => (
-                      <tr key={c.comercial} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-3 py-0.5 text-xs font-semibold text-gray-700 border-r border-gray-100">{c.comercial}</td>
-                        <td className="text-right px-2 py-0.5 text-xs font-bold text-gray-900">{c.agendasUnicas}</td>
-                        <td className="text-right px-2 py-0.5 text-xs font-bold text-gray-900">{c.ventas}</td>
-                        <td className="text-right px-2 py-0.5 text-xs font-bold text-gray-900 border-r border-gray-100">{c.cierre}%</td>
-                        <td className="text-right px-2 py-0.5 text-xs text-gray-600">{c.paidAV0Agendas}</td>
-                        <td className="text-right px-2 py-0.5 text-xs text-gray-600">{c.paidAV2Agendas}</td>
-                        <td className="text-right px-2 py-0.5 text-xs text-gray-600">{c.paidAV0Ventas}</td>
-                        <td className="text-right px-2 py-0.5 text-xs text-gray-600">{c.paidAV2Ventas}</td>
-                        <td className="text-right px-2 py-0.5 text-xs font-bold text-blue-700 bg-blue-50/30">{c.paidAV0Agendas + c.paidAV2Agendas}</td>
-                        <td className="text-right px-2 py-0.5 text-xs font-bold text-blue-700 bg-blue-50/30">{c.paidAV0Ventas + c.paidAV2Ventas}</td>
-                        <td className="text-right px-2 py-0.5 text-xs font-semibold text-blue-600 border-r border-gray-100">{c.cierreAV0}% / {c.cierreAV2}%</td>
-                        <td className="text-right px-2 py-0.5 text-xs text-gray-600">{c.orgAgendas}</td>
-                        <td className="text-right px-2 py-0.5 text-xs text-gray-600">{c.orgVentas}</td>
-                        <td className="text-right px-2 py-0.5 text-xs font-semibold text-emerald-600">{c.cierreOrg}%</td>
-                      </tr>
-                    ))}
-                    {/* Fila totales */}
                     {(() => {
-                      const t = adjustedComerciales.reduce((acc, c) => ({
-                        agendas: acc.agendas + c.agendas,
-                        agendasUnicas: acc.agendasUnicas + c.agendasUnicas,
-                        ventas: acc.ventas + c.ventas,
-                        av0Ag: acc.av0Ag + c.paidAV0Agendas,
-                        av2Ag: acc.av2Ag + c.paidAV2Agendas,
-                        av0Ve: acc.av0Ve + c.paidAV0Ventas,
-                        av2Ve: acc.av2Ve + c.paidAV2Ventas,
-                        orgAg: acc.orgAg + c.orgAgendas,
-                        orgVe: acc.orgVe + c.orgVentas,
-                      }), { agendas: 0, agendasUnicas: 0, ventas: 0, av0Ag: 0, av2Ag: 0, av0Ve: 0, av2Ve: 0, orgAg: 0, orgVe: 0 });
-                      const paidAg = t.av0Ag + t.av2Ag;
-                      const paidVe = t.av0Ve + t.av2Ve;
+                      const tL = adjustedAffiliates.reduce((s, t) => s + t.adjLeads, 0);
+                      const tA = adjustedAffiliates.reduce((s, t) => s + t.adjAgendas, 0);
+                      const tV = adjustedAffiliates.reduce((s, t) => s + t.adjVentas, 0);
                       return (
-                        <tr className="border-t-2 border-gray-200 bg-gray-50/80 font-bold">
-                          <td className="px-5 py-2 text-sm text-gray-700 border-r border-gray-100">TOTAL</td>
-                          <td className="text-right px-3 py-2 text-sm text-gray-900">{t.agendasUnicas}</td>
-                          <td className="text-right px-3 py-2 text-sm text-gray-900">{t.ventas}</td>
-                          <td className="text-right px-3 py-2 text-sm text-gray-900 border-r border-gray-100">{t.agendasUnicas > 0 ? ((t.ventas / t.agendasUnicas) * 100).toFixed(1) : "0"}%</td>
-                          <td className="text-right px-3 py-2 text-sm text-gray-600">{t.av0Ag}</td>
-                          <td className="text-right px-3 py-2 text-sm text-gray-600">{t.av2Ag}</td>
-                          <td className="text-right px-3 py-2 text-sm text-gray-600">{t.av0Ve}</td>
-                          <td className="text-right px-3 py-2 text-sm text-gray-600">{t.av2Ve}</td>
-                          <td className="text-right px-3 py-2 text-sm font-bold text-blue-700 bg-blue-50/30">{paidAg}</td>
-                          <td className="text-right px-3 py-2 text-sm font-bold text-blue-700 bg-blue-50/30">{paidVe}</td>
-                          <td className="text-right px-3 py-2 text-sm font-semibold text-blue-600 border-r border-gray-100">{t.av0Ag > 0 ? ((t.av0Ve / t.av0Ag) * 100).toFixed(1) : "0"}% / {t.av2Ag > 0 ? ((t.av2Ve / t.av2Ag) * 100).toFixed(1) : "0"}%</td>
-                          <td className="text-right px-3 py-2 text-sm text-gray-600">{t.orgAg}</td>
-                          <td className="text-right px-3 py-2 text-sm text-gray-600">{t.orgVe}</td>
-                          <td className="text-right px-3 py-2 text-sm font-semibold text-emerald-600">{t.orgAg > 0 ? ((t.orgVe / t.orgAg) * 100).toFixed(1) : "0"}%</td>
+                        <tr className="border-t border-purple-200 bg-purple-50/50 font-bold">
+                          <td className="px-3 py-0.5 text-xs text-purple-800">Total</td>
+                          <td className="text-right px-2 py-0.5 text-xs text-gray-900">{tL.toLocaleString("es-ES")}</td>
+                          <td className="text-right px-2 py-0.5 text-xs text-gray-400">100%</td>
+                          <td className="text-right px-2 py-0.5 text-xs text-gray-900">{tA}</td>
+                          <td className="text-right px-2 py-0.5 text-xs text-gray-400">100%</td>
+                          <td className="text-right px-2 py-0.5 text-xs text-gray-900">{tV}</td>
+                          <td className="text-right px-3 py-0.5 text-xs text-gray-400">100%</td>
+                          <td colSpan={7} className="border-l-2 border-amber-200" />
                         </tr>
                       );
                     })()}
                   </tbody>
                 </table>
               </div>
-          </>)}
+            </>
+          )}
+          {/* 6. Estudio por comercial */}
+          {adjustedComerciales.length > 0 && (() => {
+            const t = adjustedComerciales.reduce((acc, c) => ({
+              agendasUnicas: acc.agendasUnicas + c.agendasUnicas, ventas: acc.ventas + c.ventas,
+              av0Ag: acc.av0Ag + c.paidAV0Agendas, av2Ag: acc.av2Ag + c.paidAV2Agendas,
+              av0Ve: acc.av0Ve + c.paidAV0Ventas, av2Ve: acc.av2Ve + c.paidAV2Ventas,
+              orgAg: acc.orgAg + c.orgAgendas, orgVe: acc.orgVe + c.orgVentas,
+              affAg: acc.affAg + c.affAgendas, affVe: acc.affVe + c.affVentas,
+            }), { agendasUnicas: 0, ventas: 0, av0Ag: 0, av2Ag: 0, av0Ve: 0, av2Ve: 0, orgAg: 0, orgVe: 0, affAg: 0, affVe: 0 });
+
+            type MetricRow = { label: string; group?: string; values: (string | number)[]; bold?: boolean; color?: string };
+            const cols = [...adjustedComerciales];
+            const rows: MetricRow[] = [
+              { label: "Agendas", values: cols.map((c) => c.agendasUnicas), bold: true },
+              { label: "Ventas", values: cols.map((c) => c.ventas), bold: true },
+              { label: "Cierre llamada", values: cols.map((c) => c.cierre + "%"), bold: true },
+              { label: "Ag. AV0", group: "Paid", values: cols.map((c) => c.paidAV0Agendas), color: "text-blue-600" },
+              { label: "Ag. AV2", group: "Paid", values: cols.map((c) => c.paidAV2Agendas), color: "text-blue-600" },
+              { label: "V. AV0", group: "Paid", values: cols.map((c) => c.paidAV0Ventas), color: "text-blue-600" },
+              { label: "V. AV2", group: "Paid", values: cols.map((c) => c.paidAV2Ventas), color: "text-blue-600" },
+              { label: "Total Ag", group: "Paid", values: cols.map((c) => c.paidAV0Agendas + c.paidAV2Agendas), bold: true, color: "text-blue-700" },
+              { label: "Total V", group: "Paid", values: cols.map((c) => c.paidAV0Ventas + c.paidAV2Ventas), bold: true, color: "text-blue-700" },
+              { label: "Cierre AV0/AV2", group: "Paid", values: cols.map((c) => c.cierreAV0 + "% / " + c.cierreAV2 + "%"), color: "text-blue-600" },
+              { label: "Agendas", group: "Orgánico", values: cols.map((c) => c.orgAgendas), color: "text-emerald-600" },
+              { label: "Ventas", group: "Orgánico", values: cols.map((c) => c.orgVentas), color: "text-emerald-600" },
+              { label: "Cierre", group: "Orgánico", values: cols.map((c) => c.cierreOrg + "%"), bold: true, color: "text-emerald-600" },
+              { label: "Agendas", group: "Afiliados", values: cols.map((c) => c.affAgendas), color: "text-purple-600" },
+              { label: "Ventas", group: "Afiliados", values: cols.map((c) => c.affVentas), color: "text-purple-600" },
+              { label: "Cierre", group: "Afiliados", values: cols.map((c) => c.cierreAff + "%"), bold: true, color: "text-purple-600" },
+            ];
+            let lastGroup = "";
+            return (<>
+              <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-x-auto mt-0.5">
+                <table className="w-full min-w-[700px]" style={{ fontSize: "12px" }}>
+                  <thead>
+                    <tr className="bg-amber-700">
+                      <td colSpan={cols.length + 1} className="px-3 py-0.5 text-[10px] font-bold text-white uppercase tracking-widest">6. Estudio por comercial <span className="font-normal opacity-70">· untracked distribuido</span></td>
+                    </tr>
+                    <tr className="border-b border-gray-200 bg-gray-50/60">
+                      <th className="text-left px-4 py-2.5 text-[10px] font-bold text-gray-400 uppercase w-[110px]"></th>
+                      {cols.map((c) => (
+                        <th key={c.comercial} className="text-center py-2.5 text-sm font-bold text-gray-700 uppercase border-l border-gray-100">{c.comercial}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((row, i) => {
+                      const showGroupHeader = row.group && row.group !== lastGroup;
+                      if (row.group) lastGroup = row.group;
+                      const groupColors: Record<string, string> = { Paid: "bg-blue-50/50 text-blue-700", "Orgánico": "bg-emerald-50/50 text-emerald-700", Afiliados: "bg-purple-50/50 text-purple-700" };
+                      return (
+                        <React.Fragment key={i}>
+                          {showGroupHeader && (
+                            <tr><td colSpan={cols.length + 1} className={`px-3 py-0.5 text-[10px] font-bold uppercase tracking-widest ${groupColors[row.group!] ?? "text-gray-500"}`}>{row.group}</td></tr>
+                          )}
+                          <tr className={`border-t border-gray-50 hover:bg-gray-50/50 ${!row.group && i === 2 ? "border-b-2 border-gray-200" : ""}`}>
+                            <td className={`px-4 py-1.5 text-xs text-gray-500 whitespace-nowrap ${row.bold ? "font-bold" : ""}`}>{row.label}</td>
+                            {row.values.map((v, j) => (
+                              <td key={j} className={`text-center px-6 py-1.5 text-sm border-l border-gray-100 ${row.bold ? "font-bold" : ""} ${row.color ?? "text-gray-900"}`}>{v}</td>
+                            ))}
+                          </tr>
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>);
+          })()}
 
           {/* Detalle por dia y closer */}
           <h3 className="text-sm font-bold text-gray-700 mt-2">Detalle por dia</h3>
