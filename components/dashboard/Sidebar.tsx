@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { createBrowserClient } from "@supabase/ssr";
 import {
@@ -10,7 +10,7 @@ import {
   Star, Award, MessageSquare,
   ShoppingCart, CalendarDays, ClipboardList, Trophy, PlayCircle,
   Headphones, HelpCircle, Globe, ChevronDown, LogOut, Briefcase, GitMerge, TrendingUp, FileText, Presentation,
-  PanelLeftClose, PanelLeftOpen,
+  PanelLeftClose, PanelLeftOpen, Lock, Shield,
 } from "lucide-react";
 
 const SECTION_STYLES: Record<string, { bg: string; text: string; border: string; activeBg: string; activeText: string; activeBar: string; number: string }> = {
@@ -61,11 +61,12 @@ const navSections = [
       { href: "/dashboard/jobs", label: "Banco de Empleo", icon: Briefcase },
       { href: "/dashboard/documentos", label: "Documentos y Accesos", icon: FileText },
       { href: "/dashboard/workshops", label: "Workshops", icon: Presentation },
+      { href: "/dashboard/permisos", label: "Permisos", icon: Shield },
     ],
   },
 ];
 
-export default function Sidebar({ role = "admin" }: { role?: string }) {
+export default function Sidebar({ role = "admin", allowedRoutes }: { role?: string; allowedRoutes?: string[] | null }) {
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
@@ -133,17 +134,19 @@ export default function Sidebar({ role = "admin" }: { role?: string }) {
           const isOpen = !!openSections[section.label];
           const s = SECTION_STYLES[section.label] ?? SECTION_STYLES["Panel de producto"];
           const hasActive = section.items.some(i => pathname === i.href);
+          const sectionLocked = allowedRoutes !== null && allowedRoutes !== undefined && !section.items.some(i => allowedRoutes.includes(i.href));
 
           return (
             <div key={section.label}>
               {/* Section header */}
               <button
-                onClick={() => toggle(section.label)}
+                onClick={() => !sectionLocked && toggle(section.label)}
                 className={cn(
                   "flex items-center justify-between w-full px-3 py-2.5 rounded-xl group transition-all duration-200",
-                  s.bg,
-                  hasActive && `border ${s.border}`,
-                  !hasActive && "border border-transparent"
+                  sectionLocked ? "bg-gray-50 opacity-50 cursor-not-allowed" : s.bg,
+                  !sectionLocked && hasActive && `border ${s.border}`,
+                  !sectionLocked && !hasActive && "border border-transparent",
+                  sectionLocked && "border border-transparent"
                 )}
               >
                 <div className="flex items-center gap-2.5">
@@ -154,13 +157,17 @@ export default function Sidebar({ role = "admin" }: { role?: string }) {
                     {section.label}
                   </span>
                 </div>
-                <ChevronDown
-                  className={cn(
-                    "h-4 w-4 transition-all duration-200 opacity-50 group-hover:opacity-80",
-                    s.text,
-                    isOpen && "rotate-180"
-                  )}
-                />
+                {sectionLocked ? (
+                  <Lock className="h-3.5 w-3.5 text-gray-400" />
+                ) : (
+                  <ChevronDown
+                    className={cn(
+                      "h-4 w-4 transition-all duration-200 opacity-50 group-hover:opacity-80",
+                      s.text,
+                      isOpen && "rotate-180"
+                    )}
+                  />
+                )}
               </button>
 
               {/* Section items */}
@@ -168,6 +175,21 @@ export default function Sidebar({ role = "admin" }: { role?: string }) {
                 <div className="mt-1 ml-2 pl-4 border-l-2 border-gray-200 space-y-0.5">
                   {section.items.map(({ href, label, icon: Icon }, idx) => {
                     const active = pathname === href;
+                    const locked = allowedRoutes !== null && allowedRoutes !== undefined && !allowedRoutes.includes(href);
+                    if (locked) {
+                      return (
+                        <div
+                          key={href}
+                          className="relative flex items-center gap-3 px-3 py-2 rounded-lg text-[12px] font-semibold text-gray-300 cursor-not-allowed select-none"
+                        >
+                          <span className="text-[10px] font-bold w-4 text-center shrink-0 text-gray-300">
+                            {section.number}.{idx + 1}
+                          </span>
+                          <Lock className="h-3.5 w-3.5 shrink-0 text-gray-300" />
+                          {label}
+                        </div>
+                      );
+                    }
                     return (
                       <Link
                         key={href}

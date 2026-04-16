@@ -38,6 +38,39 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard/qa", request.url));
   }
 
+  // Check granular permissions (skip for API routes and static assets)
+  const path = request.nextUrl.pathname;
+  if (path.startsWith("/dashboard/") && !path.startsWith("/dashboard/api")) {
+    const permSupabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        cookies: {
+          getAll() { return request.cookies.getAll(); },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              res.cookies.set(name, value, options);
+            });
+          },
+        },
+      }
+    );
+    const { data: perm } = await permSupabase
+      .from("dashboard_permissions")
+      .select("allowed_routes, is_super_admin")
+      .eq("user_id", user.id)
+      .single();
+
+    if (perm && !perm.is_super_admin) {
+      const allowed: string[] = perm.allowed_routes ?? [];
+      const dashboardRoute = "/" + path.split("/").slice(1, 3).join("/");
+      if (!allowed.includes(dashboardRoute)) {
+        const firstAllowed = allowed[0] ?? "/dashboard";
+        return NextResponse.redirect(new URL(firstAllowed, request.url));
+      }
+    }
+  }
+
   return res;
 }
 
