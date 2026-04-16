@@ -302,7 +302,7 @@ export async function GET(req: NextRequest) {
     no_show: boolean; fecha_llamada: string | null; creada: string | null;
     situacion_actual: string | null; objetivo: string | null; inversion: string | null;
   }[];
-  const sales = salesData as {
+  const salesRaw = salesData as {
     correo_electronico: string | null;
     edicion: string | null;
     status: string | null;
@@ -311,6 +311,15 @@ export async function GET(req: NextRequest) {
     fecha_compra: string | null;
     date_added: string | null;
   }[];
+
+  // Deduplicate sales by email (keep first occurrence)
+  const seenSaleEmails = new Set<string>();
+  const sales = salesRaw.filter((s) => {
+    const email = (s.correo_electronico ?? "").toLowerCase().trim();
+    if (!email || seenSaleEmails.has(email)) return false;
+    seenSaleEmails.add(email);
+    return true;
+  });
 
   // Build email → source map from leads
   type PaidCampaign = "AV0" | "AV1" | "AV2" | "untracked";
