@@ -312,9 +312,11 @@ export async function GET(req: NextRequest) {
     date_added: string | null;
   }[];
 
-  // Deduplicate sales by email (keep first occurrence)
+  // Exclude refunds and deduplicate by email
   const seenSaleEmails = new Set<string>();
   const sales = salesRaw.filter((s) => {
+    const status = (s.status ?? "").toLowerCase();
+    if (status.includes("rembolsado") || status.includes("reembolsado")) return false;
     const email = (s.correo_electronico ?? "").toLowerCase().trim();
     if (!email || seenSaleEmails.has(email)) return false;
     seenSaleEmails.add(email);
