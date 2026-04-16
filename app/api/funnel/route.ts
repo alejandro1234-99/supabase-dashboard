@@ -253,7 +253,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const edicion = searchParams.get("edicion");
   const edicionesParam = searchParams.get("ediciones");
-  const filterSource = searchParams.get("source") as Source | null;
+  const filterSource = searchParams.get("source") as Source | "Todos" | null;
   const filterSub = searchParams.get("sub");
 
   const edicionesList = edicionesParam ? edicionesParam.split(",").map((e) => e.trim()).filter(Boolean) : edicion ? [edicion] : [];
