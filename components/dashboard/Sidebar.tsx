@@ -26,6 +26,10 @@ const SECTION_STYLES: Record<string, { bg: string; text: string; border: string;
     bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200",
     activeBg: "bg-amber-50", activeText: "text-amber-700", activeBar: "bg-amber-500", number: "bg-amber-500",
   },
+  "Accesos": {
+    bg: "bg-rose-50", text: "text-rose-700", border: "border-rose-200",
+    activeBg: "bg-rose-50", activeText: "text-rose-700", activeBar: "bg-rose-500", number: "bg-rose-500",
+  },
 };
 
 const navSections = [
@@ -61,6 +65,12 @@ const navSections = [
       { href: "/dashboard/jobs", label: "Banco de Empleo", icon: Briefcase },
       { href: "/dashboard/documentos", label: "Documentos y Accesos", icon: FileText },
       { href: "/dashboard/workshops", label: "Workshops", icon: Presentation },
+    ],
+  },
+  {
+    label: "Accesos",
+    number: "4",
+    items: [
       { href: "/dashboard/permisos", label: "Permisos", icon: Shield },
     ],
   },
@@ -74,6 +84,7 @@ export default function Sidebar({ role = "admin", allowedRoutes }: { role?: stri
     "Cruce de ventas": true,
     "Panel de producto": false,
     "Operativa producto": false,
+    "Accesos": false,
   });
 
   const supabase = createBrowserClient(

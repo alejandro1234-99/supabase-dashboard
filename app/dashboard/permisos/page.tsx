@@ -33,6 +33,8 @@ const ALL_PANELS = [
     { route: "/dashboard/jobs", label: "Banco de Empleo" },
     { route: "/dashboard/documentos", label: "Documentos y Accesos" },
     { route: "/dashboard/workshops", label: "Workshops" },
+  ]},
+  { group: "4 · Accesos", items: [
     { route: "/dashboard/permisos", label: "Permisos" },
   ]},
 ];
