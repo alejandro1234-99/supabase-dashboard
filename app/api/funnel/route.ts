@@ -312,14 +312,24 @@ export async function GET(req: NextRequest) {
     date_added: string | null;
   }[];
 
-  // Exclude refunds and deduplicate by email
+  // Deduplicate by email (keep all, including refunds)
   const seenSaleEmails = new Set<string>();
-  const sales = salesRaw.filter((s) => {
-    const status = (s.status ?? "").toLowerCase();
-    if (status.includes("rembolsado") || status.includes("reembolsado")) return false;
+  const salesAll = salesRaw.filter((s) => {
     const email = (s.correo_electronico ?? "").toLowerCase().trim();
     if (!email || seenSaleEmails.has(email)) return false;
     seenSaleEmails.add(email);
+    return true;
+  });
+
+  // sales = ventas brutas (todas), salesNetas = sin reembolsos
+  const sales = salesAll;
+  const refundedEmails = new Set<string>();
+  const salesNetas = salesAll.filter((s) => {
+    const status = (s.status ?? "").toLowerCase();
+    if (status.includes("rembolsado") || status.includes("reembolsado")) {
+      refundedEmails.add((s.correo_electronico ?? "").toLowerCase().trim());
+      return false;
+    }
     return true;
   });
 
@@ -428,21 +438,33 @@ export async function GET(req: NextRequest) {
   }
 
   const ventasBySource: Record<Source, number> = { Paid: 0, Organico: 0, Afiliados: 0, Untracked: 0 };
+  const ventasNetasBySource: Record<Source, number> = { Paid: 0, Organico: 0, Afiliados: 0, Untracked: 0 };
   const paidVentasByCampaign: Record<PaidCampaign, number> = { AV0: 0, AV2: 0, AV1: 0, untracked: 0 };
+  const paidVentasNetasByCampaign: Record<PaidCampaign, number> = { AV0: 0, AV2: 0, AV1: 0, untracked: 0 };
   const affiliateVentasByType: Record<AffiliateType, number> = { Worldcast: 0, vidascontadas: 0, "No Limits": 0, untracked: 0 };
+  const affiliateVentasNetasByType: Record<AffiliateType, number> = { Worldcast: 0, vidascontadas: 0, "No Limits": 0, untracked: 0 };
   const organicVentasByChannel: Record<OrganicChannel, number> = { Instagram: 0, TikTok: 0, YouTube: 0, Facebook: 0, "Web/Bio": 0, "Lead Magnet": 0, "BBDD/Email": 0, Otro: 0 };
+  const organicVentasNetasByChannel: Record<OrganicChannel, number> = { Instagram: 0, TikTok: 0, YouTube: 0, Facebook: 0, "Web/Bio": 0, "Lead Magnet": 0, "BBDD/Email": 0, Otro: 0 };
   for (const s of sales) {
     const email = (s.correo_electronico ?? "").toLowerCase();
     const src = emailSource[email] ?? "Untracked";
+    const isRefund = refundedEmails.has(email);
     ventasBySource[src]++;
+    if (!isRefund) ventasNetasBySource[src]++;
     if (src === "Paid") {
-      paidVentasByCampaign[emailPaidCampaign[email] ?? "untracked"]++;
+      const camp = emailPaidCampaign[email] ?? "untracked";
+      paidVentasByCampaign[camp]++;
+      if (!isRefund) paidVentasNetasByCampaign[camp]++;
     }
     if (src === "Afiliados") {
-      affiliateVentasByType[emailAffiliateType[email] ?? "untracked"]++;
+      const aff = emailAffiliateType[email] ?? "untracked";
+      affiliateVentasByType[aff]++;
+      if (!isRefund) affiliateVentasNetasByType[aff]++;
     }
     if (src === "Organico") {
-      organicVentasByChannel[emailOrganicChannel[email] ?? "Otro"]++;
+      const ch = emailOrganicChannel[email] ?? "Otro";
+      organicVentasByChannel[ch]++;
+      if (!isRefund) organicVentasNetasByChannel[ch]++;
     }
   }
 
@@ -451,10 +473,15 @@ export async function GET(req: NextRequest) {
   const totalAgendas = agendas.length;
   const agendasUnicas = new Set(agendas.map((r) => r.email?.toLowerCase()).filter(Boolean)).size;
   const totalVentas = sales.length;
+  const totalVentasNetas = salesNetas.length;
+  const totalReembolsos = totalVentas - totalVentasNetas;
+  const tasaReembolso = totalVentas > 0 ? ((totalReembolsos / totalVentas) * 100).toFixed(1) : "0";
 
   const convLeadAgenda = totalLeads > 0 ? ((agendasUnicas / totalLeads) * 100).toFixed(1) : "0";
   const convAgendaVenta = agendasUnicas > 0 ? ((totalVentas / agendasUnicas) * 100).toFixed(1) : "0";
   const convLeadVenta = totalLeads > 0 ? ((totalVentas / totalLeads) * 100).toFixed(1) : "0";
+  const convAgendaVentaNeta = agendasUnicas > 0 ? ((totalVentasNetas / agendasUnicas) * 100).toFixed(1) : "0";
+  const convLeadVentaNeta = totalLeads > 0 ? ((totalVentasNetas / totalLeads) * 100).toFixed(1) : "0";
 
   // Source breakdown
   const sources = (["Paid", "Organico", "Afiliados", "Untracked"] as Source[]).map((src) => ({
@@ -466,6 +493,8 @@ export async function GET(req: NextRequest) {
     agendasPct: agendasUnicas > 0 ? ((agendasUnicasBySource[src].size / agendasUnicas) * 100).toFixed(1) : "0",
     ventas: ventasBySource[src],
     ventasPct: totalVentas > 0 ? ((ventasBySource[src] / totalVentas) * 100).toFixed(1) : "0",
+    ventasNetas: ventasNetasBySource[src],
+    ventasNetasPct: totalVentasNetas > 0 ? ((ventasNetasBySource[src] / totalVentasNetas) * 100).toFixed(1) : "0",
   }));
 
   // Paid media breakdown
@@ -486,6 +515,7 @@ export async function GET(req: NextRequest) {
       agendasPct: totalPaidAgendas > 0 ? ((campAgendasUnicas / totalPaidAgendas) * 100).toFixed(1) : "0",
       ventas: campVentas,
       ventasPct: totalPaidVentas > 0 ? ((campVentas / totalPaidVentas) * 100).toFixed(1) : "0",
+      ventasNetas: paidVentasNetasByCampaign[camp],
       ratioAgenda: campLeads > 0 ? ((campAgendasUnicas / campLeads) * 100).toFixed(2) : "0",
       ratioVenta: campLeads > 0 ? ((campVentas / campLeads) * 100).toFixed(2) : "0",
       cierreAgenda: campAgendasUnicas > 0 ? ((campVentas / campAgendasUnicas) * 100).toFixed(2) : "0",
@@ -510,6 +540,7 @@ export async function GET(req: NextRequest) {
       agendasPct: totalAffAgendas > 0 ? ((affAgendasUnicas / totalAffAgendas) * 100).toFixed(1) : "0",
       ventas: affVentas,
       ventasPct: totalAffVentas > 0 ? ((affVentas / totalAffVentas) * 100).toFixed(1) : "0",
+      ventasNetas: affiliateVentasNetasByType[aff],
     };
   });
 
@@ -531,6 +562,7 @@ export async function GET(req: NextRequest) {
       agendasPct: totalOrgAgendas > 0 ? ((chAgendasUnicas / totalOrgAgendas) * 100).toFixed(1) : "0",
       ventas: chVentas,
       ventasPct: totalOrgVentas > 0 ? ((chVentas / totalOrgVentas) * 100).toFixed(1) : "0",
+      ventasNetas: organicVentasNetasByChannel[ch],
     };
   }).filter((ch) => ch.leads > 0 || ch.agendas > 0 || ch.ventas > 0);
 
@@ -1087,9 +1119,14 @@ export async function GET(req: NextRequest) {
       totalAgendas,
       agendasUnicas,
       totalVentas,
+      totalVentasNetas,
+      totalReembolsos,
+      tasaReembolso,
       convLeadAgenda,
       convAgendaVenta,
       convLeadVenta,
+      convAgendaVentaNeta,
+      convLeadVentaNeta,
     },
     sources,
     paidMedia: {

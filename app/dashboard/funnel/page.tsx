@@ -11,9 +11,14 @@ type Stats = {
   totalAgendas: number;
   agendasUnicas: number;
   totalVentas: number;
+  totalVentasNetas: number;
+  totalReembolsos: number;
+  tasaReembolso: string;
   convLeadAgenda: string;
   convAgendaVenta: string;
   convLeadVenta: string;
+  convAgendaVentaNeta: string;
+  convLeadVentaNeta: string;
 };
 
 type SourceRow = {
@@ -25,6 +30,8 @@ type SourceRow = {
   agendasPct: string;
   ventas: number;
   ventasPct: string;
+  ventasNetas: number;
+  ventasNetasPct: string;
 };
 
 type PaidCampaignRow = {
@@ -361,28 +368,34 @@ export default function FunnelPage() {
 
     // Si hay sub-filtro, buscar datos del sub-desglose
     if (subFilter) {
-      let leads = 0, agendas = 0, agendasTotal = 0, ventas = 0;
+      let leads = 0, agendas = 0, agendasTotal = 0, ventas = 0, ventasNetas = 0;
       if (sourceFilter === "Paid" && paidMedia) {
         const camp = paidMedia.campaigns.find((c) => c.campaign === subFilter);
         if (!camp) return null;
-        leads = camp.leads; agendas = camp.agendasUnicas; agendasTotal = camp.agendas; ventas = camp.ventas;
+        leads = camp.leads; agendas = camp.agendasUnicas; agendasTotal = camp.agendas; ventas = camp.ventas; ventasNetas = (camp as any).ventasNetas ?? camp.ventas;
       } else if (sourceFilter === "Afiliados" && affiliateMedia) {
         const aff = affiliateMedia.types.find((t) => t.affiliate === subFilter);
         if (!aff) return null;
-        leads = aff.leads; agendas = aff.agendasUnicas; agendasTotal = aff.agendas; ventas = aff.ventas;
+        leads = aff.leads; agendas = aff.agendasUnicas; agendasTotal = aff.agendas; ventas = aff.ventas; ventasNetas = (aff as any).ventasNetas ?? aff.ventas;
       } else if (sourceFilter === "Organico" && organicMedia) {
         const ch = organicMedia.channels.find((c) => c.channel === subFilter);
         if (!ch) return null;
-        leads = ch.leads; agendas = ch.agendasUnicas; agendasTotal = ch.agendas; ventas = ch.ventas;
+        leads = ch.leads; agendas = ch.agendasUnicas; agendasTotal = ch.agendas; ventas = ch.ventas; ventasNetas = (ch as any).ventasNetas ?? ch.ventas;
       }
+      const reembolsos = ventas - ventasNetas;
       return {
         totalLeads: leads,
         totalAgendas: agendasTotal,
         agendasUnicas: agendas,
         totalVentas: ventas,
+        totalVentasNetas: ventasNetas,
+        totalReembolsos: reembolsos,
+        tasaReembolso: ventas > 0 ? ((reembolsos / ventas) * 100).toFixed(1) : "0",
         convLeadAgenda: leads > 0 ? ((agendas / leads) * 100).toFixed(1) : "0",
         convAgendaVenta: agendas > 0 ? ((ventas / agendas) * 100).toFixed(1) : "0",
         convLeadVenta: leads > 0 ? ((ventas / leads) * 100).toFixed(1) : "0",
+        convAgendaVentaNeta: agendas > 0 ? ((ventasNetas / agendas) * 100).toFixed(1) : "0",
+        convLeadVentaNeta: leads > 0 ? ((ventasNetas / leads) * 100).toFixed(1) : "0",
       };
     }
 
@@ -392,14 +405,21 @@ export default function FunnelPage() {
     const agendas = row.agendasUnicas;
     const agendasTotal = row.agendas;
     const ventas = row.ventas;
+    const ventasNetas = row.ventasNetas;
+    const reembolsos = ventas - ventasNetas;
     return {
       totalLeads: leads,
       totalAgendas: agendasTotal,
       agendasUnicas: agendas,
       totalVentas: ventas,
+      totalVentasNetas: ventasNetas,
+      totalReembolsos: reembolsos,
+      tasaReembolso: ventas > 0 ? ((reembolsos / ventas) * 100).toFixed(1) : "0",
       convLeadAgenda: leads > 0 ? ((agendas / leads) * 100).toFixed(1) : "0",
       convAgendaVenta: agendas > 0 ? ((ventas / agendas) * 100).toFixed(1) : "0",
       convLeadVenta: leads > 0 ? ((ventas / leads) * 100).toFixed(1) : "0",
+      convAgendaVentaNeta: agendas > 0 ? ((ventasNetas / agendas) * 100).toFixed(1) : "0",
+      convLeadVentaNeta: leads > 0 ? ((ventasNetas / leads) * 100).toFixed(1) : "0",
     };
   }, [stats, sources, sourceFilter, subFilter, paidMedia, affiliateMedia, organicMedia]);
 
@@ -587,7 +607,7 @@ export default function FunnelPage() {
 
           {filteredStats ? <div className="flex gap-6">
             {/* Funnel visual — izquierda */}
-            <div className="flex flex-col items-center gap-0 w-64 shrink-0">
+            <div className="flex flex-col items-center gap-0 w-72 shrink-0">
               <div className="w-full bg-emerald-500 rounded-3xl border-2 border-white shadow-sm px-4 py-2.5 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Users className="h-3.5 w-3.5 text-white/80" />
@@ -623,6 +643,22 @@ export default function FunnelPage() {
                   <span className="text-[11px] font-semibold text-white/70 uppercase">Ventas</span>
                 </div>
                 <p className="text-lg font-black text-white">{filteredStats.totalVentas}</p>
+              </div>
+
+              <div className="py-1 flex items-center gap-1">
+                <ChevronDown className="h-3 w-3 text-gray-300" />
+                <span className="text-[10px] font-bold text-rose-600">-{filteredStats.tasaReembolso}% reembolsos</span>
+              </div>
+
+              <div className="w-[54%] bg-rose-500 rounded-3xl border-2 border-white shadow-sm px-3 py-2.5 flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <ShoppingCart className="h-3.5 w-3.5 text-white/80" />
+                  <span className="text-[10px] font-semibold text-white/70 uppercase leading-tight">V. Netas</span>
+                </div>
+                <div className="text-right">
+                  <p className="text-lg font-black text-white">{filteredStats.totalVentasNetas}</p>
+                  <p className="text-[9px] text-white/60">{filteredStats.totalReembolsos} reemb.</p>
+                </div>
               </div>
             </div>
 
@@ -685,6 +721,26 @@ export default function FunnelPage() {
                 <div>
                   <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Cierre llamada</p>
                   <p className="text-2xl font-black text-amber-700 leading-tight">{filteredStats.convAgendaVenta}% <span className="text-sm font-medium text-amber-500">agenda → venta</span></p>
+                </div>
+              </div>
+
+              {/* Ventas Netas + Cierre neto */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3 flex items-center gap-3">
+                <div className="h-9 w-9 rounded-xl bg-rose-500 flex items-center justify-center shrink-0">
+                  <ShoppingCart className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Ventas Netas</p>
+                  <p className="text-2xl font-black text-gray-900 leading-tight">{filteredStats.totalVentasNetas} <span className="text-sm font-medium text-gray-400">{filteredStats.totalReembolsos} reemb.</span></p>
+                </div>
+              </div>
+              <div className="bg-rose-50 rounded-2xl border border-rose-200 shadow-sm px-4 py-3 flex items-center gap-3">
+                <div className="h-9 w-9 rounded-xl bg-rose-500 flex items-center justify-center shrink-0">
+                  <span className="text-white text-sm font-black">%</span>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Cierre neto</p>
+                  <p className="text-2xl font-black text-rose-700 leading-tight">{filteredStats.convAgendaVentaNeta}% <span className="text-sm font-medium text-rose-500">agenda → venta neta</span></p>
                 </div>
               </div>
             </div>
