@@ -91,49 +91,52 @@ export async function PATCH(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Si se publica, postear en Circle "Bolsa de trabajo" (space_id: 2123036)
+  // Si se publica, postear en Revolutia "Banco de empleo"
   if (status === "published" && offer?.html_body) {
-    const circleResult = await postToCircle(offer);
-    if (!circleResult.ok) {
-      console.error("Error publicando en Circle:", circleResult.error);
-      return NextResponse.json({ ok: true, circle_error: circleResult.error });
+    const result = await postToRevolutia(offer);
+    if (!result.ok) {
+      console.error("Error publicando en Revolutia:", result.error);
+      return NextResponse.json({ ok: true, revolutia_error: result.error });
     }
   }
 
   return NextResponse.json({ ok: true });
 }
 
-async function postToCircle(offer: {
+const OFFICIAL_USER_ID = "96872496-d067-45cd-ba22-1c470a079b1e";
+const BANCO_EMPLEO_SLUG = "banco-empleo";
+
+async function postToRevolutia(offer: {
   title: string;
   html_body: string;
   url: string | null;
 }): Promise<{ ok: boolean; error?: string }> {
-  const CIRCLE_KEY = process.env.CIRCLE_API_KEY;
-  const COMMUNITY_ID = process.env.CIRCLE_COMMUNITY_ID;
-  const SPACE_ID = 2123036; // Bolsa de trabajo
+  const supabase = createAdminClient();
 
-  if (!CIRCLE_KEY || !COMMUNITY_ID) {
-    return { ok: false, error: "Missing CIRCLE_API_KEY or CIRCLE_COMMUNITY_ID" };
+  // Buscar el espacio "Banco de empleo"
+  const { data: space, error: spaceError } = await supabase
+    .from("spaces")
+    .select("id")
+    .eq("slug", BANCO_EMPLEO_SLUG)
+    .single();
+
+  if (spaceError || !space) {
+    return { ok: false, error: `Espacio "${BANCO_EMPLEO_SLUG}" no encontrado: ${spaceError?.message}` };
   }
 
-  const res = await fetch("https://app.circle.so/api/v1/posts", {
-    method: "POST",
-    headers: {
-      "Authorization": `Token ${CIRCLE_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      community_id: parseInt(COMMUNITY_ID),
-      space_id: SPACE_ID,
-      name: offer.title,
-      body: offer.html_body,
-      status: "published",
-    }),
+  // Insertar post como cuenta oficial Revolutia
+  // migrated_author_name permite renderizar HTML en el frontend
+  const content = `${offer.title}\n${offer.html_body}`;
+
+  const { error: insertError } = await supabase.from("posts").insert({
+    space_id: space.id,
+    user_id: OFFICIAL_USER_ID,
+    content,
+    migrated_author_name: "Revolutia",
   });
 
-  if (!res.ok) {
-    const text = await res.text();
-    return { ok: false, error: `Circle API ${res.status}: ${text}` };
+  if (insertError) {
+    return { ok: false, error: `Error insertando post: ${insertError.message}` };
   }
 
   return { ok: true };

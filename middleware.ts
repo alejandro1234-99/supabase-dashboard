@@ -2,6 +2,16 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+// Dominios permitidos y emails individuales autorizados
+const ALLOWED_DOMAINS = ["@revolutia.ai"];
+const ALLOWED_EMAILS = ["j.santacruz@hypeleadsad.com"];
+
+function isEmailAllowed(email: string): boolean {
+  const lower = email.toLowerCase();
+  if (ALLOWED_EMAILS.includes(lower)) return true;
+  return ALLOWED_DOMAINS.some((domain) => lower.endsWith(domain));
+}
+
 export async function middleware(request: NextRequest) {
   const res = NextResponse.next();
 
@@ -27,6 +37,12 @@ export async function middleware(request: NextRequest) {
 
   if (!user) {
     return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  // Verificar que el email está en dominios/emails permitidos
+  if (!user.email || !isEmailAllowed(user.email)) {
+    await supabase.auth.signOut();
+    return NextResponse.redirect(new URL("/login?error=email_no_autorizado", request.url));
   }
 
   const role = user.app_metadata?.role ?? user.user_metadata?.role;

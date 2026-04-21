@@ -6,6 +6,16 @@ import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { Loader2, Eye, EyeOff, Lock } from "lucide-react";
 
+// Dominios permitidos y emails individuales autorizados
+const ALLOWED_DOMAINS = ["@revolutia.ai"];
+const ALLOWED_EMAILS = ["j.santacruz@hypeleadsad.com"];
+
+function isEmailAllowed(email: string): boolean {
+  const lower = email.toLowerCase();
+  if (ALLOWED_EMAILS.includes(lower)) return true;
+  return ALLOWED_DOMAINS.some((domain) => lower.endsWith(domain));
+}
+
 function LoginForm() {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
@@ -15,8 +25,11 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (searchParams.get("error") === "no_admin") {
+    const err = searchParams.get("error");
+    if (err === "no_admin") {
       setError("Tu cuenta no tiene permisos de administrador.");
+    } else if (err === "email_no_autorizado") {
+      setError("Tu email no esta autorizado para acceder al dashboard.");
     }
   }, [searchParams]);
 
@@ -37,6 +50,14 @@ function LoginForm() {
 
     if (authError) {
       setError("Email o contrasena incorrectos.");
+      setLoading(false);
+      return;
+    }
+
+    // Verificar email autorizado antes de continuar
+    if (!data.user?.email || !isEmailAllowed(data.user.email)) {
+      await supabase.auth.signOut();
+      setError("Tu email no esta autorizado para acceder al dashboard.");
       setLoading(false);
       return;
     }

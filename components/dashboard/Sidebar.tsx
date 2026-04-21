@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Users, BarChart3, Activity,
   Star, Award, MessageSquare,
   ShoppingCart, CalendarDays, ClipboardList, Trophy, PlayCircle,
-  Headphones, HelpCircle, Globe, ChevronDown, LogOut, Briefcase, GitMerge, TrendingUp, FileText, Presentation,
+  Headphones, HelpCircle, Globe, ChevronDown, LogOut, Briefcase, GitMerge, TrendingUp, FileText, Presentation, CalendarClock,
   PanelLeftClose, PanelLeftOpen, Lock, Shield,
 } from "lucide-react";
 
@@ -65,6 +65,8 @@ const navSections = [
       { href: "/dashboard/jobs", label: "Banco de Empleo", icon: Briefcase },
       { href: "/dashboard/documentos", label: "Documentos y Accesos", icon: FileText },
       { href: "/dashboard/workshops", label: "Workshops", icon: Presentation },
+      { href: "/dashboard/soporte-hub", label: "Pipeline Soporte Hub", icon: Headphones },
+      { href: "/dashboard/programador-posts", label: "Programador de Posts", icon: CalendarClock },
     ],
   },
   {

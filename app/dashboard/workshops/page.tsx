@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import {
-  Loader2, Search, Calendar, Plus, Copy, Trash2, ArrowUp, ArrowDown, ArrowRight,
+  Loader2, Search, Calendar, Plus, Copy, Trash2, ArrowUp, ArrowDown, ArrowRight, Send,
 } from "lucide-react";
 
 type Workshop = {
@@ -57,6 +57,8 @@ export default function WorkshopsPage() {
   const [showNewTablero, setShowNewTablero] = useState(false);
   const [newTableroMes, setNewTableroMes] = useState("");
   const [moveTarget, setMoveTarget] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState<string | null>(null);
+  const [publishedIds, setPublishedIds] = useState<Set<string>>(new Set());
 
   const fetchData = useCallback(() => {
     setLoading(true);
@@ -149,6 +151,24 @@ export default function WorkshopsPage() {
     setShowNewTablero(false);
     setNewTableroMes("");
     fetchData();
+  }
+
+  async function publishToHub(w: Workshop) {
+    if (!w.nombre || !w.fecha) { alert("El workshop necesita nombre y fecha"); return; }
+    if (!confirm(`¿Publicar "${w.nombre}" en Revolutia Hub?`)) return;
+    setPublishing(w.id);
+    try {
+      const res = await fetch("/api/workshops/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workshopId: w.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || "Error al publicar"); return; }
+      setPublishedIds(prev => new Set([...prev, w.id]));
+      alert("✅ Workshop publicado en Revolutia Hub");
+    } catch { alert("Error de conexión"); }
+    finally { setPublishing(null); }
   }
 
   function toggleSelect(id: string) {
@@ -364,6 +384,11 @@ export default function WorkshopsPage() {
                                   className="p-1 rounded text-gray-300 hover:text-gray-600 hover:bg-gray-100"><ArrowUp className="h-3 w-3" /></button>
                                 <button onClick={() => moveRow(w.id, "down", items)} title="Bajar"
                                   className="p-1 rounded text-gray-300 hover:text-gray-600 hover:bg-gray-100"><ArrowDown className="h-3 w-3" /></button>
+                                <button onClick={() => publishToHub(w)} title="Publicar en Hub"
+                                  disabled={publishing === w.id || publishedIds.has(w.id)}
+                                  className={`p-1 rounded transition-colors ${publishedIds.has(w.id) ? 'text-green-500' : 'text-gray-300 hover:text-emerald-500 hover:bg-emerald-50'} disabled:opacity-50`}>
+                                  {publishing === w.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                                </button>
                                 <button onClick={() => cloneRow(w)} title="Clonar"
                                   className="p-1 rounded text-gray-300 hover:text-amber-500 hover:bg-amber-50"><Copy className="h-3 w-3" /></button>
                                 <button onClick={() => deleteRow(w.id)} title="Eliminar"

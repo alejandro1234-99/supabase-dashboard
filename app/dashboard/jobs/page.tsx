@@ -252,7 +252,7 @@ export default function JobsPage() {
                       disabled={job.status === "published" || updating === job.id}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     >
-                      <Send className="h-3.5 w-3.5" /> Publicar en Circle
+                      <Send className="h-3.5 w-3.5" /> Publicar en Revolutia
                     </button>
                     <button
                       onClick={() => updateStatus(job.id, "rejected")}
@@ -321,7 +321,7 @@ export default function JobsPage() {
                 <button onClick={() => updateStatus(selected.id, "published")}
                   disabled={selected.status === "published" || updating === selected.id}
                   className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-                  <Send className="h-3.5 w-3.5" /> Publicar en Circle
+                  <Send className="h-3.5 w-3.5" /> Publicar en Revolutia
                 </button>
                 <button onClick={() => updateStatus(selected.id, "rejected")}
                   disabled={selected.status === "rejected" || updating === selected.id}
