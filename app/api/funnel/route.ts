@@ -994,20 +994,22 @@ export async function GET(req: NextRequest) {
     noShows: number;
     celebradas: number;
     ventas: number;
+    ventasNetas: number;
   };
   const closerDailyMap: Record<string, Record<string, CloserDayStats>> = {};
   const closerTotals: Record<string, CloserDayStats> = {};
-  // Track unique emails per closer to deduplicate
-  const closerSeenEmails: Record<string, Set<string>> = {};
-  const closerDaySeenEmails: Record<string, Record<string, Set<string>>> = {};
 
   for (const c of edicionComerciales) {
-    closerTotals[c] = { llamadas: 0, noShows: 0, celebradas: 0, ventas: 0 };
-    closerSeenEmails[c] = new Set();
+    closerTotals[c] = { llamadas: 0, noShows: 0, celebradas: 0, ventas: 0, ventasNetas: 0 };
   }
 
   const now = new Date();
   const today = now.toISOString().split("T")[0];
+
+  // Build per-email call status: each unique email is attributed to ONE closer (via emailCloserMap),
+  // so sums across closers reconcile with global totals.
+  type EmailCallStatus = { closer: string; celebrated: boolean; day: string };
+  const emailCallStatus: Record<string, EmailCallStatus> = {};
 
   for (const a of filteredAgendas) {
     if (!a.fecha_llamada) continue;
@@ -1020,37 +1022,67 @@ export async function GET(req: NextRequest) {
       const thirtyMinAfter = new Date(callTime.getTime() + 30 * 60 * 1000);
       if (now < thirtyMinAfter) continue; // Llamada aun no celebrada
     }
-    const closer = normComercial(a.comercial);
+    const email = (a.email ?? "").toLowerCase();
+    if (!email) continue;
+
+    const closer = emailCloserMap[email] ?? normComercial(a.comercial);
+    const existing = emailCallStatus[email];
+    if (!existing) {
+      emailCallStatus[email] = { closer, celebrated: !a.no_show, day };
+    } else {
+      // If we already saw this email, prefer the celebrated call (non-no_show wins)
+      if (!a.no_show && !existing.celebrated) {
+        existing.celebrated = true;
+        existing.day = day;
+        existing.closer = closer;
+      }
+    }
+  }
+
+  // Global totals (used for reconciliation + global "cierre llamada" KPI)
+  let totalLlamadas = 0;
+  let totalCelebradas = 0;
+  let totalNoShows = 0;
+  let totalVentasEnCelebradas = 0;
+  let totalVentasEnCelebradasNetas = 0;
+
+  for (const [email, status] of Object.entries(emailCallStatus)) {
+    const { closer, celebrated, day } = status;
+    totalLlamadas++;
+    if (celebrated) totalCelebradas++;
+    else totalNoShows++;
+
+    const hasSale = saleEmails.has(email);
+    const isRefund = refundedEmails.has(email);
+    if (celebrated && hasSale) {
+      totalVentasEnCelebradas++;
+      if (!isRefund) totalVentasEnCelebradasNetas++;
+    }
+
     if (closer === "Sin asignar") continue;
 
-    const email = (a.email ?? "").toLowerCase();
-    // Deduplicate: only count each unique email once per closer
-    if (!email || closerSeenEmails[closer]?.has(email)) continue;
-    if (!closerSeenEmails[closer]) closerSeenEmails[closer] = new Set();
-    closerSeenEmails[closer].add(email);
-
+    if (!closerTotals[closer]) closerTotals[closer] = { llamadas: 0, noShows: 0, celebradas: 0, ventas: 0, ventasNetas: 0 };
     if (!closerDailyMap[closer]) closerDailyMap[closer] = {};
-    if (!closerDailyMap[closer][day]) closerDailyMap[closer][day] = { llamadas: 0, noShows: 0, celebradas: 0, ventas: 0 };
-    if (!closerDaySeenEmails[closer]) closerDaySeenEmails[closer] = {};
-    if (!closerDaySeenEmails[closer][day]) closerDaySeenEmails[closer][day] = new Set();
-    if (!closerTotals[closer]) closerTotals[closer] = { llamadas: 0, noShows: 0, celebradas: 0, ventas: 0 };
-
-    const cd = closerDailyMap[closer][day];
+    if (!closerDailyMap[closer][day]) closerDailyMap[closer][day] = { llamadas: 0, noShows: 0, celebradas: 0, ventas: 0, ventasNetas: 0 };
     const ct = closerTotals[closer];
+    const cd = closerDailyMap[closer][day];
 
-    cd.llamadas++;
     ct.llamadas++;
+    cd.llamadas++;
 
-    if (a.no_show) {
-      cd.noShows++;
+    if (!celebrated) {
       ct.noShows++;
+      cd.noShows++;
     } else {
-      cd.celebradas++;
       ct.celebradas++;
-
-      if (email && saleEmails.has(email)) {
-        cd.ventas++;
+      cd.celebradas++;
+      if (hasSale) {
         ct.ventas++;
+        cd.ventas++;
+        if (!isRefund) {
+          ct.ventasNetas++;
+          cd.ventasNetas++;
+        }
       }
     }
   }
@@ -1072,10 +1104,24 @@ export async function GET(req: NextRequest) {
       noShows: t.noShows,
       celebradas: t.celebradas,
       ventas: t.ventas,
-      cierre: t.llamadas > 0 ? ((t.ventas / t.llamadas) * 100).toFixed(1) : "0",
+      ventasNetas: t.ventasNetas,
+      // Cierre llamada = ventas cerradas / llamadas celebradas (definición real)
+      cierre: t.celebradas > 0 ? ((t.ventas / t.celebradas) * 100).toFixed(1) : "0",
+      cierreNeto: t.celebradas > 0 ? ((t.ventasNetas / t.celebradas) * 100).toFixed(1) : "0",
+      showRate: t.llamadas > 0 ? ((t.celebradas / t.llamadas) * 100).toFixed(1) : "0",
       days,
     };
   });
+
+  // Unattributed calls (Sin asignar o closers excluidos de la edición)
+  const includedLlamadas = closerPerformance.reduce((s, c) => s + c.llamadas, 0);
+  const includedCelebradas = closerPerformance.reduce((s, c) => s + c.celebradas, 0);
+  const includedVentasCelebradas = closerPerformance.reduce((s, c) => s + c.ventas, 0);
+  const includedVentasCelebradasNetas = closerPerformance.reduce((s, c) => s + c.ventasNetas, 0);
+  const sinAsignarLlamadas = totalLlamadas - includedLlamadas;
+  const sinAsignarCelebradas = totalCelebradas - includedCelebradas;
+  const sinAsignarVentasCelebradas = totalVentasEnCelebradas - includedVentasCelebradas;
+  const sinAsignarVentasCelebradasNetas = totalVentasEnCelebradasNetas - includedVentasCelebradasNetas;
 
   // Qualification breakdown
   const qualFields = ["situacion_actual", "objetivo", "inversion"] as const;
@@ -1113,6 +1159,17 @@ export async function GET(req: NextRequest) {
   });
   const cualificacion = buildQualification(uniqueAgendas);
 
+  // Global cierre llamada: ventas en celebradas / celebradas (debe cuadrar con la suma de closers)
+  const cierreLlamada = totalCelebradas > 0 ? ((totalVentasEnCelebradas / totalCelebradas) * 100).toFixed(1) : "0";
+  const cierreLlamadaNeto = totalCelebradas > 0 ? ((totalVentasEnCelebradasNetas / totalCelebradas) * 100).toFixed(1) : "0";
+  const showRate = totalLlamadas > 0 ? ((totalCelebradas / totalLlamadas) * 100).toFixed(1) : "0";
+
+  // Cobertura: qué porcentaje de agendas únicas tiene fecha_llamada pasada marcada
+  const coverage = agendasUnicas > 0 ? ((totalLlamadas / agendasUnicas) * 100).toFixed(1) : "0";
+  // Data quality flag: cobertura baja (< 50%) o show rate sospechoso (>= 95%) indican que
+  // los closers no están marcando no-shows o la fecha_llamada en Airtable/GHL.
+  const dataQualitySuspect = (agendasUnicas > 10 && parseFloat(coverage) < 50) || (totalLlamadas > 10 && parseFloat(showRate) >= 95);
+
   return NextResponse.json({
     stats: {
       totalLeads,
@@ -1127,6 +1184,20 @@ export async function GET(req: NextRequest) {
       convLeadVenta,
       convAgendaVentaNeta,
       convLeadVentaNeta,
+      totalLlamadas,
+      totalCelebradas,
+      totalNoShows,
+      totalVentasEnCelebradas,
+      totalVentasEnCelebradasNetas,
+      cierreLlamada,
+      cierreLlamadaNeto,
+      showRate,
+      coverage,
+      dataQualitySuspect,
+      sinAsignarLlamadas,
+      sinAsignarCelebradas,
+      sinAsignarVentasCelebradas,
+      sinAsignarVentasCelebradasNetas,
     },
     sources,
     paidMedia: {

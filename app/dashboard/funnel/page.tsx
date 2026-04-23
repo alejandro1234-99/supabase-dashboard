@@ -19,6 +19,20 @@ type Stats = {
   convLeadVenta: string;
   convAgendaVentaNeta: string;
   convLeadVentaNeta: string;
+  totalLlamadas?: number;
+  totalCelebradas?: number;
+  totalNoShows?: number;
+  totalVentasEnCelebradas?: number;
+  totalVentasEnCelebradasNetas?: number;
+  cierreLlamada?: string;
+  cierreLlamadaNeto?: string;
+  showRate?: string;
+  coverage?: string;
+  dataQualitySuspect?: boolean;
+  sinAsignarLlamadas?: number;
+  sinAsignarCelebradas?: number;
+  sinAsignarVentasCelebradas?: number;
+  sinAsignarVentasCelebradasNetas?: number;
 };
 
 type SourceRow = {
@@ -188,8 +202,9 @@ export default function FunnelPage() {
   type QualData = Record<string, { label: string; data: { name: string; value: number }[] }>;
   const [cualificacion, setCualificacion] = useState<QualData>({});
   const [closerPerformance, setCloserPerformance] = useState<{
-    closer: string; llamadas: number; noShows: number; celebradas: number; ventas: number; cierre: string;
-    days: { date: string; llamadas: number; noShows: number; celebradas: number; ventas: number }[];
+    closer: string; llamadas: number; noShows: number; celebradas: number; ventas: number; ventasNetas: number;
+    cierre: string; cierreNeto: string; showRate: string;
+    days: { date: string; llamadas: number; noShows: number; celebradas: number; ventas: number; ventasNetas: number }[];
   }[]>([]);
   const [notas, setNotas] = useState<{ id: string; titulo: string; contenido: string; tipo: string; created_at: string }[]>([]);
   const [showNewNota, setShowNewNota] = useState(false);
@@ -720,7 +735,13 @@ export default function FunnelPage() {
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Cierre llamada</p>
-                  <p className="text-2xl font-black text-amber-700 leading-tight">{filteredStats.convAgendaVenta}% <span className="text-sm font-medium text-amber-500">agenda → venta</span></p>
+                  <p className="text-2xl font-black text-amber-700 leading-tight">
+                    {filteredStats.cierreLlamada ?? filteredStats.convAgendaVenta}%
+                    <span className="text-sm font-medium text-amber-500"> {filteredStats.cierreLlamada != null ? "ventas / celebradas" : "agenda → venta"}</span>
+                  </p>
+                  {filteredStats.cierreLlamada != null && (
+                    <p className="text-[10px] text-gray-400 mt-0.5">Cierre agenda: <span className="font-semibold text-gray-600">{filteredStats.convAgendaVenta}%</span></p>
+                  )}
                 </div>
               </div>
 
@@ -740,7 +761,13 @@ export default function FunnelPage() {
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Cierre neto</p>
-                  <p className="text-2xl font-black text-rose-700 leading-tight">{filteredStats.convAgendaVentaNeta}% <span className="text-sm font-medium text-rose-500">agenda → venta neta</span></p>
+                  <p className="text-2xl font-black text-rose-700 leading-tight">
+                    {filteredStats.cierreLlamadaNeto ?? filteredStats.convAgendaVentaNeta}%
+                    <span className="text-sm font-medium text-rose-500"> {filteredStats.cierreLlamadaNeto != null ? "v. netas / celebradas" : "agenda → v. neta"}</span>
+                  </p>
+                  {filteredStats.cierreLlamadaNeto != null && (
+                    <p className="text-[10px] text-gray-400 mt-0.5">Cierre agenda neto: <span className="font-semibold text-gray-600">{filteredStats.convAgendaVentaNeta}%</span></p>
+                  )}
                 </div>
               </div>
             </div>
@@ -806,7 +833,26 @@ export default function FunnelPage() {
 
               {/* Rendimiento closers */}
               <>
-                  <h3 className="text-sm font-bold text-gray-700 mt-4">Rendimiento closers <span className="font-normal text-gray-400">(Rendimiento en funcion de las llamadas ya celebradas)</span></h3>
+                  <h3 className="text-sm font-bold text-gray-700 mt-4">Rendimiento closers <span className="font-normal text-gray-400">(Cierre llamada = ventas / celebradas)</span></h3>
+
+                  {/* Banner edition-level data quality */}
+                  {stats?.dataQualitySuspect && (
+                    <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl px-5 py-3 flex items-start gap-3">
+                      <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                      <div className="flex-1 text-sm">
+                        <p className="font-bold text-amber-900 mb-0.5">Datos de llamadas poco fiables en esta edición</p>
+                        <p className="text-amber-800 text-[13px]">
+                          {parseFloat(stats.coverage ?? "0") < 50 && (
+                            <>Cobertura baja: solo <span className="font-bold">{stats.coverage}%</span> de las agendas ({stats.totalLlamadas}/{stats.agendasUnicas}) tienen fecha de llamada marcada. </>
+                          )}
+                          {parseFloat(stats.showRate ?? "0") >= 95 && (
+                            <>Show rate global <span className="font-bold">{stats.showRate}%</span> — irrealmente alto, sugiere que los closers no están marcando no-shows en Go High Level. </>
+                          )}
+                          Los cierres por closer y el global están calculados solo sobre lo marcado, no sobre el total real.
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Resumen por closer */}
                   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -819,42 +865,129 @@ export default function FunnelPage() {
                           <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Celebradas</th>
                           <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">% Show</th>
                           <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Ventas</th>
+                          <th className="text-right px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">V. Netas</th>
                           <th className="text-right px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wide">Cierre llamada</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
-                        {closerPerformance.map((c) => (
-                          <tr key={c.closer} className="hover:bg-gray-50/50 transition-colors">
-                            <td className="px-5 py-3 text-sm font-semibold text-gray-800">{c.closer}</td>
-                            <td className="text-right px-4 py-3 text-sm text-gray-600">{c.llamadas}</td>
-                            <td className="text-right px-4 py-3 text-sm text-red-500 font-medium">{c.noShows}</td>
-                            <td className="text-right px-4 py-3 text-sm font-bold text-gray-900">{c.celebradas}</td>
-                            <td className="text-right px-4 py-3 text-sm text-gray-600">{c.llamadas > 0 ? ((c.celebradas / c.llamadas) * 100).toFixed(1) : "0"}%</td>
-                            <td className="text-right px-4 py-3 text-sm font-bold text-emerald-600">{c.ventas}</td>
-                            <td className="text-right px-5 py-3 text-sm font-black text-gray-900">{c.cierre}%</td>
-                          </tr>
-                        ))}
+                        {closerPerformance.map((c) => {
+                          const showPct = c.llamadas > 0 ? (c.celebradas / c.llamadas) * 100 : 0;
+                          const showSuspect = showPct > 75;
+                          return (
+                            <tr key={c.closer} className="hover:bg-gray-50/50 transition-colors">
+                              <td className="px-5 py-3 text-sm font-semibold text-gray-800">{c.closer}</td>
+                              <td className="text-right px-4 py-3 text-sm text-gray-600">{c.llamadas}</td>
+                              <td className="text-right px-4 py-3 text-sm text-red-500 font-medium">{c.noShows}</td>
+                              <td className="text-right px-4 py-3 text-sm font-bold text-gray-900">{c.celebradas}</td>
+                              <td className={`text-right px-4 py-3 text-sm ${showSuspect ? "text-amber-600 font-semibold" : "text-gray-600"}`}>
+                                <span className="inline-flex items-center gap-1 justify-end">
+                                  {showSuspect && <AlertTriangle className="h-3 w-3 text-amber-500" />}
+                                  {showPct.toFixed(1)}%
+                                </span>
+                              </td>
+                              <td className="text-right px-4 py-3 text-sm font-bold text-emerald-600">{c.ventas}</td>
+                              <td className="text-right px-4 py-3 text-sm font-bold text-rose-600">{c.ventasNetas}</td>
+                              <td className="text-right px-5 py-3 text-sm font-black text-gray-900">{c.cierre}%</td>
+                            </tr>
+                          );
+                        })}
                         {(() => {
                           const tLlamadas = closerPerformance.reduce((s, c) => s + c.llamadas, 0);
                           const tNoShows = closerPerformance.reduce((s, c) => s + c.noShows, 0);
                           const tCelebradas = closerPerformance.reduce((s, c) => s + c.celebradas, 0);
                           const tVentas = closerPerformance.reduce((s, c) => s + c.ventas, 0);
+                          const tVentasNetas = closerPerformance.reduce((s, c) => s + c.ventasNetas, 0);
+                          const tShowPct = tLlamadas > 0 ? (tCelebradas / tLlamadas) * 100 : 0;
                           return (
                             <tr className="border-t-2 border-gray-200 bg-gray-50/80">
                               <td className="px-5 py-3 text-sm font-black text-gray-900">Total</td>
                               <td className="text-right px-4 py-3 text-sm font-bold text-gray-900">{tLlamadas}</td>
                               <td className="text-right px-4 py-3 text-sm font-bold text-red-500">{tNoShows}</td>
                               <td className="text-right px-4 py-3 text-sm font-black text-gray-900">{tCelebradas}</td>
-                              <td className="text-right px-4 py-3 text-sm font-bold text-gray-600">{tLlamadas > 0 ? ((tCelebradas / tLlamadas) * 100).toFixed(1) : "0"}%</td>
+                              <td className="text-right px-4 py-3 text-sm font-bold text-gray-600">{tShowPct.toFixed(1)}%</td>
                               <td className="text-right px-4 py-3 text-sm font-black text-emerald-600">{tVentas}</td>
-                              <td className="text-right px-5 py-3 text-sm font-black text-gray-900">{tLlamadas > 0 ? ((tVentas / tLlamadas) * 100).toFixed(1) : "0"}%</td>
+                              <td className="text-right px-4 py-3 text-sm font-black text-rose-600">{tVentasNetas}</td>
+                              <td className="text-right px-5 py-3 text-sm font-black text-gray-900">{tCelebradas > 0 ? ((tVentas / tCelebradas) * 100).toFixed(1) : "0"}%</td>
                             </tr>
                           );
                         })()}
                       </tbody>
                     </table>
-                    <p className="text-[11px] text-gray-400 italic px-5 py-2">*Los valores reflejan agendas únicas. Las llamadas se suman a esta tabla 30 minutos después de la hora de inicio</p>
+                    <p className="text-[11px] text-gray-400 italic px-5 py-2">*Cierre llamada = ventas / celebradas. Las llamadas se suman 30 min después de la hora de inicio. <span className="text-amber-600">⚠ en % Show &gt; 75%</span> suele indicar que no se está marcando no-show en Go High Level.</p>
                   </div>
+
+                  {/* Bloque de reconciliación */}
+                  {stats && stats.totalLlamadas != null && (() => {
+                    const sumLl = closerPerformance.reduce((s, c) => s + c.llamadas, 0);
+                    const sumCe = closerPerformance.reduce((s, c) => s + c.celebradas, 0);
+                    const sumVe = closerPerformance.reduce((s, c) => s + c.ventas, 0);
+                    const sumVn = closerPerformance.reduce((s, c) => s + c.ventasNetas, 0);
+                    const ok = (a: number, b: number) => a === b;
+                    const rows: { label: string; sum: number; total: number; sinAsignar: number }[] = [
+                      { label: "Llamadas",         sum: sumLl, total: stats.totalLlamadas ?? 0,                  sinAsignar: stats.sinAsignarLlamadas ?? 0 },
+                      { label: "Celebradas",       sum: sumCe, total: stats.totalCelebradas ?? 0,                sinAsignar: stats.sinAsignarCelebradas ?? 0 },
+                      { label: "Ventas (en celebradas)",      sum: sumVe, total: stats.totalVentasEnCelebradas ?? 0,      sinAsignar: stats.sinAsignarVentasCelebradas ?? 0 },
+                      { label: "Ventas netas (en celebradas)", sum: sumVn, total: stats.totalVentasEnCelebradasNetas ?? 0, sinAsignar: stats.sinAsignarVentasCelebradasNetas ?? 0 },
+                    ];
+                    const ventasSinLlamada = (stats.totalVentas ?? 0) - (stats.totalVentasEnCelebradas ?? 0);
+                    return (
+                      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mt-3">
+                        <div className="px-5 py-2 bg-gray-50 border-b border-gray-100">
+                          <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Cuadre de métricas</p>
+                        </div>
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="border-b border-gray-100">
+                              <th className="text-left px-5 py-2 text-[10px] font-bold text-gray-400 uppercase">Métrica</th>
+                              <th className="text-right px-4 py-2 text-[10px] font-bold text-gray-400 uppercase">Σ closers</th>
+                              <th className="text-right px-4 py-2 text-[10px] font-bold text-gray-400 uppercase">Sin asignar</th>
+                              <th className="text-right px-4 py-2 text-[10px] font-bold text-gray-400 uppercase">Total global</th>
+                              <th className="text-center px-4 py-2 text-[10px] font-bold text-gray-400 uppercase">Cuadre</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-50">
+                            {rows.map((r) => {
+                              const cuadra = ok(r.sum + r.sinAsignar, r.total);
+                              return (
+                                <tr key={r.label}>
+                                  <td className="px-5 py-1.5 text-gray-600">{r.label}</td>
+                                  <td className="text-right px-4 py-1.5 font-bold text-gray-900">{r.sum}</td>
+                                  <td className="text-right px-4 py-1.5 text-gray-500">{r.sinAsignar}</td>
+                                  <td className="text-right px-4 py-1.5 font-bold text-gray-900">{r.total}</td>
+                                  <td className={`text-center px-4 py-1.5 font-bold ${cuadra ? "text-emerald-600" : "text-red-600"}`}>
+                                    {cuadra ? "✓" : `✗ (${r.sum + r.sinAsignar} ≠ ${r.total})`}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                            <tr className="bg-gray-50/60">
+                              <td className="px-5 py-1.5 text-gray-600 italic" colSpan={3}>Ventas sin llamada celebrada (compraron sin show)</td>
+                              <td className="text-right px-4 py-1.5 font-bold text-gray-700">{ventasSinLlamada}</td>
+                              <td className="text-center px-4 py-1.5 text-gray-400">—</td>
+                            </tr>
+                            <tr className="bg-gray-50/60">
+                              <td className="px-5 py-1.5 text-gray-600 italic" colSpan={3}>Total ventas brutas (todas las fuentes)</td>
+                              <td className="text-right px-4 py-1.5 font-bold text-gray-900">{stats.totalVentas}</td>
+                              <td className="text-center px-4 py-1.5 text-gray-400">—</td>
+                            </tr>
+                            <tr className="bg-gray-50/60">
+                              <td className="px-5 py-1.5 text-gray-600 italic" colSpan={3}>Agendas únicas (sin filtrar por fecha de llamada)</td>
+                              <td className="text-right px-4 py-1.5 font-bold text-gray-900">{stats.agendasUnicas} <span className="text-gray-400 font-normal">({stats.totalAgendas} registros)</span></td>
+                              <td className="text-center px-4 py-1.5 text-gray-400">—</td>
+                            </tr>
+                            <tr className="bg-gray-50/60">
+                              <td className="px-5 py-1.5 text-gray-600 italic" colSpan={3}>Cobertura (agendas únicas con fecha de llamada pasada)</td>
+                              <td className={`text-right px-4 py-1.5 font-bold ${parseFloat(stats.coverage ?? "0") < 50 ? "text-amber-700" : "text-gray-900"}`}>
+                                {stats.totalLlamadas}/{stats.agendasUnicas} <span className="font-normal">({stats.coverage}%)</span>
+                              </td>
+                              <td className="text-center px-4 py-1.5 text-gray-400">—</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                        <p className="text-[11px] text-gray-400 italic px-5 py-2">*Las columnas &quot;Σ closers + Sin asignar&quot; deben igualar &quot;Total global&quot;. Si alguna fila sale ✗, hay un problema de data quality (closer mal asignado, email repetido, etc.).</p>
+                      </div>
+                    );
+                  })()}
 
               </>
           </>
@@ -1247,7 +1380,7 @@ export default function FunnelPage() {
             const rows: MetricRow[] = [
               { label: "Agendas", values: cols.map((c) => c.agendasUnicas), bold: true },
               { label: "Ventas", values: cols.map((c) => c.ventas), bold: true },
-              { label: "Cierre llamada", values: cols.map((c) => c.cierre + "%"), bold: true },
+              { label: "Cierre agenda", values: cols.map((c) => c.cierre + "%"), bold: true },
               { label: "Ag. AV0", group: "Paid", values: cols.map((c) => c.paidAV0Agendas), color: "text-blue-600" },
               { label: "Ag. AV2", group: "Paid", values: cols.map((c) => c.paidAV2Agendas), color: "text-blue-600" },
               { label: "V. AV0", group: "Paid", values: cols.map((c) => c.paidAV0Ventas), color: "text-blue-600" },
@@ -1319,7 +1452,7 @@ export default function FunnelPage() {
                   <th />
                   {closerPerformance.map((c) => (
                     <React.Fragment key={c.closer}>
-                      <th className="text-right px-2 py-0.5 text-[9px] font-bold text-gray-400 uppercase border-l border-gray-100">Llam</th>
+                      <th className="text-right px-2 py-0.5 text-[9px] font-bold text-gray-400 uppercase border-l border-gray-100">Cel</th>
                       <th className="text-right px-2 py-0.5 text-[9px] font-bold text-gray-400 uppercase">Vent</th>
                       <th className="text-right px-2 py-0.5 text-[9px] font-bold text-gray-400 uppercase">%</th>
                     </React.Fragment>
