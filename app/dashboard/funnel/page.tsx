@@ -835,25 +835,6 @@ export default function FunnelPage() {
               <>
                   <h3 className="text-sm font-bold text-gray-700 mt-4">Rendimiento closers <span className="font-normal text-gray-400">(Cierre llamada = ventas / celebradas)</span></h3>
 
-                  {/* Banner edition-level data quality */}
-                  {stats?.dataQualitySuspect && (
-                    <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl px-5 py-3 flex items-start gap-3">
-                      <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-                      <div className="flex-1 text-sm">
-                        <p className="font-bold text-amber-900 mb-0.5">Datos de llamadas poco fiables en esta edición</p>
-                        <p className="text-amber-800 text-[13px]">
-                          {parseFloat(stats.coverage ?? "0") < 50 && (
-                            <>Cobertura baja: solo <span className="font-bold">{stats.coverage}%</span> de las agendas ({stats.totalLlamadas}/{stats.agendasUnicas}) tienen fecha de llamada marcada. </>
-                          )}
-                          {parseFloat(stats.showRate ?? "0") >= 95 && (
-                            <>Show rate global <span className="font-bold">{stats.showRate}%</span> — irrealmente alto, sugiere que los closers no están marcando no-shows en Go High Level. </>
-                          )}
-                          Los cierres por closer y el global están calculados solo sobre lo marcado, no sobre el total real.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
                   {/* Resumen por closer */}
                   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                     <table className="w-full">
