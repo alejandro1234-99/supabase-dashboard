@@ -5,7 +5,6 @@
  * ANTES: crea la tabla leads usando el SQL en setup-leads-db.ts
  */
 
-import { createClient } from "@supabase/supabase-js";
 import * as dotenv from "dotenv";
 import { resolve } from "path";
 import { readFileSync } from "fs";
@@ -15,14 +14,41 @@ dotenv.config({ path: resolve(process.cwd(), ".env.local") });
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
+// Mini cliente REST (evita @supabase/supabase-js — node_modules a veces tiene realtime-js roto)
+const restHeaders = {
+  apikey: SUPABASE_KEY,
+  Authorization: `Bearer ${SUPABASE_KEY}`,
+  "Content-Type": "application/json",
+};
+
+async function restInsert(table: string, rows: object[]): Promise<{ error?: string }> {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method: "POST",
+    headers: { ...restHeaders, Prefer: "return=minimal" },
+    body: JSON.stringify(rows),
+  });
+  if (!res.ok) return { error: `${res.status} ${await res.text()}` };
+  return {};
+}
+
+async function restDeleteEq(table: string, column: string, value: string): Promise<{ count: number; error?: string }> {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${column}=eq.${encodeURIComponent(value)}`, {
+    method: "DELETE",
+    headers: { ...restHeaders, Prefer: "return=representation,count=exact" },
+  });
+  if (!res.ok) return { count: 0, error: `${res.status} ${await res.text()}` };
+  const data = await res.json();
+  return { count: Array.isArray(data) ? data.length : 0 };
+}
 
 // CSV files to import
 const CSV_FILES = [
-  resolve(process.env.HOME!, "Downloads/Leads Registro Marzo 2025 Revolutia - MAR26 (1).csv"),
+  resolve(process.env.HOME!, "Downloads/Leads Registro Marzo 2025 Revolutia - ABR26.csv"),
 ];
+
+// Edición destino y fecha de corte (excluir hoy: solo hasta ayer inclusive)
+const TARGET_EDICION = "Abril 2026";
+const CUTOFF_DATE = "2026-04-27"; // máxima fecha aceptada (inclusive)
 
 /**
  * Parse a CSV line handling quoted fields with commas inside
@@ -151,6 +177,7 @@ function parseFile(filePath: string): LeadRow[] {
   const rows: LeadRow[] = [];
   let fixedEmails = 0;
   let skipped = 0;
+  let skippedFuture = 0;
 
   for (let i = 1; i < lines.length; i++) {
     const cols = parseCsvLine(lines[i]);
@@ -167,10 +194,15 @@ function parseFile(filePath: string): LeadRow[] {
 
     if (!email) { skipped++; continue; }
 
-    const edicionRaw = get(cols, "edicion") ?? "Marzo 2026";
+    const fechaRegistro = parseDate(get(cols, "fecha registrofirst") ?? "");
+
+    // Excluir registros del día de hoy (los del lanzamiento aún no cuentan)
+    if (fechaRegistro && fechaRegistro > CUTOFF_DATE) { skippedFuture++; continue; }
+
+    const edicionRaw = get(cols, "edicion") ?? TARGET_EDICION;
 
     rows.push({
-      fecha_registro: parseDate(get(cols, "fecha registrofirst") ?? "") ?? null,
+      fecha_registro: fechaRegistro,
       nombre,
       email,
       avatar: get(cols, "avatar"),
@@ -188,30 +220,19 @@ function parseFile(filePath: string): LeadRow[] {
 
   console.log(`   📧 ${fixedEmails} emails corregidos (estaban en campo nombre)`);
   console.log(`   ⏭️  ${skipped} filas sin email descartadas`);
+  console.log(`   📅 ${skippedFuture} filas posteriores a ${CUTOFF_DATE} descartadas (lanzamiento en curso)`);
 
   return rows;
 }
 
 async function deleteEdicion(edicion: string) {
   console.log(`\n🗑️  Borrando leads de "${edicion}"...`);
-  let deleted = 0;
-  // Delete in batches (Supabase has row limits on delete)
-  while (true) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.from("leads" as any) as any)
-      .delete()
-      .eq("edicion", edicion)
-      .select("id")
-      .limit(5000);
-    if (error) {
-      console.error("   ❌ Error borrando:", error.message);
-      break;
-    }
-    if (!data || data.length === 0) break;
-    deleted += data.length;
-    process.stdout.write(`   🗑️  ${deleted} borrados...\r`);
+  const { count, error } = await restDeleteEq("leads", "edicion", edicion);
+  if (error) {
+    console.error("   ❌ Error borrando:", error);
+    return;
   }
-  console.log(`   🗑️  ${deleted} leads de "${edicion}" borrados`);
+  console.log(`   🗑️  ${count} leads de "${edicion}" borrados`);
 }
 
 async function main() {
@@ -220,8 +241,8 @@ async function main() {
     process.exit(1);
   }
 
-  // Delete existing Marzo 2026 leads before importing
-  await deleteEdicion("Marzo 2026");
+  // Delete existing leads of target edition before importing (idempotente)
+  await deleteEdicion(TARGET_EDICION);
 
   let totalInserted = 0;
 
@@ -237,11 +258,10 @@ async function main() {
 
     for (let i = 0; i < rows.length; i += BATCH) {
       const batch = rows.slice(i, i + BATCH);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase.from("leads" as any) as any).insert(batch);
+      const { error } = await restInsert("leads", batch);
 
       if (error) {
-        console.error(`   ❌ Error en batch ${Math.floor(i / BATCH) + 1}:`, error.message);
+        console.error(`   ❌ Error en batch ${Math.floor(i / BATCH) + 1}:`, error);
       } else {
         inserted += batch.length;
         process.stdout.write(`   ✅ ${inserted}/${rows.length} insertados\r`);

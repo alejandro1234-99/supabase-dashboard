@@ -605,6 +605,7 @@ export async function GET(req: NextRequest) {
     "Enero 2026": ["Nacho", "Arnau", "Hector"],
     "Febrero 2026": ["Arnau", "Hector", "Alberto", "Raúl"],
     "Marzo 2026": ["Nacho", "Arnau", "Hector", "Alberto"],
+    "Abril 2026": ["Nacho", "Arnau", "Hector", "Alberto"],
   };
   const edicionComerciales = edicionesList.length > 0
     ? [...new Set(edicionesList.flatMap((ed) => EDITION_COMERCIALES[ed] ?? COMERCIALES_FIJOS))]
@@ -800,6 +801,7 @@ export async function GET(req: NextRequest) {
     "Enero 2026": { start: "2026-01-27", days: 8 },
     "Febrero 2026": { start: "2026-02-24", days: 8 },
     "Marzo 2026": { start: "2026-03-24", days: 9 },
+    "Abril 2026": { start: "2026-04-28", days: 8 },
   };
 
   const isMultiEdition = edicionesList.length > 1;

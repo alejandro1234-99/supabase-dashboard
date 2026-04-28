@@ -13,7 +13,7 @@ type Nota = {
   updated_at: string;
 };
 
-const EDICIONES = ["Enero 2026", "Febrero 2026", "Marzo 2026"];
+const EDICIONES = ["Enero 2026", "Febrero 2026", "Marzo 2026", "Abril 2026"];
 
 const TIPOS = [
   { value: "conclusion", label: "Conclusion", icon: FileText, color: "bg-emerald-500" },

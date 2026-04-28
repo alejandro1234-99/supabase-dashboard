@@ -28,7 +28,7 @@ type EstudioMkt = {
   matchCount: number; noMatch: number;
 };
 
-const EDICIONES = ["Global", "Enero 2026", "Febrero 2026", "Marzo 2026"];
+const EDICIONES = ["Global", "Enero 2026", "Febrero 2026", "Marzo 2026", "Abril 2026"];
 
 function ReembolsoTable({ title, subtitle, rows, labelKey }: {
   title: string; subtitle?: string;

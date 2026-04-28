@@ -21,7 +21,7 @@ type Stats = {
   mediaDiasReembolso: number | null;
 };
 
-const EDICIONES = ["Global", "Enero 2026", "Febrero 2026", "Marzo 2026"];
+const EDICIONES = ["Global", "Enero 2026", "Febrero 2026", "Marzo 2026", "Abril 2026"];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Venta = Record<string, any>;

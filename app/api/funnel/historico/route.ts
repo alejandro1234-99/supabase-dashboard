@@ -34,7 +34,7 @@ function classifyLead(lead: { funnel: string | null; medium: string | null; test
   return "Untracked";
 }
 
-const EDICIONES = ["Noviembre 2025", "Enero 2026", "Febrero 2026", "Marzo 2026"];
+const EDICIONES = ["Noviembre 2025", "Enero 2026", "Febrero 2026", "Marzo 2026", "Abril 2026"];
 
 // Ediciones con datos resumidos (sin detalle por filas en Supabase)
 // Se inyectan directamente cuando no hay datos suficientes en las tablas
