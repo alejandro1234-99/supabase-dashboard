@@ -63,7 +63,6 @@ const navSections = [
       { href: "/dashboard/gestion-exitos", label: "Gestion Casos de Exito", icon: Trophy },
       { href: "/dashboard/qa", label: "Q&A Pipeline", icon: HelpCircle },
       { href: "/dashboard/jobs", label: "Banco de Empleo", icon: Briefcase },
-      { href: "/dashboard/documentos", label: "Documentos y Accesos", icon: FileText },
       { href: "/dashboard/workshops", label: "Workshops", icon: Presentation },
     ],
   },

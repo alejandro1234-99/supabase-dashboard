@@ -31,7 +31,6 @@ const ALL_PANELS = [
     { route: "/dashboard/gestion-exitos", label: "Gestion Casos de Exito" },
     { route: "/dashboard/qa", label: "Q&A Pipeline" },
     { route: "/dashboard/jobs", label: "Banco de Empleo" },
-    { route: "/dashboard/documentos", label: "Documentos y Accesos" },
     { route: "/dashboard/workshops", label: "Workshops" },
   ]},
   { group: "4 · Accesos", items: [
