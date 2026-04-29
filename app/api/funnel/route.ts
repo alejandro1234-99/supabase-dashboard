@@ -582,6 +582,9 @@ export async function GET(req: NextRequest) {
     "Raul": "Raúl",
     "Nacho": "Nacho",
     "Nacho Revolutia": "Nacho",
+    "William": "William",
+    "William Revolutia": "William",
+    "Will": "William",
     "Nacho Laguna": "Nacho",
   };
   function normComercial(name: string | null): string {
@@ -605,7 +608,7 @@ export async function GET(req: NextRequest) {
     "Enero 2026": ["Nacho", "Arnau", "Hector"],
     "Febrero 2026": ["Arnau", "Hector", "Alberto", "Raúl"],
     "Marzo 2026": ["Nacho", "Arnau", "Hector", "Alberto"],
-    "Abril 2026": ["Nacho", "Arnau", "Hector", "Alberto"],
+    "Abril 2026": ["Alberto", "Arnau", "Nacho", "William"],
   };
   const edicionComerciales = edicionesList.length > 0
     ? [...new Set(edicionesList.flatMap((ed) => EDITION_COMERCIALES[ed] ?? COMERCIALES_FIJOS))]

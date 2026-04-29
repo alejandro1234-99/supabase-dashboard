@@ -129,6 +129,47 @@ function capitalize(s: string): string {
 }
 
 /**
+ * Detecta emails internos del equipo / test que no son leads reales.
+ * - Alias Gmail "+revolutia" / "+revolutiaai": el equipo usa este patron para testear el funnel.
+ * - Patrones literales de test: "prueba@", "test@", "*test\d+@gmail.com"
+ * - Dominio @whyadsmedia.com: agencia de ads, testing interno.
+ *
+ * NO se excluyen "admin@<dominio>" de empresas externas (posibles leads B2B reales).
+ */
+function isTeamOrTestEmail(email: string): boolean {
+  const e = email.toLowerCase().trim();
+  if (e.includes("+revolutia")) return true;
+  if (/^(test|prueba|testing|dev|cretest)\d*@/.test(e)) return true;
+  if (/^(intentodetest|thisisatest|revotest|aztest|detest|ivantest)\d*@/.test(e)) return true;
+  if (e.endsWith("@whyadsmedia.com")) return true;
+  return false;
+}
+
+/**
+ * Dedup leads por email aplicando first-touch-with-fallback:
+ *   1. Ordenar todas las filas del email por fecha_registro ASC.
+ *   2. Quedarse con la PRIMERA fila que tenga al menos un campo de tracking
+ *      (funnel, medium o test) poblado.
+ *   3. Si todas las filas del email estan vacias, usar la primera (preserva fecha + nombre).
+ */
+function dedupByEmail(rows: LeadRow[]): { unique: LeadRow[]; dupsRemoved: number } {
+  const byEmail: Record<string, LeadRow[]> = {};
+  for (const r of rows) {
+    const key = (r.email ?? "").toLowerCase().trim();
+    if (!key) continue;
+    if (!byEmail[key]) byEmail[key] = [];
+    byEmail[key].push(r);
+  }
+  const unique: LeadRow[] = [];
+  for (const list of Object.values(byEmail)) {
+    list.sort((a, b) => (a.fecha_registro ?? "").localeCompare(b.fecha_registro ?? ""));
+    const firstWithInfo = list.find((r) => r.funnel || r.medium || r.test);
+    unique.push(firstWithInfo ?? list[0]);
+  }
+  return { unique, dupsRemoved: rows.length - unique.length };
+}
+
+/**
  * Header name → DB column mapping
  */
 const HEADER_MAP: Record<string, keyof LeadRow> = {
@@ -178,6 +219,7 @@ function parseFile(filePath: string): LeadRow[] {
   let fixedEmails = 0;
   let skipped = 0;
   let skippedFuture = 0;
+  let skippedTeam = 0;
 
   for (let i = 1; i < lines.length; i++) {
     const cols = parseCsvLine(lines[i]);
@@ -193,6 +235,9 @@ function parseFile(filePath: string): LeadRow[] {
     }
 
     if (!email) { skipped++; continue; }
+
+    // Excluir emails del equipo/test interno
+    if (isTeamOrTestEmail(email)) { skippedTeam++; continue; }
 
     const fechaRegistro = parseDate(get(cols, "fecha registrofirst") ?? "");
 
@@ -221,8 +266,13 @@ function parseFile(filePath: string): LeadRow[] {
   console.log(`   📧 ${fixedEmails} emails corregidos (estaban en campo nombre)`);
   console.log(`   ⏭️  ${skipped} filas sin email descartadas`);
   console.log(`   📅 ${skippedFuture} filas posteriores a ${CUTOFF_DATE} descartadas (lanzamiento en curso)`);
+  console.log(`   🧪 ${skippedTeam} filas con emails del equipo/test descartadas`);
 
-  return rows;
+  // Dedup por email (first-touch con fallback al primero con info de tracking)
+  const { unique, dupsRemoved } = dedupByEmail(rows);
+  console.log(`   🔁 ${dupsRemoved} filas duplicadas (mismo email) consolidadas → ${unique.length} leads únicos`);
+
+  return unique;
 }
 
 async function deleteEdicion(edicion: string) {
