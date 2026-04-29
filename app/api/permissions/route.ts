@@ -21,16 +21,17 @@ export async function GET() {
     .returns<Omit<PermRow, "is_trusted_default">[]>();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Iterar TODAS las paginas de auth.users (la API tope es ~200 por pagina).
+  // Iterar TODAS las paginas de auth.users hasta que devuelva pagina vacia.
+  // Algunos clientes ignoran `perPage` y devuelven 50 por pagina; iteramos
+  // bastantes paginas para cubrir hasta ~5000 usuarios.
   const allAuthUsers: { id: string; email: string | undefined; user_metadata: Record<string, unknown> }[] = [];
-  for (let page = 1; page <= 20; page++) {
+  for (let page = 1; page <= 100; page++) {
     const { data, error: authErr } = await supabase.auth.admin.listUsers({ page, perPage: 200 });
     if (authErr) return NextResponse.json({ error: authErr.message }, { status: 500 });
     if (!data.users.length) break;
     for (const u of data.users) {
       allAuthUsers.push({ id: u.id, email: u.email, user_metadata: u.user_metadata ?? {} });
     }
-    if (data.users.length < 200) break;
   }
 
   const explicitByUserId = new Map<string, PermRow>();
