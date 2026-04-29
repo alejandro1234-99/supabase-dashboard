@@ -9,6 +9,7 @@ type Permission = {
   name: string;
   allowed_routes: string[];
   is_super_admin: boolean;
+  is_trusted_default?: boolean;
 };
 
 const ALL_PANELS = [
@@ -112,6 +113,7 @@ export default function PermisosPage() {
                   <div className="text-sm font-bold text-gray-800">{p.name || p.email.split("@")[0]}</div>
                   <div className="text-[10px] text-gray-400 font-normal">{p.email}</div>
                   {p.is_super_admin && <span className="inline-block mt-0.5 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[9px] font-bold rounded-full uppercase">Super Admin</span>}
+                  {p.is_trusted_default && <span className="inline-block mt-0.5 px-1.5 py-0.5 bg-gray-100 text-gray-500 text-[9px] font-bold rounded-full uppercase">Por dominio</span>}
                 </th>
               ))}
             </tr>
@@ -124,7 +126,7 @@ export default function PermisosPage() {
                   <tr className="bg-gray-50/80">
                     <td className="px-4 py-1.5 text-[10px] font-bold text-gray-500 uppercase tracking-widest">{group.group}</td>
                     {permissions.map((p) => {
-                      if (p.is_super_admin) return <td key={p.user_id} className="border-l border-gray-100" />;
+                      if (p.is_super_admin || p.is_trusted_default) return <td key={p.user_id} className="border-l border-gray-100" />;
                       const routes = dirty[p.user_id] ?? p.allowed_routes;
                       const allOn = groupRoutes.every((r) => routes.includes(r));
                       const someOn = groupRoutes.some((r) => routes.includes(r));
@@ -144,7 +146,7 @@ export default function PermisosPage() {
                     <tr key={item.route} className="border-t border-gray-50 hover:bg-gray-50/50">
                       <td className="px-4 py-1.5 pl-8 text-xs text-gray-600">{item.label}</td>
                       {permissions.map((p) => {
-                        if (p.is_super_admin) {
+                        if (p.is_super_admin || p.is_trusted_default) {
                           return (
                             <td key={p.user_id} className="text-center border-l border-gray-100">
                               <Unlock className="h-3.5 w-3.5 text-emerald-400 mx-auto" />

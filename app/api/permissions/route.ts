@@ -83,12 +83,14 @@ export async function GET() {
       merged.push({ ...explicit, is_trusted_default: false });
     } else if (isTrustedDomain(u.email)) {
       // Acceso por defecto via dominio trusted, sin fila en dashboard_permissions.
+      // is_super_admin=false (NO son super admins). is_trusted_default=true marca que
+      // tienen acceso completo "por defecto del dominio".
       merged.push({
         user_id: u.id,
         email: u.email,
         name: (u.user_metadata?.full_name as string) || u.email.split("@")[0],
         allowed_routes: [],
-        is_super_admin: true, // acceso completo por defecto
+        is_super_admin: false,
         is_trusted_default: true,
       });
     }
