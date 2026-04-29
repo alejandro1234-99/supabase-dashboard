@@ -1,16 +1,67 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase";
+import { isEmailAllowed, isTrustedDomain } from "@/lib/access-config";
+
+type PermRow = {
+  user_id: string;
+  email: string;
+  name: string;
+  allowed_routes: string[];
+  is_super_admin: boolean;
+  is_trusted_default?: boolean;
+};
 
 export async function GET() {
   const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("dashboard_permissions")
-    .select("*")
-    .order("is_super_admin", { ascending: false })
-    .order("name");
 
+  // Fila explicita en dashboard_permissions.
+  const { data: rows, error } = await supabase
+    .from("dashboard_permissions")
+    .select("user_id, email, name, allowed_routes, is_super_admin")
+    .returns<Omit<PermRow, "is_trusted_default">[]>();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ permissions: data });
+
+  // Todos los usuarios de auth con email en allowlist (dominios trusted o emails individuales).
+  const { data: authData, error: authErr } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+  if (authErr) return NextResponse.json({ error: authErr.message }, { status: 500 });
+
+  const explicitByUserId = new Map<string, PermRow>();
+  for (const r of rows ?? []) explicitByUserId.set(r.user_id, r as PermRow);
+
+  const merged: PermRow[] = [];
+  for (const u of authData.users) {
+    if (!u.email || !isEmailAllowed(u.email)) continue;
+    const explicit = explicitByUserId.get(u.id);
+    if (explicit) {
+      merged.push({ ...explicit, is_trusted_default: false });
+    } else if (isTrustedDomain(u.email)) {
+      // Acceso por defecto via dominio trusted, sin fila en dashboard_permissions.
+      merged.push({
+        user_id: u.id,
+        email: u.email,
+        name: (u.user_metadata?.full_name as string) || u.email.split("@")[0],
+        allowed_routes: [],
+        is_super_admin: true, // acceso completo por defecto
+        is_trusted_default: true,
+      });
+    }
+  }
+
+  // Tambien incluir filas explicitas cuyo user_id no aparece en auth (caso raro).
+  for (const r of rows ?? []) {
+    if (!authData.users.some((u) => u.id === r.user_id)) {
+      merged.push({ ...r, is_trusted_default: false });
+    }
+  }
+
+  // Orden: super_admin primero, luego trusted_default, luego resto, alfabetico por name.
+  merged.sort((a, b) => {
+    if (a.is_super_admin !== b.is_super_admin) return a.is_super_admin ? -1 : 1;
+    if (!!a.is_trusted_default !== !!b.is_trusted_default) return a.is_trusted_default ? -1 : 1;
+    return (a.name ?? "").localeCompare(b.name ?? "");
+  });
+
+  return NextResponse.json({ permissions: merged });
 }
 
 export async function PATCH(req: NextRequest) {

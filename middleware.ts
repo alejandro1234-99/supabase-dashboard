@@ -2,23 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// Dominios del grupo empresarial: cualquier email de estos dominios tiene acceso
-// completo al dashboard sin necesidad de role manual ni fila en dashboard_permissions.
-const ALLOWED_DOMAINS = ["@revolutia.ai", "@noctorial.com", "@hypeleadsad.com"];
-
-// Excepciones individuales (emails fuera de los dominios del grupo).
-const ALLOWED_EMAILS: string[] = [];
-
-function isEmailAllowed(email: string): boolean {
-  const lower = email.toLowerCase();
-  if (ALLOWED_EMAILS.includes(lower)) return true;
-  return ALLOWED_DOMAINS.some((domain) => lower.endsWith(domain));
-}
-
-function isTrustedDomain(email: string): boolean {
-  const lower = email.toLowerCase();
-  return ALLOWED_DOMAINS.some((domain) => lower.endsWith(domain));
-}
+import { isEmailAllowed, isTrustedDomain } from "./lib/access-config";
 
 export async function middleware(request: NextRequest) {
   const res = NextResponse.next();
