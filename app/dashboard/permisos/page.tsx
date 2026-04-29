@@ -39,6 +39,15 @@ const ALL_PANELS = [
   ]},
 ];
 
+const ALL_ROUTES = ALL_PANELS.flatMap((g) => g.items.map((i) => i.route));
+
+function effectiveRoutes(p: Permission, dirty: Record<string, string[]>): string[] {
+  if (p.user_id in dirty) return dirty[p.user_id];
+  // trusted_default sin fila: tiene acceso a TODO por defecto
+  if (p.is_trusted_default) return ALL_ROUTES;
+  return p.allowed_routes;
+}
+
 export default function PermisosPage() {
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,13 +81,23 @@ export default function PermisosPage() {
   async function saveUser(userId: string) {
     const routes = dirty[userId];
     if (!routes) return;
+    const p = permissions.find((x) => x.user_id === userId);
+    if (!p) return;
     setSaving(userId);
+    // POST hace upsert: crea fila si el usuario era trusted_default sin row,
+    // o actualiza si ya tenia una.
     await fetch("/api/permissions", {
-      method: "PATCH",
+      method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id: userId, allowed_routes: routes }),
+      body: JSON.stringify({
+        user_id: userId,
+        email: p.email,
+        name: p.name,
+        is_super_admin: false,
+        allowed_routes: routes,
+      }),
     });
-    setPermissions((prev) => prev.map((p) => p.user_id === userId ? { ...p, allowed_routes: routes } : p));
+    setPermissions((prev) => prev.map((q) => q.user_id === userId ? { ...q, allowed_routes: routes, is_trusted_default: false } : q));
     setDirty((prev) => { const n = { ...prev }; delete n[userId]; return n; });
     setSaving(null);
   }
@@ -126,8 +145,8 @@ export default function PermisosPage() {
                   <tr className="bg-gray-50/80">
                     <td className="px-4 py-1.5 text-[10px] font-bold text-gray-500 uppercase tracking-widest">{group.group}</td>
                     {permissions.map((p) => {
-                      if (p.is_super_admin || p.is_trusted_default) return <td key={p.user_id} className="border-l border-gray-100" />;
-                      const routes = dirty[p.user_id] ?? p.allowed_routes;
+                      if (p.is_super_admin) return <td key={p.user_id} className="border-l border-gray-100" />;
+                      const routes = effectiveRoutes(p, dirty);
                       const allOn = groupRoutes.every((r) => routes.includes(r));
                       const someOn = groupRoutes.some((r) => routes.includes(r));
                       return (
@@ -146,14 +165,14 @@ export default function PermisosPage() {
                     <tr key={item.route} className="border-t border-gray-50 hover:bg-gray-50/50">
                       <td className="px-4 py-1.5 pl-8 text-xs text-gray-600">{item.label}</td>
                       {permissions.map((p) => {
-                        if (p.is_super_admin || p.is_trusted_default) {
+                        if (p.is_super_admin) {
                           return (
                             <td key={p.user_id} className="text-center border-l border-gray-100">
                               <Unlock className="h-3.5 w-3.5 text-emerald-400 mx-auto" />
                             </td>
                           );
                         }
-                        const routes = dirty[p.user_id] ?? p.allowed_routes;
+                        const routes = effectiveRoutes(p, dirty);
                         const enabled = routes.includes(item.route);
                         return (
                           <td key={p.user_id} className="text-center border-l border-gray-100">
