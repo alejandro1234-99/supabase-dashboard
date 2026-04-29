@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server";
 
 // Dominios permitidos y emails individuales autorizados
 const ALLOWED_DOMAINS = ["@revolutia.ai"];
-const ALLOWED_EMAILS = ["j.santacruz@hypeleadsad.com"];
+const ALLOWED_EMAILS = ["j.santacruz@hypeleadsad.com", "elsa.fernandez@noctorial.com"];
 
 function isEmailAllowed(email: string): boolean {
   const lower = email.toLowerCase();
