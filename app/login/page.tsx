@@ -5,16 +5,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { Loader2, Eye, EyeOff, Lock } from "lucide-react";
-
-// Dominios permitidos y emails individuales autorizados
-const ALLOWED_DOMAINS = ["@revolutia.ai"];
-const ALLOWED_EMAILS = ["j.santacruz@hypeleadsad.com"];
-
-function isEmailAllowed(email: string): boolean {
-  const lower = email.toLowerCase();
-  if (ALLOWED_EMAILS.includes(lower)) return true;
-  return ALLOWED_DOMAINS.some((domain) => lower.endsWith(domain));
-}
+import { isEmailAllowed, isTrustedDomain } from "@/lib/access-config";
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -64,14 +55,16 @@ function LoginForm() {
 
     const role =
       data.user?.app_metadata?.role ?? data.user?.user_metadata?.role;
-
-    if (role === "admin") {
-      window.location.href = "/dashboard";
-      return;
-    }
+    const trusted = isTrustedDomain(data.user.email);
 
     if (role === "qa_admin") {
       window.location.href = "/dashboard/qa";
+      return;
+    }
+
+    // Los emails del grupo (revolutia / noctorial / hypeleadsad) entran sin role.
+    if (trusted || role === "admin") {
+      window.location.href = "/dashboard";
       return;
     }
 
