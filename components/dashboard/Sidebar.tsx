@@ -65,8 +65,6 @@ const navSections = [
       { href: "/dashboard/jobs", label: "Banco de Empleo", icon: Briefcase },
       { href: "/dashboard/documentos", label: "Documentos y Accesos", icon: FileText },
       { href: "/dashboard/workshops", label: "Workshops", icon: Presentation },
-      { href: "/dashboard/soporte-hub", label: "Pipeline Soporte Hub", icon: Headphones },
-      { href: "/dashboard/programador-posts", label: "Programador de Posts", icon: CalendarClock },
     ],
   },
   {
