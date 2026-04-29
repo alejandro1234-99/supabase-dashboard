@@ -8,8 +8,15 @@
 export const ALLOWED_DOMAINS = ["@revolutia.ai", "@noctorial.com", "@hypeleadsad.com"];
 export const ALLOWED_EMAILS: string[] = [];
 
+// Excepciones bloqueadas: aunque el email este en un dominio del grupo,
+// estos usuarios NO pueden entrar al dashboard.
+export const BLOCKED_EMAILS: string[] = [
+  "victor@hypeleadsad.com",
+];
+
 export function isEmailAllowed(email: string): boolean {
   const lower = email.toLowerCase();
+  if (BLOCKED_EMAILS.includes(lower)) return false;
   if (ALLOWED_EMAILS.includes(lower)) return true;
   return ALLOWED_DOMAINS.some((d) => lower.endsWith(d));
 }
