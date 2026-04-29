@@ -12,6 +12,14 @@ export const ALLOWED_EMAILS: string[] = [];
 // estos usuarios NO pueden entrar al dashboard.
 export const BLOCKED_EMAILS: string[] = [
   "victor@hypeleadsad.com",
+  "anastasia.martynyuk@revolutia.ai",
+  "arnau@revolutia.ai",
+  "arnau.r@revolutia.ai",
+  "daniel.martinez@revolutia.ai",
+  "jonatan.dominguez@revolutia.ai",
+  "nacho.laguna@revolutia.ai",
+  "pol.gutierrez@revolutia.ai",
+  "raul.garcia@revolutia.ai",
 ];
 
 export function isEmailAllowed(email: string): boolean {

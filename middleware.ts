@@ -72,6 +72,11 @@ export async function middleware(request: NextRequest) {
       .eq("user_id", user.id)
       .single();
 
+    // /dashboard/permisos solo accesible a super_admin (no a trusted_default).
+    if (path.startsWith("/dashboard/permisos") && !perm?.is_super_admin) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+
     if (perm && !perm.is_super_admin) {
       const allowed: string[] = perm.allowed_routes ?? [];
       const dashboardRoute = "/" + path.split("/").slice(1, 3).join("/");

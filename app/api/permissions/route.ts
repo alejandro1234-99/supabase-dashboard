@@ -1,6 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase";
 import { isEmailAllowed, isTrustedDomain } from "@/lib/access-config";
+
+async function requireSuperAdmin(): Promise<{ ok: true } | { ok: false; res: NextResponse }> {
+  const cookieStore = await cookies();
+  const ssr = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { cookies: { getAll() { return cookieStore.getAll(); }, setAll() {} } }
+  );
+  const { data: { user } } = await ssr.auth.getUser();
+  if (!user) return { ok: false, res: NextResponse.json({ error: "no_session" }, { status: 401 }) };
+
+  const admin = createAdminClient();
+  const { data: perm } = await admin
+    .from("dashboard_permissions")
+    .select("is_super_admin")
+    .eq("user_id", user.id)
+    .single();
+  if (!perm?.is_super_admin) {
+    return { ok: false, res: NextResponse.json({ error: "forbidden" }, { status: 403 }) };
+  }
+  return { ok: true };
+}
 
 type PermRow = {
   user_id: string;
@@ -12,6 +36,9 @@ type PermRow = {
 };
 
 export async function GET() {
+  const auth = await requireSuperAdmin();
+  if (!auth.ok) return auth.res;
+
   const supabase = createAdminClient();
 
   // Fila explicita en dashboard_permissions.
@@ -85,6 +112,9 @@ export async function GET() {
 }
 
 export async function PATCH(req: NextRequest) {
+  const auth = await requireSuperAdmin();
+  if (!auth.ok) return auth.res;
+
   const body = await req.json();
   const { user_id, allowed_routes } = body;
 
@@ -103,6 +133,9 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireSuperAdmin();
+  if (!auth.ok) return auth.res;
+
   const body = await req.json();
   const { user_id, email, name, is_super_admin, allowed_routes } = body;
 

@@ -75,7 +75,7 @@ const navSections = [
   },
 ];
 
-export default function Sidebar({ role = "admin", allowedRoutes }: { role?: string; allowedRoutes?: string[] | null }) {
+export default function Sidebar({ role = "admin", allowedRoutes, isSuperAdmin = false }: { role?: string; allowedRoutes?: string[] | null; isSuperAdmin?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
@@ -103,7 +103,9 @@ export default function Sidebar({ role = "admin", allowedRoutes }: { role?: stri
 
   const sections = role === "qa_admin"
     ? [{ label: "Operativa producto", number: "3", items: navSections.flatMap(s => s.items).filter(i => i.href === "/dashboard/qa") }]
-    : navSections;
+    : isSuperAdmin
+      ? navSections
+      : navSections.filter(s => s.label !== "Accesos");
 
   if (collapsed) {
     return (
