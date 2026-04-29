@@ -642,8 +642,8 @@ export default function FunnelPage() {
                   <span className="text-[11px] font-semibold text-white/70 uppercase">Agendas</span>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-black text-white">{filteredStats.agendasUnicas}</p>
-                  <p className="text-[9px] text-white/60">{filteredStats.totalAgendas} totales</p>
+                  <p className="text-lg font-black text-white">{filteredStats.totalAgendas}</p>
+                  <p className="text-[9px] text-white/60">{filteredStats.agendasUnicas} únicas</p>
                 </div>
               </div>
 
@@ -705,8 +705,8 @@ export default function FunnelPage() {
                   <CalendarDays className="h-4 w-4 text-white" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Agendas unicas</p>
-                  <p className="text-2xl font-black text-gray-900 leading-tight">{filteredStats.agendasUnicas} <span className="text-sm font-medium text-gray-400">{filteredStats.totalAgendas} totales</span></p>
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Agendas</p>
+                  <p className="text-2xl font-black text-gray-900 leading-tight">{filteredStats.totalAgendas} <span className="text-sm font-medium text-gray-400">· {filteredStats.agendasUnicas} únicas</span></p>
                 </div>
               </div>
               <div className="bg-indigo-50 rounded-2xl border border-indigo-200 shadow-sm px-4 py-3 flex items-center gap-3">
@@ -1349,17 +1349,19 @@ export default function FunnelPage() {
           {/* 6. Estudio por comercial */}
           {adjustedComerciales.length > 0 && (() => {
             const t = adjustedComerciales.reduce((acc, c) => ({
+              agendas: acc.agendas + c.agendas,
               agendasUnicas: acc.agendasUnicas + c.agendasUnicas, ventas: acc.ventas + c.ventas,
               av0Ag: acc.av0Ag + c.paidAV0Agendas, av2Ag: acc.av2Ag + c.paidAV2Agendas,
               av0Ve: acc.av0Ve + c.paidAV0Ventas, av2Ve: acc.av2Ve + c.paidAV2Ventas,
               orgAg: acc.orgAg + c.orgAgendas, orgVe: acc.orgVe + c.orgVentas,
               affAg: acc.affAg + c.affAgendas, affVe: acc.affVe + c.affVentas,
-            }), { agendasUnicas: 0, ventas: 0, av0Ag: 0, av2Ag: 0, av0Ve: 0, av2Ve: 0, orgAg: 0, orgVe: 0, affAg: 0, affVe: 0 });
+            }), { agendas: 0, agendasUnicas: 0, ventas: 0, av0Ag: 0, av2Ag: 0, av0Ve: 0, av2Ve: 0, orgAg: 0, orgVe: 0, affAg: 0, affVe: 0 });
 
             type MetricRow = { label: string; group?: string; values: (string | number)[]; bold?: boolean; color?: string };
             const cols = [...adjustedComerciales];
             const rows: MetricRow[] = [
-              { label: "Agendas", values: cols.map((c) => c.agendasUnicas), bold: true },
+              { label: "Agendas", values: cols.map((c) => c.agendas), bold: true },
+              { label: "Agendas únicas", values: cols.map((c) => c.agendasUnicas) },
               { label: "Ventas", values: cols.map((c) => c.ventas), bold: true },
               { label: "Cierre agenda", values: cols.map((c) => c.cierre + "%"), bold: true },
               { label: "Ag. AV0", group: "Paid", values: cols.map((c) => c.paidAV0Agendas), color: "text-blue-600" },
@@ -1401,7 +1403,7 @@ export default function FunnelPage() {
                           {showGroupHeader && (
                             <tr><td colSpan={cols.length + 1} className={`px-3 py-0.5 text-[10px] font-bold uppercase tracking-widest ${groupColors[row.group!] ?? "text-gray-500"}`}>{row.group}</td></tr>
                           )}
-                          <tr className={`border-t border-gray-50 hover:bg-gray-50/50 ${!row.group && i === 2 ? "border-b-2 border-gray-200" : ""}`}>
+                          <tr className={`border-t border-gray-50 hover:bg-gray-50/50 ${!row.group && i === 3 ? "border-b-2 border-gray-200" : ""}`}>
                             <td className={`px-4 py-1.5 text-xs text-gray-500 whitespace-nowrap ${row.bold ? "font-bold" : ""}`}>{row.label}</td>
                             {row.values.map((v, j) => (
                               <td key={j} className={`text-center px-6 py-1.5 text-sm border-l border-gray-100 ${row.bold ? "font-bold" : ""} ${row.color ?? "text-gray-900"}`}>{v}</td>

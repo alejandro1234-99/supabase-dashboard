@@ -642,17 +642,22 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Count agendas using emailCloserMap so each email is attributed to ONE closer only
+  // Agendas BRUTAS: cada fila cuenta para el comercial DE ESA FILA (incluye reagendas).
+  for (const a of agendas) {
+    const cm = getComercial(normComercial(a.comercial));
+    cm.agendas++;
+  }
+
+  // Agendas UNICAS: cada email se atribuye a UN solo closer (el ganador de emailCloserMap,
+  // que prioriza la agenda no-no_show). Sub-buckets por source van por unicas.
   const countedAgendaEmails = new Set<string>();
   for (const a of agendas) {
     const email = (a.email ?? "").toLowerCase();
     if (!email || countedAgendaEmails.has(email)) continue;
 
-    // Attribute to the closer from emailCloserMap (prioritizes non-no_show)
     const assignedCloser = emailCloserMap[email] ?? normComercial(a.comercial);
     const cm = getComercial(assignedCloser);
     countedAgendaEmails.add(email);
-    cm.agendas++;
     cm.agendasUnicas.add(email);
     const src = emailSource[email];
     if (src === "Paid") {
