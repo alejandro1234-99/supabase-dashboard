@@ -21,15 +21,26 @@ export async function GET() {
     .returns<Omit<PermRow, "is_trusted_default">[]>();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Iterar TODAS las paginas de auth.users hasta que devuelva pagina vacia.
-  // Algunos clientes ignoran `perPage` y devuelven 50 por pagina; iteramos
-  // bastantes paginas para cubrir hasta ~5000 usuarios.
+  // Iterar TODAS las paginas de auth.users via REST directa (el cliente JS
+  // de supabase ignora perPage en algunas versiones y solo devuelve 50).
+  type AuthUser = { id: string; email?: string; user_metadata?: Record<string, unknown> };
   const allAuthUsers: { id: string; email: string | undefined; user_metadata: Record<string, unknown> }[] = [];
+  const restHeaders = {
+    apikey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`,
+  };
   for (let page = 1; page <= 100; page++) {
-    const { data, error: authErr } = await supabase.auth.admin.listUsers({ page, perPage: 200 });
-    if (authErr) return NextResponse.json({ error: authErr.message }, { status: 500 });
-    if (!data.users.length) break;
-    for (const u of data.users) {
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/admin/users?page=${page}&per_page=200`,
+      { headers: restHeaders, cache: "no-store" }
+    );
+    if (!res.ok) {
+      return NextResponse.json({ error: `Auth admin: ${res.status} ${await res.text()}` }, { status: 500 });
+    }
+    const d = (await res.json()) as { users?: AuthUser[] };
+    const users = d.users ?? [];
+    if (!users.length) break;
+    for (const u of users) {
       allAuthUsers.push({ id: u.id, email: u.email, user_metadata: u.user_metadata ?? {} });
     }
   }
