@@ -48,7 +48,7 @@ const CSV_FILES = [
 
 // Edición destino y fecha de corte (excluir hoy: solo hasta ayer inclusive)
 const TARGET_EDICION = "Abril 2026";
-const CUTOFF_DATE = "2026-04-27"; // máxima fecha aceptada (inclusive)
+const CUTOFF_DATE = "2026-04-28"; // máxima fecha aceptada (inclusive)
 
 /**
  * Parse a CSV line handling quoted fields with commas inside
