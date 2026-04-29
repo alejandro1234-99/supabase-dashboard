@@ -21,15 +21,23 @@ export async function GET() {
     .returns<Omit<PermRow, "is_trusted_default">[]>();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Todos los usuarios de auth con email en allowlist (dominios trusted o emails individuales).
-  const { data: authData, error: authErr } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-  if (authErr) return NextResponse.json({ error: authErr.message }, { status: 500 });
+  // Iterar TODAS las paginas de auth.users (la API tope es ~200 por pagina).
+  const allAuthUsers: { id: string; email: string | undefined; user_metadata: Record<string, unknown> }[] = [];
+  for (let page = 1; page <= 20; page++) {
+    const { data, error: authErr } = await supabase.auth.admin.listUsers({ page, perPage: 200 });
+    if (authErr) return NextResponse.json({ error: authErr.message }, { status: 500 });
+    if (!data.users.length) break;
+    for (const u of data.users) {
+      allAuthUsers.push({ id: u.id, email: u.email, user_metadata: u.user_metadata ?? {} });
+    }
+    if (data.users.length < 200) break;
+  }
 
   const explicitByUserId = new Map<string, PermRow>();
   for (const r of rows ?? []) explicitByUserId.set(r.user_id, r as PermRow);
 
   const merged: PermRow[] = [];
-  for (const u of authData.users) {
+  for (const u of allAuthUsers) {
     if (!u.email || !isEmailAllowed(u.email)) continue;
     const explicit = explicitByUserId.get(u.id);
     if (explicit) {
@@ -49,7 +57,7 @@ export async function GET() {
 
   // Tambien incluir filas explicitas cuyo user_id no aparece en auth (caso raro).
   for (const r of rows ?? []) {
-    if (!authData.users.some((u) => u.id === r.user_id)) {
+    if (!allAuthUsers.some((u) => u.id === r.user_id)) {
       merged.push({ ...r, is_trusted_default: false });
     }
   }
