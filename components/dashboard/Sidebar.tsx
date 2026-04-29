@@ -32,7 +32,10 @@ const SECTION_STYLES: Record<string, { bg: string; text: string; border: string;
   },
 };
 
-const navSections = [
+type NavItem = { href: string; label: string; icon: typeof GitMerge };
+type NavSection = { label: string; number: string; items: NavItem[]; requiresSuperAdmin?: boolean };
+
+const navSections: NavSection[] = [
   {
     label: "Cruce de ventas",
     number: "1",
@@ -69,6 +72,7 @@ const navSections = [
   {
     label: "Accesos",
     number: "4",
+    requiresSuperAdmin: true,
     items: [
       { href: "/dashboard/permisos", label: "Permisos", icon: Shield },
     ],
@@ -101,11 +105,9 @@ export default function Sidebar({ role = "admin", allowedRoutes, isSuperAdmin = 
     setOpenSections((prev) => ({ ...prev, [label]: !prev[label] }));
   }
 
-  const sections = role === "qa_admin"
+  const sections: NavSection[] = role === "qa_admin"
     ? [{ label: "Operativa producto", number: "3", items: navSections.flatMap(s => s.items).filter(i => i.href === "/dashboard/qa") }]
-    : isSuperAdmin
-      ? navSections
-      : navSections.filter(s => s.label !== "Accesos");
+    : navSections;
 
   if (collapsed) {
     return (
@@ -146,7 +148,8 @@ export default function Sidebar({ role = "admin", allowedRoutes, isSuperAdmin = 
           const isOpen = !!openSections[section.label];
           const s = SECTION_STYLES[section.label] ?? SECTION_STYLES["Panel de producto"];
           const hasActive = section.items.some(i => pathname === i.href);
-          const sectionLocked = allowedRoutes !== null && allowedRoutes !== undefined && !section.items.some(i => allowedRoutes.includes(i.href));
+          const requiresSuperAdminLocked = !!section.requiresSuperAdmin && !isSuperAdmin;
+          const sectionLocked = requiresSuperAdminLocked || (allowedRoutes !== null && allowedRoutes !== undefined && !section.items.some(i => allowedRoutes.includes(i.href)));
 
           return (
             <div key={section.label}>
@@ -187,7 +190,7 @@ export default function Sidebar({ role = "admin", allowedRoutes, isSuperAdmin = 
                 <div className="mt-1 ml-2 pl-4 border-l-2 border-gray-200 space-y-0.5">
                   {section.items.map(({ href, label, icon: Icon }, idx) => {
                     const active = pathname === href;
-                    const locked = allowedRoutes !== null && allowedRoutes !== undefined && !allowedRoutes.includes(href);
+                    const locked = requiresSuperAdminLocked || (allowedRoutes !== null && allowedRoutes !== undefined && !allowedRoutes.includes(href));
                     if (locked) {
                       return (
                         <div
