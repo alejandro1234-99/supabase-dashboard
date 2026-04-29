@@ -1233,5 +1233,10 @@ export async function GET(req: NextRequest) {
     closerPerformance,
     cualificacion,
     economics: (edicionesList.length === 1 ? ECONOMIC_DATA[edicionesList[0]] : null) ?? { general: { total: null, raw: {}, adjusted: {} }, paid: { total: null, raw: {}, adjusted: {} }, affiliates: { total: null, raw: {}, adjusted: {} } },
+  }, {
+    headers: {
+      // Cachea en CDN de Vercel 60s. Sirve respuesta stale hasta 5 min mientras revalida.
+      "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+    },
   });
 }

@@ -9,7 +9,7 @@ type CacheEntry = {
 };
 
 const cache = new Map<string, CacheEntry>();
-const TTL = 60_000; // 60 seconds — serve stale data for up to 1 minute
+const TTL = 300_000; // 5 minutos — sirve datos cacheados sin refetch durante 5 min, después revalida en background
 
 /**
  * Fetch with client-side caching.

@@ -143,5 +143,7 @@ export async function GET() {
     cualificacionPorEdicion[ed] = qual;
   }
 
-  return NextResponse.json({ ediciones, cualificacionPorEdicion });
+  return NextResponse.json({ ediciones, cualificacionPorEdicion }, {
+    headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" },
+  });
 }

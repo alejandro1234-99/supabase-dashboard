@@ -221,6 +221,7 @@ export default function FunnelPage() {
   const [sourceFilter, setSourceFilter] = useState<"Todos" | "Organico" | "Paid" | "Afiliados">("Todos");
   const [subFilter, setSubFilter] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
@@ -292,6 +293,8 @@ export default function FunnelPage() {
       ? `/api/notas?edicion=${encodeURIComponent(quarterEdiciones[quarterEdiciones.length - 1] ?? "")}`
       : `/api/notas?edicion=${encodeURIComponent(edicionFilter!)}`;
 
+    setRefreshing(true);
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     cancelRef.current.push(swr<any>(funnelUrl, (d, isStale) => {
       setStats(d.stats);
@@ -304,8 +307,8 @@ export default function FunnelPage() {
       setCloserPerformance(d.closerPerformance ?? []);
       setCualificacion(d.cualificacion ?? {});
       setEconomics(d.economics);
-      if (!isStale) setLoading(false);
-      else setLoading(false); // Show stale data, no spinner
+      setLoading(false);
+      if (!isStale) setRefreshing(false);
     }));
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -501,7 +504,15 @@ export default function FunnelPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Cruce de ventas</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-gray-900">Cruce de ventas</h1>
+          {refreshing && !loading && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium text-indigo-600 bg-indigo-50 border border-indigo-200">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Actualizando...
+            </span>
+          )}
+        </div>
         <p className="text-gray-400 text-sm mt-0.5">Embudo completo: Leads → Agendas → Ventas</p>
       </div>
 
