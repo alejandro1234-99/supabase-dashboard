@@ -79,7 +79,7 @@ const navSections: NavSection[] = [
   },
 ];
 
-export default function Sidebar({ role = "admin", allowedRoutes, isSuperAdmin = false }: { role?: string; allowedRoutes?: string[] | null; isSuperAdmin?: boolean }) {
+export default function Sidebar({ role = "admin", allowedRoutes, isSuperAdmin = false, userEmail }: { role?: string; allowedRoutes?: string[] | null; isSuperAdmin?: boolean; userEmail?: string }) {
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
@@ -243,15 +243,25 @@ export default function Sidebar({ role = "admin", allowedRoutes, isSuperAdmin = 
       </nav>
 
       {/* Footer */}
-      <div className="p-3 border-t border-gray-100 flex items-center justify-between">
-        <p className="text-[11px] text-gray-300 font-medium px-2">v1.0 · Admin Dashboard</p>
-        <button
-          onClick={handleLogout}
-          title="Cerrar sesion"
-          className="p-2 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all"
-        >
-          <LogOut className="h-4 w-4" />
-        </button>
+      <div className="px-3 py-3 border-t border-gray-100">
+        {userEmail && (
+          <div className="px-2 mb-2">
+            <p className="text-[11px] text-gray-500 font-semibold truncate" title={userEmail}>{userEmail}</p>
+            <p className="text-[9px] text-gray-300 mt-0.5">
+              {isSuperAdmin ? "Super admin" : "Usuario"}
+            </p>
+          </div>
+        )}
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] text-gray-300 font-medium px-2">v1.0</p>
+          <button
+            onClick={handleLogout}
+            title="Cerrar sesion"
+            className="p-2 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </aside>
   );

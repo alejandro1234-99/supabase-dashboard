@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -52,19 +53,12 @@ export async function middleware(request: NextRequest) {
   // Check granular permissions (skip for API routes and static assets)
   const path = request.nextUrl.pathname;
   if (path.startsWith("/dashboard/") && !path.startsWith("/dashboard/api")) {
-    const permSupabase = createServerClient(
+    // Cliente admin puro (sin cookies) para bypass de RLS — antes con createServerClient
+    // y cookies, la sesion del usuario aplicaba RLS y la query devolvia null.
+    const permSupabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        cookies: {
-          getAll() { return request.cookies.getAll(); },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              res.cookies.set(name, value, options);
-            });
-          },
-        },
-      }
+      { auth: { autoRefreshToken: false, persistSession: false } }
     );
     const { data: perm } = await permSupabase
       .from("dashboard_permissions")

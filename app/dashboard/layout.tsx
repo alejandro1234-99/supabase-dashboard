@@ -43,7 +43,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-background">
-      <Sidebar role={role} allowedRoutes={allowedRoutes} isSuperAdmin={isSuperAdmin} />
+      <Sidebar role={role} allowedRoutes={allowedRoutes} isSuperAdmin={isSuperAdmin} userEmail={user?.email} />
       <main className="flex-1 p-8 overflow-auto scrollbar-thin">{children}</main>
     </div>
   );
