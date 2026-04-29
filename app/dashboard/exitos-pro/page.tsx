@@ -2,10 +2,11 @@
 
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import {
-  Loader2, Trophy, Search, ExternalLink, Activity, Users, Plus, X, Save, Check, Clock,
-  Video, VideoOff, Edit3, MapPin, GraduationCap, Briefcase,
+  Loader2, Trophy, Search, ExternalLink, Activity, Plus, X, Save, Check, Clock,
+  Video, VideoOff, Edit3, MapPin, Briefcase,
 } from "lucide-react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis } from "recharts";
+import { cachedFetch, invalidateCache } from "@/lib/cached-fetch";
 
 type Caso = {
   id: string;
@@ -272,8 +273,8 @@ export default function ExitosProPage() {
     if (filterGrabado) params.set("grabado", filterGrabado);
     if (filterEdicion) params.set("edicion", filterEdicion);
     if (filterCohort) params.set("cohort", filterCohort);
-    fetch(`/api/exitos-pro?${params}`)
-      .then((r) => r.json())
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    cachedFetch<any>(`/api/exitos-pro?${params}`)
       .then((d) => {
         setCasos(d.data ?? []);
         setStats(d.stats);
@@ -321,6 +322,7 @@ export default function ExitosProPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: editing.id, ...editForm }),
     });
+    invalidateCache("/api/exitos-pro");
     setEditing(null);
     setEditForm({});
     setSaving(false);
@@ -335,6 +337,7 @@ export default function ExitosProPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: addAlumno.id, ...addForm }),
     });
+    invalidateCache("/api/exitos-pro");
     setShowAdd(false);
     setAddAlumno(null);
     setAddQuery("");

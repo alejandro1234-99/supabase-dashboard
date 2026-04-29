@@ -10,6 +10,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase";
+import { getEmailToUserIdMap } from "@/lib/auth-users-cache";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
@@ -72,21 +73,9 @@ export async function GET(req: NextRequest) {
   }
 
   // 4. Profiles de la Platform — via auth.users (email → user_id → profile)
-  // Iterar paginas de auth.users y construir email→user_id
-  const emailToUserId: Record<string, string> = {};
-  for (let page = 1; page <= 100; page++) {
-    const r = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/admin/users?page=${page}&per_page=200`,
-      { headers: { apikey: process.env.SUPABASE_SERVICE_ROLE_KEY!, Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}` }, cache: "no-store" }
-    );
-    if (!r.ok) break;
-    const d = await r.json();
-    const us = (d.users ?? []) as Any[];
-    if (!us.length) break;
-    for (const u of us) {
-      if (u.email) emailToUserId[u.email.toLowerCase()] = u.id;
-    }
-  }
+  // Mapeo cacheado a nivel modulo (TTL 2 min) para evitar paginar auth.users
+  // en cada request.
+  const emailToUserId = await getEmailToUserIdMap();
 
   const userIds = emails.map((e) => emailToUserId[e]).filter(Boolean);
   const { data: profilesRaw } = userIds.length > 0
@@ -200,7 +189,8 @@ export async function GET(req: NextRequest) {
     .not("edicion", "is", null);
   const ediciones = [...new Set(((edicionesList ?? []) as Any[]).map((r) => r.edicion).filter(Boolean))].sort();
 
-  const cohorts = [...new Set(filtered.map((c) => c.platform_cohort).filter(Boolean))].sort() as string[];
+  // Cohorts del set sin filtrar (para que el dropdown no se reduzca al filtrar).
+  const cohorts = [...new Set(data.map((c) => c.platform_cohort).filter(Boolean))].sort() as string[];
 
   return NextResponse.json({
     data: filtered,
@@ -220,6 +210,8 @@ export async function GET(req: NextRequest) {
     porCohort,
     ediciones,
     cohorts,
+  }, {
+    headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=120" },
   });
 }
 
