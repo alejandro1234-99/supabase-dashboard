@@ -25,6 +25,7 @@ const ALL_PANELS = [
     { route: "/dashboard/vimeo", label: "Consumo Vimeo" },
     { route: "/dashboard/circle", label: "Circle" },
     { route: "/dashboard/exitos", label: "Casos de Exito" },
+    { route: "/dashboard/exitos-pro", label: "Casos de Exito Pro" },
     { route: "/dashboard/soporte", label: "Soporte" },
   ]},
   { group: "3 · Operativa producto", items: [

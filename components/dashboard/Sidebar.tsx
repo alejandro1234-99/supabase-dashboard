@@ -55,6 +55,7 @@ const navSections: NavSection[] = [
       { href: "/dashboard/vimeo", label: "Consumo Vimeo", icon: PlayCircle },
       { href: "/dashboard/circle", label: "Circle", icon: Globe },
       { href: "/dashboard/exitos", label: "Casos de Exito", icon: Trophy },
+      { href: "/dashboard/exitos-pro", label: "Casos de Exito Pro", icon: Trophy },
       { href: "/dashboard/soporte", label: "Soporte", icon: Headphones },
     ],
   },
