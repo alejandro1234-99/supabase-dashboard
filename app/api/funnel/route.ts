@@ -584,6 +584,10 @@ export async function GET(req: NextRequest) {
     "Nacho Revolutia": "Nacho",
     "William": "William",
     "William Revolutia": "William",
+    "William García": "William",
+    "William Garcia": "William",
+    "W García": "William",
+    "W Garcia": "William",
     "Will": "William",
     "Nacho Laguna": "Nacho",
   };
