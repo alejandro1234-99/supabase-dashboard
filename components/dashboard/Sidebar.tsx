@@ -10,7 +10,7 @@ import {
   Star, Award, MessageSquare,
   ShoppingCart, CalendarDays, ClipboardList, Trophy, PlayCircle,
   Headphones, HelpCircle, Globe, ChevronDown, LogOut, Briefcase, GitMerge, TrendingUp, FileText, Presentation, CalendarClock,
-  PanelLeftClose, PanelLeftOpen, Lock, Shield,
+  PanelLeftClose, PanelLeftOpen, Lock, Shield, Wallet,
 } from "lucide-react";
 
 const SECTION_STYLES: Record<string, { bg: string; text: string; border: string; activeBg: string; activeText: string; activeBar: string; number: string }> = {
@@ -63,6 +63,7 @@ const navSections: NavSection[] = [
     label: "Operativa producto",
     number: "3",
     items: [
+      { href: "/dashboard/administracion", label: "Administración", icon: Wallet },
       { href: "/dashboard/onboardings", label: "Onboardings", icon: ClipboardList },
       { href: "/dashboard/gestion-exitos", label: "Gestion Casos de Exito", icon: Trophy },
       { href: "/dashboard/qa", label: "Q&A Pipeline", icon: HelpCircle },
