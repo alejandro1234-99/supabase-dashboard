@@ -650,11 +650,11 @@ export default function FunnelPage() {
               <div className="w-[78%] bg-indigo-500 rounded-3xl border-2 border-white shadow-sm px-4 py-2.5 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <CalendarDays className="h-3.5 w-3.5 text-white/80" />
-                  <span className="text-[11px] font-semibold text-white/70 uppercase">Agendas</span>
+                  <span className="text-[11px] font-semibold text-white/70 uppercase">Agendas únicas</span>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-black text-white">{filteredStats.totalAgendas}</p>
-                  <p className="text-[9px] text-white/60">{filteredStats.agendasUnicas} únicas</p>
+                  <p className="text-lg font-black text-white">{filteredStats.agendasUnicas}</p>
+                  <p className="text-[9px] text-white/60">{filteredStats.totalAgendas} totales</p>
                 </div>
               </div>
 
@@ -716,8 +716,8 @@ export default function FunnelPage() {
                   <CalendarDays className="h-4 w-4 text-white" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Agendas</p>
-                  <p className="text-2xl font-black text-gray-900 leading-tight">{filteredStats.totalAgendas} <span className="text-sm font-medium text-gray-400">· {filteredStats.agendasUnicas} únicas</span></p>
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Agendas únicas</p>
+                  <p className="text-2xl font-black text-gray-900 leading-tight">{filteredStats.agendasUnicas} <span className="text-sm font-medium text-gray-400">· {filteredStats.totalAgendas} totales</span></p>
                 </div>
               </div>
               <div className="bg-indigo-50 rounded-2xl border border-indigo-200 shadow-sm px-4 py-3 flex items-center gap-3">
@@ -1371,8 +1371,8 @@ export default function FunnelPage() {
             type MetricRow = { label: string; group?: string; values: (string | number)[]; bold?: boolean; color?: string };
             const cols = [...adjustedComerciales];
             const rows: MetricRow[] = [
-              { label: "Agendas", values: cols.map((c) => c.agendas), bold: true },
-              { label: "Agendas únicas", values: cols.map((c) => c.agendasUnicas) },
+              { label: "Agendas únicas", values: cols.map((c) => c.agendasUnicas), bold: true },
+              { label: "Agendas (brutas)", values: cols.map((c) => c.agendas) },
               { label: "Ventas", values: cols.map((c) => c.ventas), bold: true },
               { label: "Cierre agenda", values: cols.map((c) => c.cierre + "%"), bold: true },
               { label: "Ag. AV0", group: "Paid", values: cols.map((c) => c.paidAV0Agendas), color: "text-blue-600" },
