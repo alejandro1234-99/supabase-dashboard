@@ -424,5 +424,7 @@ export async function GET(req: NextRequest) {
     cash_por_mes,
     por_cohort,
     recobros,
+  }, {
+    headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=300" },
   });
 }

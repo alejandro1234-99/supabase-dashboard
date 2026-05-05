@@ -313,22 +313,25 @@ export async function GET(req: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let estudioMkt: any = null;
   if (includeMkt) {
-  // Fetch ALL leads to match by email across editions
+  // Solo necesitamos leads cuyo email coincida con una venta. Filtrar
+  // server-side en lugar de paginar la tabla completa de leads (decenas
+  // de miles de filas). Antes esto tardaba 5-11s; con el filtro <500ms.
+  const ventasEmailList = [...new Set(ventasEmails as string[])].filter(Boolean);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const allLeads = await (async () => {
-    const PAGE = 1000;
+    if (ventasEmailList.length === 0) return [];
+    // Supabase tiene límites en .in() para listas muy largas; troceamos en
+    // chunks de 500 emails por seguridad.
+    const CHUNK = 500;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const all: any[] = [];
-    let from = 0;
-    while (true) {
+    for (let i = 0; i < ventasEmailList.length; i += CHUNK) {
+      const slice = ventasEmailList.slice(i, i + CHUNK);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data } = await (supabase.from("leads" as any) as any)
         .select("email, funnel, test, medium, campaign, edicion")
-        .range(from, from + PAGE - 1);
-      if (!data || data.length === 0) break;
-      all.push(...data);
-      if (data.length < PAGE) break;
-      from += PAGE;
+        .in("email", slice);
+      if (data) all.push(...data);
     }
     return all as { email: string | null; funnel: string | null; test: string | null; medium: string | null; campaign: string | null; edicion: string | null }[];
   })();
@@ -436,6 +439,8 @@ export async function GET(req: NextRequest) {
     avatarMap,
     estudioReembolsos,
     estudioMkt,
+  }, {
+    headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=300" },
   });
 }
 

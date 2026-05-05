@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from "recharts";
+import { swr, invalidateCache } from "@/lib/cached-fetch";
 
 type Review = {
   id: string;
@@ -136,7 +137,6 @@ function toQuarter(month: string) {
 }
 
 function formatWeek(w: string) {
-  // "2025-W35" → "S35 '25"
   const [year, week] = w.split("-W");
   return `S${week} '${year.slice(2)}`;
 }
@@ -151,7 +151,6 @@ function ReviewsChart({ monthlyData, weeklyData }: { monthlyData: MonthlyData[];
     if (view === "month") {
       return monthlyData.map((d) => ({ label: formatMonth(d.month), count: d.count }));
     }
-    // Aggregate by quarter
     const qMap: Record<string, number> = {};
     for (const d of monthlyData) {
       const q = toQuarter(d.month);
@@ -232,7 +231,7 @@ function ReviewsChart({ monthlyData, weeklyData }: { monthlyData: MonthlyData[];
   );
 }
 
-export default function ReviewsPage() {
+export default function TrustpilotPanel() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [count, setCount] = useState(0);
@@ -249,25 +248,24 @@ export default function ReviewsPage() {
     const params = new URLSearchParams({ page: String(page) });
     if (starsFilter) params.set("stars", String(starsFilter));
     if (searchValue) params.set("search", searchValue);
-    fetch(`/api/trustpilot?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.error) { setNoTable(true); return; }
-        setReviews(d.data ?? []);
-        setCount(d.count ?? 0);
-        setStats({
-          avgRating: d.avgRating,
-          total: d.total,
-          uniqueReviewers: d.uniqueReviewers,
-          starCounts: d.starCounts,
-          monthlyData: d.monthlyData ?? [],
-          weeklyData: d.weeklyData ?? [],
-        });
-      })
-      .finally(() => { setLoading(false); setSearching(false); });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return swr<any>(`/api/trustpilot?${params}`, (d) => {
+      if (d.error) { setNoTable(true); setLoading(false); setSearching(false); return; }
+      setReviews(d.data ?? []);
+      setCount(d.count ?? 0);
+      setStats({
+        avgRating: d.avgRating,
+        total: d.total,
+        uniqueReviewers: d.uniqueReviewers,
+        starCounts: d.starCounts,
+        monthlyData: d.monthlyData ?? [],
+        weeklyData: d.weeklyData ?? [],
+      });
+      setLoading(false);
+      setSearching(false);
+    });
   }, [page, starsFilter]);
 
-  // Debounced search
   const handleSearchChange = (value: string) => {
     setSearch(value);
     setSearching(true);
@@ -276,15 +274,20 @@ export default function ReviewsPage() {
     debounceRef.current = setTimeout(() => fetchReviews(value), 350);
   };
 
-  useEffect(() => { fetchReviews(search); }, [fetchReviews]);
+  useEffect(() => {
+    const cancel = fetchReviews(search);
+    return () => { if (cancel) cancel(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchReviews]);
 
   const handleDelete = (id: string) => {
     setReviews((prev) => prev.filter((r) => r.id !== id));
     setCount((c) => c - 1);
     setStats((s) => s ? { ...s, total: s.total - 1 } : s);
+    invalidateCache("/api/trustpilot");
   };
 
-  const filtered = reviews; // filtering is now server-side
+  const filtered = reviews;
 
   const totalPages = Math.ceil(count / 20);
   const avg = parseFloat(stats?.avgRating ?? "0");
@@ -300,14 +303,8 @@ export default function ReviewsPage() {
   }
 
   return (
-    <div className="space-y-8 max-w-4xl">
-
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reviews de Trustpilot</h1>
-          <p className="text-gray-400 text-sm mt-0.5">revolutia.ai</p>
-        </div>
+    <div className="space-y-8">
+      <div className="flex items-center justify-end">
         <a
           href="https://es.trustpilot.com/review/revolutia.ai"
           target="_blank"
@@ -318,7 +315,6 @@ export default function ReviewsPage() {
         </a>
       </div>
 
-      {/* Stats hero */}
       {stats && (
         <div className="bg-gradient-to-br from-[#00b67a] to-[#007a52] rounded-3xl p-8 text-white shadow-lg">
           <div className="flex flex-col md:flex-row items-center gap-8">
@@ -356,12 +352,10 @@ export default function ReviewsPage() {
         </div>
       )}
 
-      {/* Gráfica temporal */}
       {stats && stats.monthlyData.length > 0 && (
         <ReviewsChart monthlyData={stats.monthlyData} weeklyData={stats.weeklyData} />
       )}
 
-      {/* Controles */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 min-w-48">
           {searching
@@ -403,7 +397,6 @@ export default function ReviewsPage() {
         <span className="text-sm text-gray-400 shrink-0">{count} reviews</span>
       </div>
 
-      {/* Lista */}
       {loading ? (
         <div className="flex justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-[#00b67a]" />
@@ -414,12 +407,11 @@ export default function ReviewsPage() {
           <p>No hay reviews con este filtro</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-3">
           {filtered.map((r) => <ReviewCard key={r.id} review={r} onDelete={handleDelete} />)}
         </div>
       )}
 
-      {/* Paginación */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between pt-2">
           <p className="text-sm text-gray-400">Página {page} de {totalPages}</p>

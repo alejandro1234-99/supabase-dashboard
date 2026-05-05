@@ -58,7 +58,7 @@ function LoginForm() {
     const trusted = isTrustedDomain(data.user.email);
 
     if (role === "qa_admin") {
-      window.location.href = "/dashboard/qa";
+      window.location.href = "/dashboard/soporte?tab=qa";
       return;
     }
 

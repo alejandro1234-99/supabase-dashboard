@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, FileText, Receipt, AlertTriangle, CheckCircle2, XCircle, Filter } from "lucide-react";
+import { swr } from "@/lib/cached-fetch";
 
 type Stats = {
   total: number;
@@ -50,14 +51,15 @@ export default function ContratosFacturasTab() {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetch(`/api/administracion/contratos-facturas?cohort=${encodeURIComponent(cohort)}&filter=${filter}`)
-      .then((r) => r.json())
-      .then((d: Resp & { error?: string }) => {
+    const cancel = swr<Resp & { error?: string }>(
+      `/api/administracion/contratos-facturas?cohort=${encodeURIComponent(cohort)}&filter=${filter}`,
+      (d) => {
         if (d.error) setError(d.error);
         else setData(d);
-      })
-      .catch((e) => setError(String(e)))
-      .finally(() => setLoading(false));
+        setLoading(false);
+      }
+    );
+    return () => cancel();
   }, [cohort, filter]);
 
   const filteredRows = useMemo(() => {

@@ -97,6 +97,8 @@ export async function GET(req: NextRequest) {
     semanasActivas,
     semanaStats,
     ratingTimeline,
+  }, {
+    headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=300" },
   });
 }
 

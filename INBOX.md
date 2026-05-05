@@ -4,6 +4,10 @@
 
 ## Open
 
+### Crear tabla `alumno_notas` (notas internas por alumno en OB)
+- UI + API ya implementadas (2026-05-04): bloque "Notas internas" en fila expandida de `/dashboard/onboarding`, endpoints en `app/api/onboarding/notas/route.ts`.
+- **Pendiente**: ejecutar `scripts/create-alumno-notas-table.sql` en Supabase SQL Editor — la feature no funciona hasta que exista la tabla.
+
 ### Hotmart sync — verificar funcionamiento
 - Workflow n8n: `https://n8n-n8n.26ckev.easypanel.host/workflow/hfFZh1bGIE5n2UTN`
 - Cron: cada día 03:00 UTC

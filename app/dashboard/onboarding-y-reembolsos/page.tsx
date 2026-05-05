@@ -2,27 +2,27 @@
 
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Wallet, FileText } from "lucide-react";
-import PagosRecobrosTab from "./tabs/PagosRecobrosTab";
-import ContratosFacturasTab from "./tabs/ContratosFacturasTab";
+import { ClipboardList, RefreshCw } from "lucide-react";
+import OnboardingsPanel from "./OnboardingsPanel";
+import ReembolsosPanel from "./ReembolsosPanel";
 
-type TabId = "pagos-recobros" | "contratos-facturas";
+type TabId = "onboardings" | "reembolsos";
 
-const TABS: { id: TabId; label: string; icon: typeof Wallet }[] = [
-  { id: "pagos-recobros", label: "Pagos y Recobros", icon: Wallet },
-  { id: "contratos-facturas", label: "Contratos y Facturas", icon: FileText },
+const TABS: { id: TabId; label: string; icon: typeof ClipboardList }[] = [
+  { id: "onboardings", label: "Onboardings", icon: ClipboardList },
+  { id: "reembolsos", label: "Reembolsos", icon: RefreshCw },
 ];
 
 function Content() {
   const searchParams = useSearchParams();
-  const initial: TabId = searchParams.get("tab") === "contratos-facturas" ? "contratos-facturas" : "pagos-recobros";
+  const initial: TabId = searchParams.get("tab") === "reembolsos" ? "reembolsos" : "onboardings";
   const [tab, setTab] = useState<TabId>(initial);
 
   return (
     <div className="space-y-6 max-w-7xl">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Administración</h1>
-        <p className="text-gray-400 text-sm mt-0.5">Paneles de gestión administrativa y financiera</p>
+        <h1 className="text-2xl font-bold text-gray-900">Onboarding y Reembolsos</h1>
+        <p className="text-gray-400 text-sm mt-0.5">Onboardings de alumnos y estudio de reembolsos por edición</p>
       </div>
 
       <div className="border-b border-gray-200 flex gap-1 overflow-x-auto">
@@ -46,13 +46,13 @@ function Content() {
         })}
       </div>
 
-      {tab === "pagos-recobros" && <PagosRecobrosTab />}
-      {tab === "contratos-facturas" && <ContratosFacturasTab />}
+      {tab === "onboardings" && <OnboardingsPanel />}
+      {tab === "reembolsos" && <ReembolsosPanel />}
     </div>
   );
 }
 
-export default function AdministracionPage() {
+export default function OnboardingYReembolsosPage() {
   return (
     <Suspense fallback={<div className="space-y-6 max-w-7xl"><div className="h-20" /></div>}>
       <Content />

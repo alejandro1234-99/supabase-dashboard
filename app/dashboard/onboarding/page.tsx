@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Loader2, Users, FileCheck, KeyRound, Search, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, Users, FileCheck, KeyRound, Search, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, StickyNote, Trash2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
@@ -26,6 +26,15 @@ type Alumno = {
   acceso_enviado: boolean;
   fecha_registro: string | null;
   provincia: string | null;
+};
+
+type Nota = {
+  id: string;
+  alumno_id: string;
+  contenido: string;
+  autor: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 type Stats = { total: number; conContrato: number; conAcceso: number };
@@ -69,6 +78,114 @@ function RiesgoBadge({ riesgo }: { riesgo: string | null }) {
   };
   const cls = colors[riesgo] ?? "bg-gray-100 text-gray-500";
   return <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold ${cls}`}>{riesgo}</span>;
+}
+
+function NotasAlumno({ alumnoId }: { alumnoId: string }) {
+  const [notas, setNotas] = useState<Nota[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [contenido, setContenido] = useState("");
+  const [autor, setAutor] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const fetchNotas = useCallback(() => {
+    setLoading(true);
+    fetch(`/api/onboarding/notas?alumno_id=${alumnoId}`)
+      .then((r) => r.json())
+      .then((d) => setNotas(d.data ?? []))
+      .finally(() => setLoading(false));
+  }, [alumnoId]);
+
+  useEffect(() => { fetchNotas(); }, [fetchNotas]);
+
+  async function handleCreate() {
+    if (!contenido.trim() || saving) return;
+    setSaving(true);
+    await fetch("/api/onboarding/notas", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ alumno_id: alumnoId, contenido, autor }),
+    });
+    setContenido("");
+    setSaving(false);
+    fetchNotas();
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("¿Borrar esta nota?")) return;
+    await fetch(`/api/onboarding/notas?id=${id}`, { method: "DELETE" });
+    fetchNotas();
+  }
+
+  return (
+    <div className="mt-4 pt-4 border-t border-gray-200">
+      <div className="flex items-center gap-1.5 mb-3">
+        <StickyNote className="h-3.5 w-3.5 text-amber-500" />
+        <p className="font-semibold text-amber-600 uppercase tracking-wide text-[10px]">
+          Notas internas {!loading && notas.length > 0 && `(${notas.length})`}
+        </p>
+      </div>
+
+      {/* Formulario nueva nota */}
+      <div className="flex flex-col gap-2 mb-3">
+        <textarea
+          placeholder="Escribe una nota sobre este alumno..."
+          value={contenido}
+          onChange={(e) => setContenido(e.target.value)}
+          onClick={(e) => e.stopPropagation()}
+          rows={2}
+          className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:border-amber-300 resize-none bg-white"
+        />
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            placeholder="Autor (opcional)"
+            value={autor}
+            onChange={(e) => setAutor(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            className="flex-1 px-3 py-1.5 text-xs border border-gray-200 rounded-full focus:outline-none focus:border-amber-300 bg-white"
+          />
+          <button
+            onClick={(e) => { e.stopPropagation(); handleCreate(); }}
+            disabled={!contenido.trim() || saving}
+            className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-500 text-white text-xs font-semibold rounded-full hover:bg-amber-600 transition-colors disabled:opacity-40"
+          >
+            <Send className="h-3 w-3" />
+            Guardar
+          </button>
+        </div>
+      </div>
+
+      {/* Lista de notas */}
+      {loading ? (
+        <div className="flex justify-center py-3">
+          <Loader2 className="h-4 w-4 animate-spin text-amber-500" />
+        </div>
+      ) : notas.length === 0 ? (
+        <p className="text-[11px] text-gray-400 italic">Sin notas todavía.</p>
+      ) : (
+        <div className="space-y-2">
+          {notas.map((n) => (
+            <div key={n.id} className="bg-white border border-amber-100 rounded-xl px-3 py-2 flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-gray-700 whitespace-pre-wrap">{n.contenido}</p>
+                <p className="text-[10px] text-gray-400 mt-1">
+                  {n.autor ? `${n.autor} · ` : ""}
+                  {new Date(n.created_at).toLocaleString("es-ES", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                </p>
+              </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleDelete(n.id); }}
+                className="p-1 rounded-md text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all shrink-0"
+                title="Borrar nota"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function AlumnoRow({ a }: { a: Alumno }) {
@@ -124,6 +241,9 @@ function AlumnoRow({ a }: { a: Alumno }) {
                   <p className="text-gray-700">{a.merecido_la_pena}</p>
                 </div>
               )}
+            </div>
+            <div onClick={(e) => e.stopPropagation()}>
+              <NotasAlumno alumnoId={a.id} />
             </div>
           </td>
         </tr>

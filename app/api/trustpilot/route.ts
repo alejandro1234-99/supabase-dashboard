@@ -90,6 +90,8 @@ export async function GET(req: NextRequest) {
     uniqueReviewers,
     monthlyData,
     weeklyData,
+  }, {
+    headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=300" },
   });
 }
 

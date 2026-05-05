@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { swr } from "@/lib/cached-fetch";
 import {
   Loader2, Users, RefreshCw, AlertCircle, TrendingUp, Wallet, Receipt, PhoneCall, AlertTriangle,
   CreditCard, Building2, Sparkles, Filter,
@@ -95,14 +96,15 @@ export default function PagosRecobrosTab() {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetch(`/api/administracion/pagos-recobros?cohort=${encodeURIComponent(cohort)}&currency=EUR`)
-      .then((r) => r.json())
-      .then((d: Resp & { error?: string }) => {
+    const cancel = swr<Resp & { error?: string }>(
+      `/api/administracion/pagos-recobros?cohort=${encodeURIComponent(cohort)}&currency=EUR`,
+      (d) => {
         if (d.error) setError(d.error);
         else setData(d);
-      })
-      .catch((e) => setError(String(e)))
-      .finally(() => setLoading(false));
+        setLoading(false);
+      }
+    );
+    return () => cancel();
   }, [cohort]);
 
   const recobrosFiltrados = useMemo(() => {

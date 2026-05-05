@@ -189,5 +189,7 @@ export async function GET(req: NextRequest) {
     cohorts,
     stats,
     rows: filtered.sort((a, b) => (b.cohort || "").localeCompare(a.cohort || "")),
+  }, {
+    headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=300" },
   });
 }

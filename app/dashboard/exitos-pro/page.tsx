@@ -130,7 +130,7 @@ function fmtDate(d: string | null): string {
   return new Date(d).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" });
 }
 
-function CasoCard({ caso, onEdit }: { caso: Caso; onEdit: (c: Caso) => void }) {
+function CasoCard({ caso, onEdit, onView }: { caso: Caso; onEdit: (c: Caso) => void; onView: (c: Caso) => void }) {
   const initials = (caso.nombre_completo ?? "?")
     .split(" ").slice(0, 2).map((w) => w[0] ?? "").join("").toUpperCase();
   const color = STAGE_COLORS[caso.tipo_exito ?? ""] ?? "#94a3b8";
@@ -138,11 +138,12 @@ function CasoCard({ caso, onEdit }: { caso: Caso; onEdit: (c: Caso) => void }) {
 
   return (
     <div
-      className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md hover:border-gray-200 transition-all relative group"
+      onClick={() => onView(caso)}
+      className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md hover:border-gray-200 transition-all relative group cursor-pointer"
     >
       {/* Edit button */}
       <button
-        onClick={() => onEdit(caso)}
+        onClick={(e) => { e.stopPropagation(); onEdit(caso); }}
         className="absolute top-3 right-3 p-1.5 rounded-lg bg-gray-50 hover:bg-indigo-100 text-gray-400 hover:text-indigo-600 transition-all opacity-0 group-hover:opacity-100"
         title="Editar"
       >
@@ -216,12 +217,156 @@ function CasoCard({ caso, onEdit }: { caso: Caso; onEdit: (c: Caso) => void }) {
 
       {/* Footer links */}
       <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-100">
-        {caso.enlace_perfil && <a href={caso.enlace_perfil} target="_blank" rel="noreferrer" className="text-[11px] text-indigo-500 hover:underline">Circle</a>}
-        {caso.linkedin && <a href={caso.linkedin} target="_blank" rel="noreferrer" className="text-[11px] text-indigo-500 hover:underline">LinkedIn</a>}
-        {caso.instagram && <a href={caso.instagram} target="_blank" rel="noreferrer" className="text-[11px] text-indigo-500 hover:underline">Instagram</a>}
-        {caso.pagina_web && <a href={caso.pagina_web} target="_blank" rel="noreferrer" className="text-[11px] text-indigo-500 hover:underline">Web</a>}
+        {caso.enlace_perfil && <a href={caso.enlace_perfil} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-[11px] text-indigo-500 hover:underline">Circle</a>}
+        {caso.linkedin && <a href={caso.linkedin} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-[11px] text-indigo-500 hover:underline">LinkedIn</a>}
+        {caso.instagram && <a href={caso.instagram} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-[11px] text-indigo-500 hover:underline">Instagram</a>}
+        {caso.pagina_web && <a href={caso.pagina_web} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-[11px] text-indigo-500 hover:underline">Web</a>}
       </div>
     </div>
+  );
+}
+
+function CasoDetailModal({ caso, onClose, onEdit }: { caso: Caso; onClose: () => void; onEdit: (c: Caso) => void }) {
+  const initials = (caso.nombre_completo ?? "?")
+    .split(" ").slice(0, 2).map((w) => w[0] ?? "").join("").toUpperCase();
+  const color = STAGE_COLORS[caso.tipo_exito ?? ""] ?? "#94a3b8";
+  const avatar = caso.platform_avatar_url ?? caso.avatar_url;
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        {/* Hero */}
+        <div className="px-6 pt-6 pb-4 border-b border-gray-100 flex items-start gap-4">
+          {avatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={avatar} alt={caso.nombre_completo ?? ""} className="w-16 h-16 rounded-full object-cover shrink-0" />
+          ) : (
+            <div className="w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-lg shrink-0" style={{ backgroundColor: color }}>
+              {initials}
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <h2 className="text-xl font-bold text-gray-900">{caso.nombre_completo ?? "—"}</h2>
+            <p className="text-sm text-gray-500">{caso.email ?? ""}</p>
+            <div className="flex flex-wrap items-center gap-1.5 mt-2">
+              <StageBadge tipo={caso.tipo_exito} />
+              <EstadoBadge estado={caso.caso_exito} />
+              <GrabadoBadge grabado={caso.grabado} enlace={caso.enlace_drive} />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => { onEdit(caso); onClose(); }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-amber-500 text-white rounded-lg hover:bg-amber-600"
+            >
+              <Edit3 className="h-3.5 w-3.5" /> Editar
+            </button>
+            <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100"><X className="h-4 w-4 text-gray-400" /></button>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="px-6 py-5 space-y-6">
+          {caso.descripcion_exito && (
+            <DetailSection title="Descripción del caso">
+              <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{caso.descripcion_exito}</p>
+            </DetailSection>
+          )}
+
+          <DetailSection title="Caso de éxito">
+            <DetailGrid>
+              <DetailItem label="Stage" value={caso.tipo_exito} />
+              <DetailItem label="Estado" value={caso.caso_exito === "Sí" ? "Confirmado" : caso.caso_exito} />
+              <DetailItem label="Fuente" value={caso.fuente_caso_exito} />
+              <DetailItem label="Fecha del caso" value={fmtDate(caso.fecha_caso_exito)} />
+              <DetailItem label="Grabado" value={caso.grabado ? "Sí" : "No"} />
+              <DetailItem label="Enlace grabación" value={caso.enlace_drive} link />
+            </DetailGrid>
+          </DetailSection>
+
+          <DetailSection title="Plataforma Revolutia">
+            <DetailGrid>
+              <DetailItem label="Cohort" value={caso.platform_cohort} />
+              <DetailItem label="Onboarding completado" value={caso.platform_onboarding_completed ? `Sí · ${fmtDate(caso.platform_onboarding_completed_at)}` : "No"} />
+              <DetailItem label="Última actividad" value={fmtDate(caso.platform_last_active_at)} />
+              <DetailItem label="Background profesional" value={caso.platform_professional_background} />
+              <DetailItem label="Rol deseado" value={caso.platform_desired_role} />
+              <DetailItem label="Ubicación (platform)" value={[caso.platform_city, caso.platform_region, caso.platform_country].filter(Boolean).join(", ") || null} />
+            </DetailGrid>
+          </DetailSection>
+
+          <DetailSection title="Actividad en Circle">
+            <DetailGrid>
+              <DetailItem label="Posts" value={caso.posts_publicados ?? 0} />
+              <DetailItem label="Comentarios" value={caso.comentarios_totales ?? 0} />
+              <DetailItem label="Conexiones" value={caso.conexiones_circle ?? 0} />
+              <DetailItem label="Edición" value={caso.edicion} />
+              <DetailItem label="Fecha de entrada" value={fmtDate(caso.fecha_entrada)} />
+              <DetailItem label="Localización" value={caso.localizacion} />
+            </DetailGrid>
+          </DetailSection>
+
+          <DetailSection title="Enlaces">
+            <div className="flex flex-wrap gap-2">
+              {caso.enlace_perfil && <DetailLink href={caso.enlace_perfil} label="Circle" />}
+              {caso.linkedin && <DetailLink href={caso.linkedin} label="LinkedIn" />}
+              {caso.instagram && <DetailLink href={caso.instagram} label="Instagram" />}
+              {caso.pagina_web && <DetailLink href={caso.pagina_web} label="Web" />}
+              {!caso.enlace_perfil && !caso.linkedin && !caso.instagram && !caso.pagina_web && (
+                <p className="text-xs text-gray-400">Sin enlaces registrados</p>
+              )}
+            </div>
+          </DetailSection>
+
+          {caso.tags && (
+            <DetailSection title="Tags">
+              <div className="flex flex-wrap gap-1.5">
+                {caso.tags.split(",").map((t) => t.trim()).filter(Boolean).map((t) => (
+                  <span key={t} className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">{t}</span>
+                ))}
+              </div>
+            </DetailSection>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DetailSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2">{title}</h3>
+      {children}
+    </div>
+  );
+}
+
+function DetailGrid({ children }: { children: React.ReactNode }) {
+  return <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2.5">{children}</div>;
+}
+
+function DetailItem({ label, value, link }: { label: string; value: string | number | null | undefined; link?: boolean }) {
+  const empty = value === null || value === undefined || value === "" || value === "—";
+  return (
+    <div className="flex items-baseline gap-2 text-sm">
+      <span className="text-[11px] text-gray-400 w-32 shrink-0">{label}</span>
+      {empty ? (
+        <span className="text-gray-300">—</span>
+      ) : link && typeof value === "string" ? (
+        <a href={value} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline truncate">{value}</a>
+      ) : (
+        <span className="text-gray-800">{value}</span>
+      )}
+    </div>
+  );
+}
+
+function DetailLink({ href, label }: { href: string; label: string }) {
+  return (
+    <a href={href} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-semibold hover:bg-indigo-100">
+      {label} <ExternalLink className="h-3 w-3" />
+    </a>
   );
 }
 
@@ -247,6 +392,7 @@ export default function ExitosProPage() {
   const [editing, setEditing] = useState<Caso | null>(null);
   const [editForm, setEditForm] = useState<Partial<Caso>>({});
   const [saving, setSaving] = useState(false);
+  const [viewing, setViewing] = useState<Caso | null>(null);
 
   // Buscador para añadir
   const [showAdd, setShowAdd] = useState(false);
@@ -263,6 +409,7 @@ export default function ExitosProPage() {
     enlace_drive: "",
   });
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchAbortRef = useRef<AbortController | null>(null);
 
   const fetchData = useCallback(() => {
     setLoading(true);
@@ -295,9 +442,13 @@ export default function ExitosProPage() {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (q.length < 2) { setAddResults([]); return; }
     debounceRef.current = setTimeout(() => {
-      fetch(`/api/alumnos?search=${encodeURIComponent(q)}&limit=8&page=1`)
+      if (searchAbortRef.current) searchAbortRef.current.abort();
+      const ctrl = new AbortController();
+      searchAbortRef.current = ctrl;
+      fetch(`/api/alumnos?search=${encodeURIComponent(q)}&limit=8&page=1`, { signal: ctrl.signal })
         .then((r) => r.json())
-        .then((d) => setAddResults(d.data ?? []));
+        .then((d) => setAddResults(d.data ?? []))
+        .catch((e) => { if (e.name !== "AbortError") throw e; });
     }, 300);
   }
 
@@ -440,8 +591,13 @@ export default function ExitosProPage() {
         <div className="text-center py-16 text-gray-400 text-sm">No hay casos para los filtros aplicados.</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {casos.map((c) => <CasoCard key={c.id} caso={c} onEdit={startEdit} />)}
+          {casos.map((c) => <CasoCard key={c.id} caso={c} onEdit={startEdit} onView={setViewing} />)}
         </div>
+      )}
+
+      {/* Detail modal */}
+      {viewing && (
+        <CasoDetailModal caso={viewing} onClose={() => setViewing(null)} onEdit={startEdit} />
       )}
 
       {/* Edit modal */}

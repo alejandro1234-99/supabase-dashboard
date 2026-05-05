@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { swr, invalidateCache } from "@/lib/cached-fetch";
 import { Loader2, ShoppingCart, ClipboardList, AlertTriangle, FileCheck, FileText, Users, RefreshCw, Clock, Search, Link2, Check, X, Trash2, Download, Filter, Plus } from "lucide-react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
@@ -22,6 +22,7 @@ type Stats = {
 };
 
 const EDICIONES = ["Global", "Enero 2026", "Febrero 2026", "Marzo 2026", "Abril 2026"];
+const DEFAULT_EDICION = EDICIONES[EDICIONES.length - 1];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Venta = Record<string, any>;
@@ -312,13 +313,13 @@ function DetailModal({ data, fields, title, onClose, onMatch, hasMatch, table, o
   );
 }
 
-export default function OnboardingsPage() {
+export default function OnboardingsPanel() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [riesgoMap, setRiesgoMap] = useState<Record<string, number>>({});
   const [avatarMap, setAvatarMap] = useState<Record<string, number>>({});
   const [ventas, setVentas] = useState<Venta[]>([]);
   const [onboardings, setOnboardings] = useState<Onboarding[]>([]);
-  const [edicionFilter, setEdicionFilter] = useState("Global");
+  const [edicionFilter, setEdicionFilter] = useState(DEFAULT_EDICION);
   const [loading, setLoading] = useState(true);
   const [searchVentas, setSearchVentas] = useState("");
   const [searchOb, setSearchOb] = useState("");
@@ -332,6 +333,69 @@ export default function OnboardingsPage() {
   const [matching, setMatching] = useState(false);
   const [ventasCustomFilters, setVentasCustomFilters] = useState<CustomFilter[]>([]);
   const [obCustomFilters, setObCustomFilters] = useState<CustomFilter[]>([]);
+  const [selectedObIds, setSelectedObIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  function toggleObSelected(id: string) {
+    setSelectedObIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  async function bulkDeleteOnboardings() {
+    const ids = Array.from(selectedObIds);
+    if (ids.length === 0) return;
+    if (!confirm(`Eliminar ${ids.length} onboarding${ids.length > 1 ? "s" : ""}? Esta acción no se puede deshacer.`)) return;
+    setBulkDeleting(true);
+    await Promise.all(ids.map((id) =>
+      fetch(`/api/onboardings/update?table=onboarding&id=${id}`, { method: "DELETE" })
+    ));
+    setSelectedObIds(new Set());
+    setBulkDeleting(false);
+    fetchData(true);
+  }
+
+  const filteredOnboardings = useMemo<Onboarding[]>(() => {
+    const ventaEmailSet = new Set(ventas.map((v) => (v.correo_electronico ?? "").toLowerCase()).filter(Boolean));
+    const obEmailCount: Record<string, number> = {};
+    const obPhoneCount: Record<string, number> = {};
+    onboardings.forEach((o) => {
+      const e = (o.email ?? "").toLowerCase(); if (e) obEmailCount[e] = (obEmailCount[e] ?? 0) + 1;
+      const t = (o.telefono ?? "").replace(/\s/g, ""); if (t) obPhoneCount[t] = (obPhoneCount[t] ?? 0) + 1;
+    });
+    const dupObEmails = new Set(Object.entries(obEmailCount).filter(([, c]) => c > 1).map(([e]) => e));
+    const dupObPhones = new Set(Object.entries(obPhoneCount).filter(([, c]) => c > 1).map(([t]) => t));
+    return (applyCustomFilters(onboardings, obCustomFilters) as Onboarding[])
+      .filter((o) => {
+        if (searchOb && !(o.nombre_completo ?? "").toLowerCase().includes(searchOb.toLowerCase()) && !(o.email ?? "").toLowerCase().includes(searchOb.toLowerCase())) return false;
+        if (filterOb === "sin_contrato" && o.contrato_firmado) return false;
+        if (filterOb === "sin_factura" && o.factura_enviada) return false;
+        if (filterOb === "sin_venta" && ventaEmailSet.has((o.email ?? "").toLowerCase())) return false;
+        if (filterOb === "duplicados") {
+          const e = (o.email ?? "").toLowerCase();
+          const t = (o.telefono ?? "").replace(/\s/g, "");
+          if (!dupObEmails.has(e) && !dupObPhones.has(t)) return false;
+        }
+        return true;
+      });
+  }, [onboardings, ventas, searchOb, filterOb, obCustomFilters]);
+
+  const filteredObAllSelected = filteredOnboardings.length > 0 && filteredOnboardings.every((o) => selectedObIds.has(o.id));
+  const filteredObSomeSelected = filteredOnboardings.some((o) => selectedObIds.has(o.id));
+
+  function toggleAllFilteredObs() {
+    setSelectedObIds((prev) => {
+      const next = new Set(prev);
+      if (filteredObAllSelected) {
+        filteredOnboardings.forEach((o) => next.delete(o.id));
+      } else {
+        filteredOnboardings.forEach((o) => next.add(o.id));
+      }
+      return next;
+    });
+  }
 
   const cancelRef = useRef<(() => void) | null>(null);
 
@@ -404,10 +468,7 @@ export default function OnboardingsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Onboardings</h1>
-        <p className="text-gray-400 text-sm mt-0.5">Estado de onboarding por edicion · Ventas vs Onboardings</p>
-      </div>
+      <p className="text-gray-400 text-sm">Estado de onboarding por edicion · Ventas vs Onboardings</p>
 
       {/* Selector de edición */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
@@ -810,10 +871,36 @@ export default function OnboardingsPage() {
             </div>
           </div>
           <CustomFilterBar filters={obCustomFilters} setFilters={setObCustomFilters} fieldOptions={OB_FILTER_FIELDS} />
+          {selectedObIds.size > 0 && (
+            <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
+              <p className="text-xs font-bold text-amber-700">
+                {selectedObIds.size} onboarding{selectedObIds.size > 1 ? "s" : ""} seleccionado{selectedObIds.size > 1 ? "s" : ""}
+              </p>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setSelectedObIds(new Set())}
+                  className="text-xs font-semibold text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-lg hover:bg-white/50 transition-all">
+                  Limpiar
+                </button>
+                <button onClick={bulkDeleteOnboardings} disabled={bulkDeleting}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-red-500 hover:bg-red-600 px-3 py-1.5 rounded-lg transition-all disabled:opacity-50">
+                  {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                  Eliminar {selectedObIds.size}
+                </button>
+              </div>
+            </div>
+          )}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/60">
+                  <th className="px-3 py-3 w-8">
+                    <input type="checkbox"
+                      checked={filteredObAllSelected}
+                      ref={(el) => { if (el) el.indeterminate = !filteredObAllSelected && filteredObSomeSelected; }}
+                      onChange={toggleAllFilteredObs}
+                      className="h-4 w-4 rounded border-gray-300 text-amber-500 focus:ring-amber-400 cursor-pointer"
+                      title="Seleccionar todos los visibles" />
+                  </th>
                   <th className="text-left px-5 py-3 text-xs font-bold text-gray-400 uppercase">#</th>
                   <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase">Nombre</th>
                   <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase">Email</th>
@@ -838,28 +925,8 @@ export default function OnboardingsPage() {
                     const obEmailSet = new Set(onboardings.map((ob) => (ob.email ?? "").toLowerCase()).filter(Boolean));
                     return !obEmailSet.has((v.correo_electronico ?? "").toLowerCase());
                   });
-                  const obEmailCount: Record<string, number> = {};
-                  const obPhoneCount: Record<string, number> = {};
-                  onboardings.forEach((o) => {
-                    const e = (o.email ?? "").toLowerCase(); if (e) obEmailCount[e] = (obEmailCount[e] ?? 0) + 1;
-                    const t = (o.telefono ?? "").replace(/\s/g, ""); if (t) obPhoneCount[t] = (obPhoneCount[t] ?? 0) + 1;
-                  });
-                  const dupObEmails = new Set(Object.entries(obEmailCount).filter(([, c]) => c > 1).map(([e]) => e));
-                  const dupObPhones = new Set(Object.entries(obPhoneCount).filter(([, c]) => c > 1).map(([t]) => t));
 
-                  return (applyCustomFilters(onboardings, obCustomFilters) as Onboarding[])
-                    .filter((o) => {
-                      if (searchOb && !(o.nombre_completo ?? "").toLowerCase().includes(searchOb.toLowerCase()) && !(o.email ?? "").toLowerCase().includes(searchOb.toLowerCase())) return false;
-                      if (filterOb === "sin_contrato" && o.contrato_firmado) return false;
-                      if (filterOb === "sin_factura" && o.factura_enviada) return false;
-                      if (filterOb === "sin_venta" && ventaEmailSet.has((o.email ?? "").toLowerCase())) return false;
-                      if (filterOb === "duplicados") {
-                        const e = (o.email ?? "").toLowerCase();
-                        const t = (o.telefono ?? "").replace(/\s/g, "");
-                        if (!dupObEmails.has(e) && !dupObPhones.has(t)) return false;
-                      }
-                      return true;
-                    })
+                  return filteredOnboardings
                     .map((o, idx) => {
                       const AVATAR_COLORS: Record<string, string> = { AV0: "bg-blue-50 text-blue-600", AV1: "bg-indigo-50 text-indigo-600", AV2: "bg-purple-50 text-purple-600", "NO AVATAR": "bg-gray-100 text-gray-500" };
                       const RISK_COLORS: Record<string, string> = { BAJO: "bg-emerald-50 text-emerald-600", MEDIO: "bg-amber-50 text-amber-600", ALTO: "bg-red-50 text-red-600" };
@@ -869,8 +936,13 @@ export default function OnboardingsPage() {
                         const first = obNombre.split(" ")[0];
                         return first && first.length > 2 && (v.nombre_completo ?? "").toLowerCase().includes(first);
                       }) : null;
+                      const isSelected = selectedObIds.has(o.id);
                       return (
-                        <tr key={o.id} onClick={() => setSelectedOb(o)} className={`hover:bg-gray-50/50 cursor-pointer ${!hasVenta ? "bg-amber-50/30" : ""}`}>
+                        <tr key={o.id} onClick={() => setSelectedOb(o)} className={`hover:bg-gray-50/50 cursor-pointer ${isSelected ? "bg-amber-100/60" : !hasVenta ? "bg-amber-50/30" : ""}`}>
+                          <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
+                            <input type="checkbox" checked={isSelected} onChange={() => toggleObSelected(o.id)}
+                              className="h-4 w-4 rounded border-gray-300 text-amber-500 focus:ring-amber-400 cursor-pointer" />
+                          </td>
                           <td className="px-5 py-2.5 text-xs text-gray-400">{idx + 1}</td>
                           <td className="px-4 py-2.5 text-sm font-semibold text-gray-800">{o.nombre_completo ?? "—"}</td>
                           <td className="px-4 py-2.5 text-xs text-gray-500">{o.email}</td>

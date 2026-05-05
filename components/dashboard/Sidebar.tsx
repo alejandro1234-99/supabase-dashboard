@@ -7,9 +7,9 @@ import { cn } from "@/lib/utils";
 import { createBrowserClient } from "@supabase/ssr";
 import {
   LayoutDashboard, Users, BarChart3, Activity,
-  Star, Award, MessageSquare,
-  ShoppingCart, CalendarDays, ClipboardList, Trophy, PlayCircle,
-  Headphones, HelpCircle, Globe, ChevronDown, LogOut, Briefcase, GitMerge, TrendingUp, FileText, Presentation, CalendarClock,
+  MessageSquare,
+  ShoppingCart, CalendarDays, ClipboardList, Trophy,
+  Headphones, HelpCircle, ChevronDown, LogOut, GitMerge, TrendingUp, FileText, Presentation, CalendarClock,
   PanelLeftClose, PanelLeftOpen, Lock, Shield, Wallet,
 } from "lucide-react";
 
@@ -21,10 +21,6 @@ const SECTION_STYLES: Record<string, { bg: string; text: string; border: string;
   "Panel de producto": {
     bg: "bg-purple-50", text: "text-purple-600", border: "border-purple-200",
     activeBg: "bg-purple-50", activeText: "text-purple-700", activeBar: "bg-purple-500", number: "bg-purple-500",
-  },
-  "Operativa producto": {
-    bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200",
-    activeBg: "bg-amber-50", activeText: "text-amber-700", activeBar: "bg-amber-500", number: "bg-amber-500",
   },
   "Accesos": {
     bg: "bg-rose-50", text: "text-rose-700", border: "border-rose-200",
@@ -48,32 +44,18 @@ const navSections: NavSection[] = [
     label: "Panel de producto",
     number: "2",
     items: [
-      { href: "/dashboard/reembolsos", label: "Reembolsos", icon: ClipboardList },
-      { href: "/dashboard/reviews", label: "Reviews", icon: Star },
-      { href: "/dashboard/feedback", label: "NPS Formacion", icon: MessageSquare },
-      { href: "/dashboard/arp", label: "Certificados ARP", icon: Award },
-      { href: "/dashboard/vimeo", label: "Consumo Vimeo", icon: PlayCircle },
-      { href: "/dashboard/circle", label: "Circle", icon: Globe },
-      { href: "/dashboard/exitos", label: "Casos de Exito", icon: Trophy },
-      { href: "/dashboard/exitos-pro", label: "Casos de Exito Pro", icon: Trophy },
-      { href: "/dashboard/soporte", label: "Soporte", icon: Headphones },
-    ],
-  },
-  {
-    label: "Operativa producto",
-    number: "3",
-    items: [
       { href: "/dashboard/administracion", label: "Administración", icon: Wallet },
-      { href: "/dashboard/onboardings", label: "Onboardings", icon: ClipboardList },
-      { href: "/dashboard/gestion-exitos", label: "Gestion Casos de Exito", icon: Trophy },
-      { href: "/dashboard/qa", label: "Q&A Pipeline", icon: HelpCircle },
-      { href: "/dashboard/jobs", label: "Banco de Empleo", icon: Briefcase },
+      { href: "/dashboard/exitos-pro", label: "Casos de Exito", icon: Trophy },
+      { href: "/dashboard/opiniones", label: "Opiniones Alumnos", icon: MessageSquare },
+      { href: "/dashboard/onboarding-y-reembolsos", label: "Onboarding y Reembolsos", icon: ClipboardList },
+      { href: "/dashboard/producto", label: "Panel de Producto", icon: LayoutDashboard },
+      { href: "/dashboard/soporte", label: "Soporte", icon: Headphones },
       { href: "/dashboard/workshops", label: "Workshops", icon: Presentation },
     ],
   },
   {
     label: "Accesos",
-    number: "4",
+    number: "3",
     requiresSuperAdmin: true,
     items: [
       { href: "/dashboard/permisos", label: "Permisos", icon: Shield },
@@ -88,7 +70,6 @@ export default function Sidebar({ role = "admin", allowedRoutes, isSuperAdmin = 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     "Cruce de ventas": true,
     "Panel de producto": false,
-    "Operativa producto": false,
     "Accesos": false,
   });
 
@@ -108,7 +89,7 @@ export default function Sidebar({ role = "admin", allowedRoutes, isSuperAdmin = 
   }
 
   const sections: NavSection[] = role === "qa_admin"
-    ? [{ label: "Operativa producto", number: "3", items: navSections.flatMap(s => s.items).filter(i => i.href === "/dashboard/qa") }]
+    ? [{ label: "Panel de producto", number: "2", items: [{ href: "/dashboard/soporte?tab=qa", label: "Sesiones Q&A", icon: HelpCircle }] }]
     : navSections;
 
   if (collapsed) {

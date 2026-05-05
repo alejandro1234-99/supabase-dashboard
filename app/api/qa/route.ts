@@ -47,5 +47,7 @@ export async function GET() {
   return NextResponse.json({
     data,
     stats: { total, pendientes, enProgreso, resueltas, descartadas, avgResolucion },
+  }, {
+    headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=120" },
   });
 }

@@ -29,6 +29,7 @@ type EstudioMkt = {
 };
 
 const EDICIONES = ["Global", "Enero 2026", "Febrero 2026", "Marzo 2026", "Abril 2026"];
+const DEFAULT_EDICION = EDICIONES[EDICIONES.length - 1];
 
 function ReembolsoTable({ title, subtitle, rows, labelKey }: {
   title: string; subtitle?: string;
@@ -77,11 +78,11 @@ function ReembolsoTable({ title, subtitle, rows, labelKey }: {
   );
 }
 
-export default function ReembolsosPage() {
+export default function ReembolsosPanel() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [estudioReembolsos, setEstudioReembolsos] = useState<EstudioReembolsos | null>(null);
   const [estudioMkt, setEstudioMkt] = useState<EstudioMkt | null>(null);
-  const [edicionFilter, setEdicionFilter] = useState("Global");
+  const [edicionFilter, setEdicionFilter] = useState(DEFAULT_EDICION);
   const [loading, setLoading] = useState(true);
 
   const cancelRef = useRef<(() => void) | null>(null);
@@ -103,10 +104,7 @@ export default function ReembolsosPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Reembolsos</h1>
-        <p className="text-gray-400 text-sm mt-0.5">Estudio de reembolsos cruzado con onboarding y marketing</p>
-      </div>
+      <p className="text-gray-400 text-sm">Estudio de reembolsos cruzado con onboarding y marketing</p>
 
       {/* Selector de edición */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">

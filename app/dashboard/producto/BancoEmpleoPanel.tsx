@@ -5,6 +5,7 @@ import {
   Loader2, Search, Briefcase, Clock, CheckCircle, XCircle,
   ChevronLeft, ChevronRight, X, ExternalLink, BarChart2, Send,
 } from "lucide-react";
+import { swr, invalidateCache } from "@/lib/cached-fetch";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
@@ -74,7 +75,7 @@ const STATUS_MAP = {
   rejected:       { label: "Rechazada", color: "text-rose-500 bg-rose-50", icon: XCircle },
 };
 
-export default function JobsPage() {
+export default function BancoEmpleoPanel() {
   const [data, setData] = useState<JobOffer[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
@@ -89,24 +90,27 @@ export default function JobsPage() {
   const [filterCategory, setFilterCategory] = useState("");
   const [page, setPage] = useState(1);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(() => {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page) });
     if (search) params.set("search", search);
     if (filterStatus) params.set("status", filterStatus);
     if (filterCategory) params.set("category", filterCategory);
 
-    const res = await fetch(`/api/jobs?${params}`);
-    const json: ApiResponse = await res.json();
-    setData(json.data ?? []);
-    setCount(json.count ?? 0);
-    setStats(json.stats ?? null);
-    setCategories(json.categories ?? []);
-    setPorSemana(json.porSemana ?? []);
-    setLoading(false);
+    return swr<ApiResponse>(`/api/jobs?${params}`, (json) => {
+      setData(json.data ?? []);
+      setCount(json.count ?? 0);
+      setStats(json.stats ?? null);
+      setCategories(json.categories ?? []);
+      setPorSemana(json.porSemana ?? []);
+      setLoading(false);
+    });
   }, [page, search, filterStatus, filterCategory]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    const cancel = fetchData();
+    return () => { if (cancel) cancel(); };
+  }, [fetchData]);
 
   const totalPages = Math.ceil(count / 20);
   const hasFilters = search || filterStatus || filterCategory;
@@ -124,18 +128,15 @@ export default function JobsPage() {
     });
     setUpdating(null);
     if (selected?.id === id) setSelected(prev => prev ? { ...prev, status } : null);
+    invalidateCache("/api/jobs");
     fetchData();
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Banco de Empleo</h1>
-        <p className="text-gray-400 text-sm mt-0.5">
-          Ofertas de trabajo en automatización, no-code e IA · actualizadas diariamente por agente Claude
-        </p>
-      </div>
+      <p className="text-gray-400 text-sm">
+        Ofertas de trabajo en automatización, no-code e IA · actualizadas diariamente por agente Claude
+      </p>
 
       {/* Stats */}
       {stats && (

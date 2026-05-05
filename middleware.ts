@@ -5,6 +5,10 @@ import type { NextRequest } from "next/server";
 
 import { isEmailAllowed, isTrustedDomain } from "./lib/access-config";
 
+type PermEntry = { perm: { allowed_routes: string[] | null; is_super_admin: boolean } | null; ts: number };
+const permCache = new Map<string, PermEntry>();
+const PERM_TTL_MS = 30_000;
+
 export async function middleware(request: NextRequest) {
   const res = NextResponse.next();
 
@@ -46,25 +50,34 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login?error=no_admin", request.url));
   }
 
-  if (role === "qa_admin" && !request.nextUrl.pathname.startsWith("/dashboard/qa")) {
-    return NextResponse.redirect(new URL("/dashboard/qa", request.url));
+  if (role === "qa_admin" && !request.nextUrl.pathname.startsWith("/dashboard/soporte")) {
+    return NextResponse.redirect(new URL("/dashboard/soporte?tab=qa", request.url));
   }
 
   // Check granular permissions (skip for API routes and static assets)
   const path = request.nextUrl.pathname;
   if (path.startsWith("/dashboard/") && !path.startsWith("/dashboard/api")) {
-    // Cliente admin puro (sin cookies) para bypass de RLS — antes con createServerClient
-    // y cookies, la sesion del usuario aplicaba RLS y la query devolvia null.
-    const permSupabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    );
-    const { data: perm } = await permSupabase
-      .from("dashboard_permissions")
-      .select("allowed_routes, is_super_admin")
-      .eq("user_id", user.id)
-      .single();
+    // Cache en memoria (TTL 30s) del lookup de dashboard_permissions
+    // — los permisos no cambian entre clicks; sin esto cada navegación
+    // a /dashboard/* paga 100-1500ms en una query trivial.
+    let perm: PermEntry["perm"];
+    const cached = permCache.get(user.id);
+    if (cached && Date.now() - cached.ts < PERM_TTL_MS) {
+      perm = cached.perm;
+    } else {
+      const permSupabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+      );
+      const { data } = await permSupabase
+        .from("dashboard_permissions")
+        .select("allowed_routes, is_super_admin")
+        .eq("user_id", user.id)
+        .single();
+      perm = data ?? null;
+      permCache.set(user.id, { perm, ts: Date.now() });
+    }
 
     // /dashboard/permisos solo accesible a super_admin (no a trusted_default).
     if (path.startsWith("/dashboard/permisos") && !perm?.is_super_admin) {

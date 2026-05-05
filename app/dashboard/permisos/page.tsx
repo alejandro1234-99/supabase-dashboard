@@ -18,24 +18,15 @@ const ALL_PANELS = [
     { route: "/dashboard/funnel-historico", label: "Historico" },
   ]},
   { group: "2 · Panel de producto", items: [
-    { route: "/dashboard/reembolsos", label: "Reembolsos" },
-    { route: "/dashboard/reviews", label: "Reviews" },
-    { route: "/dashboard/feedback", label: "NPS Formacion" },
-    { route: "/dashboard/arp", label: "Certificados ARP" },
-    { route: "/dashboard/vimeo", label: "Consumo Vimeo" },
-    { route: "/dashboard/circle", label: "Circle" },
-    { route: "/dashboard/exitos", label: "Casos de Exito" },
-    { route: "/dashboard/exitos-pro", label: "Casos de Exito Pro" },
+    { route: "/dashboard/administracion", label: "Administración" },
+    { route: "/dashboard/exitos-pro", label: "Casos de Exito" },
+    { route: "/dashboard/opiniones", label: "Opiniones Alumnos" },
+    { route: "/dashboard/onboarding-y-reembolsos", label: "Onboarding y Reembolsos" },
+    { route: "/dashboard/producto", label: "Panel de Producto" },
     { route: "/dashboard/soporte", label: "Soporte" },
-  ]},
-  { group: "3 · Operativa producto", items: [
-    { route: "/dashboard/onboardings", label: "Onboardings" },
-    { route: "/dashboard/gestion-exitos", label: "Gestion Casos de Exito" },
-    { route: "/dashboard/qa", label: "Q&A Pipeline" },
-    { route: "/dashboard/jobs", label: "Banco de Empleo" },
     { route: "/dashboard/workshops", label: "Workshops" },
   ]},
-  { group: "4 · Accesos", items: [
+  { group: "3 · Accesos", items: [
     { route: "/dashboard/permisos", label: "Permisos" },
   ]},
 ];

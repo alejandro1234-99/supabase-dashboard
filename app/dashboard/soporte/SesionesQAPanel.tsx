@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { Loader2, HelpCircle, Clock, CheckCircle, XCircle, PlayCircle, ExternalLink, Video, Paperclip, Timer } from "lucide-react";
+import { swr, invalidateCache } from "@/lib/cached-fetch";
 
 type QAConsulta = {
   id: string;
@@ -83,7 +84,6 @@ function KanbanCard({
       onDragStart={(e) => onDragStart(e, card.id)}
       className="bg-white rounded-xl border border-gray-100 shadow-sm cursor-grab active:cursor-grabbing select-none"
     >
-      {/* Header */}
       <div className="p-3.5" onClick={() => setExpanded(!expanded)}>
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex-1 min-w-0">
@@ -96,7 +96,6 @@ function KanbanCard({
         </div>
         <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">{card.consulta ?? "—"}</p>
 
-        {/* Badges */}
         <div className="flex items-center gap-1.5 mt-2">
           {card.loom_url && (
             <span className="flex items-center gap-1 text-[10px] font-semibold text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded-full">
@@ -117,16 +116,13 @@ function KanbanCard({
         </div>
       </div>
 
-      {/* Expanded content */}
       {expanded && (
         <div className="border-t border-gray-50 p-3.5 space-y-3" onClick={(e) => e.stopPropagation()}>
-          {/* Consulta completa */}
           <div>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Consulta</p>
             <p className="text-xs text-gray-700 leading-relaxed">{card.consulta}</p>
           </div>
 
-          {/* Loom */}
           {card.loom_url && (
             <div>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Vídeo Loom</p>
@@ -138,7 +134,6 @@ function KanbanCard({
             </div>
           )}
 
-          {/* Adjunto */}
           {card.attachment_url && (
             <div>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Adjunto</p>
@@ -158,7 +153,6 @@ function KanbanCard({
             </div>
           )}
 
-          {/* Respuesta preparada */}
           <div>
             <div className="flex items-center justify-between mb-1">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Respuesta preparada</p>
@@ -173,7 +167,6 @@ function KanbanCard({
             />
           </div>
 
-          {/* Mover a columna */}
           <div>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Mover a</p>
             <div className="flex flex-wrap gap-1.5">
@@ -186,7 +179,6 @@ function KanbanCard({
             </div>
           </div>
 
-          {/* Timestamps */}
           {(card.fecha_en_progreso || card.fecha_resuelta) && (
             <div className="text-[10px] text-gray-400 space-y-0.5 pt-1 border-t border-gray-50">
               {card.fecha_en_progreso && <p>En progreso: {fmtDate(card.fecha_en_progreso)}</p>}
@@ -202,7 +194,7 @@ function KanbanCard({
   );
 }
 
-export default function QAPage() {
+export default function SesionesQAPanel() {
   const [consultas, setConsultas] = useState<QAConsulta[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -211,19 +203,20 @@ export default function QAPage() {
 
   const fetchData = () => {
     setLoading(true);
-    fetch("/api/qa")
-      .then((r) => r.json())
-      .then((d) => {
-        setConsultas(d.data ?? []);
-        setStats(d.stats);
-      })
-      .finally(() => setLoading(false));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return swr<any>("/api/qa", (d) => {
+      setConsultas(d.data ?? []);
+      setStats(d.stats);
+      setLoading(false);
+    });
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    const cancel = fetchData();
+    return () => { if (cancel) cancel(); };
+  }, []);
 
   const handleStatusChange = async (id: string, status: string) => {
-    // Optimistic update
     setConsultas((prev) => prev.map((c) => c.id === id ? { ...c, status } : c));
     const res = await fetch(`/api/qa/${id}`, {
       method: "PATCH",
@@ -231,9 +224,9 @@ export default function QAPage() {
       body: JSON.stringify({ status }),
     });
     if (res.ok) {
+      invalidateCache("/api/qa");
       const { data } = await res.json();
       setConsultas((prev) => prev.map((c) => c.id === id ? data : c));
-      // Update stats
       setStats((prev) => {
         if (!prev) return prev;
         const updated = { ...prev };
@@ -282,15 +275,10 @@ export default function QAPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Q&A — Pipeline de consultas</h1>
-        <p className="text-gray-400 text-sm mt-0.5">Gestión y seguimiento de consultas de alumnos</p>
-      </div>
+      <p className="text-gray-400 text-sm">Pipeline de consultas — gestión y seguimiento del Q&A semanal</p>
 
-      {/* Stats */}
       {stats && (
-        <div className="grid grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3 flex items-center gap-3">
             <div className="h-8 w-8 rounded-xl bg-indigo-500 flex items-center justify-center shrink-0">
               <HelpCircle className="h-4 w-4 text-white" />
@@ -350,13 +338,12 @@ export default function QAPage() {
         </div>
       )}
 
-      {/* Kanban */}
       {loading ? (
         <div className="flex justify-center py-16">
           <Loader2 className="h-7 w-7 animate-spin text-indigo-400" />
         </div>
       ) : (
-        <div className="grid grid-cols-4 gap-4 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-start">
           {COLUMNS.map(({ key, label, color, bg, icon: Icon }) => {
             const cards = consultas.filter((c) => c.status === key);
             const isOver = dragOverCol === key;
@@ -368,7 +355,6 @@ export default function QAPage() {
                 onDrop={(e) => handleDrop(e, key)}
                 className={`rounded-2xl p-3 min-h-40 transition-all ${isOver ? "ring-2 ring-indigo-300 ring-offset-1" : ""} ${bg}`}
               >
-                {/* Column header */}
                 <div className={`flex items-center justify-between mb-3`}>
                   <div className="flex items-center gap-2">
                     <Icon className={`h-3.5 w-3.5 ${color}`} />
@@ -377,7 +363,6 @@ export default function QAPage() {
                   <span className={`text-xs font-black ${color} opacity-60`}>{cards.length}</span>
                 </div>
 
-                {/* Cards */}
                 <div className="space-y-2">
                   {cards.map((card) => (
                     <KanbanCard

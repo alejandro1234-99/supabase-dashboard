@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase";
+import { getEmailToUserIdMap } from "@/lib/auth-users-cache";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -66,6 +67,62 @@ export async function GET(req: NextRequest) {
 
     if (newFromPurchases.length > 0) {
       (data as unknown[]).push(...newFromPurchases);
+    }
+
+    // También buscar en `profiles` (plataforma Revolutia). Devuelve usuarios
+    // que entraron por la plataforma nueva y todavía no están en `alumnos`.
+    const emailToUserId = await getEmailToUserIdMap();
+    const userIdToEmail: Record<string, string> = {};
+    for (const [email, uid] of Object.entries(emailToUserId)) userIdToEmail[uid] = email;
+
+    const matchingUserIdsByEmail = Object.entries(emailToUserId)
+      .filter(([email]) => email.includes(search.toLowerCase()))
+      .map(([, uid]) => uid);
+
+    const { data: profilesByName } = await sb
+      .from("profiles")
+      .select("user_id, name, avatar_url, cohort, is_test_account")
+      .ilike("name", `%${search}%`)
+      .limit(20);
+
+    const profileUserIds = new Set<string>([
+      ...matchingUserIdsByEmail,
+      ...(((profilesByName ?? []) as { user_id: string }[]).map((p) => p.user_id)),
+    ]);
+
+    let profilesData: { user_id: string; name: string | null; avatar_url: string | null; cohort: string | null; is_test_account: boolean }[] = [];
+    if (profileUserIds.size > 0) {
+      const { data: profilesFull } = await sb
+        .from("profiles")
+        .select("user_id, name, avatar_url, cohort, is_test_account")
+        .in("user_id", Array.from(profileUserIds));
+      profilesData = (profilesFull ?? []) as typeof profilesData;
+    }
+
+    const newFromPlatform = profilesData
+      .filter((p) => !p.is_test_account)
+      .map((p) => ({
+        user_id: p.user_id,
+        email: userIdToEmail[p.user_id] ?? null,
+        name: p.name,
+        avatar_url: p.avatar_url,
+        cohort: p.cohort,
+      }))
+      .filter((p) => p.email && !allAlumnoEmailSet.has(p.email.toLowerCase()))
+      .filter((p) => !alumnoEmails.has(p.email!.toLowerCase()))
+      .filter((p, i, arr) => arr.findIndex((x) => x.email === p.email) === i)
+      .map((p) => ({
+        id: p.user_id,
+        nombre_completo: p.name,
+        email: p.email,
+        tags: p.cohort,
+        caso_exito: null,
+        avatar_url: p.avatar_url,
+        _from_platform: true,
+      }));
+
+    if (newFromPlatform.length > 0) {
+      (data as unknown[]).push(...newFromPlatform);
     }
   }
 

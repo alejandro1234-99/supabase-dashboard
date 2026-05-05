@@ -167,5 +167,7 @@ export async function GET(req: NextRequest) {
     tipos,
     canales,
     responsables,
+  }, {
+    headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=300" },
   });
 }

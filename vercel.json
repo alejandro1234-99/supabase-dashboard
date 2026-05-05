@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/jobs-research",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/refresh-auth-emails",
+      "schedule": "0 5 * * *"
     }
   ]
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Loader2, Video, Eye, Clock, Users, Search, CheckCircle, ExternalLink, TrendingUp } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { swr } from "@/lib/cached-fetch";
 
 type VideoStat = {
   id: string;
@@ -115,7 +116,7 @@ function VideoCard({ video }: { video: VideoStat }) {
   );
 }
 
-export default function VimeoPage() {
+export default function VimeoPanel() {
   const [videos, setVideos] = useState<VideoStat[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [porModulo, setPorModulo] = useState<PorModulo[]>([]);
@@ -135,31 +136,29 @@ export default function VimeoPage() {
     if (moduloFilter) params.set("modulo", moduloFilter);
     if (search) params.set("search", search);
     params.set("sort", sort);
-    fetch(`/api/vimeo?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setVideos(d.data ?? []);
-        setStats(d.stats);
-        setPorModulo(d.porModulo ?? []);
-        setCategorias(d.categorias ?? []);
-        setModulos(d.modulos ?? []);
-      })
-      .finally(() => setLoading(false));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return swr<any>(`/api/vimeo?${params}`, (d) => {
+      setVideos(d.data ?? []);
+      setStats(d.stats);
+      setPorModulo(d.porModulo ?? []);
+      setCategorias(d.categorias ?? []);
+      setModulos(d.modulos ?? []);
+      setLoading(false);
+    });
   }, [categoriaFilter, moduloFilter, search, sort]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    const cancel = fetchData();
+    return () => { if (cancel) cancel(); };
+  }, [fetchData]);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Consumo de Vimeo</h1>
-        <p className="text-gray-400 text-sm mt-0.5">Estadísticas de reproducción por vídeo · Formación</p>
-      </div>
+      <p className="text-gray-400 text-sm">Estadísticas de reproducción por vídeo · Formación</p>
 
       {/* Stats */}
       {stats && (
-        <div className="grid grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3 flex items-center gap-3">
             <div className="h-9 w-9 rounded-xl bg-indigo-500 flex items-center justify-center shrink-0">
               <Video className="h-4 w-4 text-white" />

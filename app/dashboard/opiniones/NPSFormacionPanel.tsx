@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Loader2, MessageSquare, Star, TrendingUp, Users, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LineChart, Line } from "recharts";
+import { swr, invalidateCache } from "@/lib/cached-fetch";
 
 type FeedbackItem = {
   id: string;
@@ -166,7 +167,7 @@ function AvgChart({ semanaStats }: { semanaStats: SemanaStats[] }) {
   );
 }
 
-export default function FeedbackPage() {
+export default function NPSFormacionPanel() {
   const [items, setItems] = useState<FeedbackItem[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [ratingTimeline, setRatingTimeline] = useState<{ byDay: { key: string; avg: number; count: number }[]; byWeek: { key: string; avg: number; count: number }[]; byMonth: { key: string; avg: number; count: number }[] }>({ byDay: [], byWeek: [], byMonth: [] });
@@ -181,24 +182,26 @@ export default function FeedbackPage() {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page) });
     if (semanaFilter) params.set("semana", String(semanaFilter));
-    fetch(`/api/feedback?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.error) { setNoTable(true); return; }
-        setItems(d.data ?? []);
-        setCount(d.count ?? 0);
-        setStats({
-          totalResponses: d.totalResponses,
-          globalAvg: d.globalAvg,
-          semanasActivas: d.semanasActivas,
-          semanaStats: d.semanaStats ?? [],
-        });
-        setRatingTimeline(d.ratingTimeline ?? { byDay: [], byWeek: [], byMonth: [] });
-      })
-      .finally(() => setLoading(false));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return swr<any>(`/api/feedback?${params}`, (d) => {
+      if (d.error) { setNoTable(true); setLoading(false); return; }
+      setItems(d.data ?? []);
+      setCount(d.count ?? 0);
+      setStats({
+        totalResponses: d.totalResponses,
+        globalAvg: d.globalAvg,
+        semanasActivas: d.semanasActivas,
+        semanaStats: d.semanaStats ?? [],
+      });
+      setRatingTimeline(d.ratingTimeline ?? { byDay: [], byWeek: [], byMonth: [] });
+      setLoading(false);
+    });
   }, [page, semanaFilter]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    const cancel = fetchData();
+    return () => { if (cancel) cancel(); };
+  }, [fetchData]);
 
   const totalPages = Math.ceil(count / 20);
 
@@ -214,16 +217,9 @@ export default function FeedbackPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Feedback de Alumnos</h1>
-        <p className="text-gray-400 text-sm mt-0.5">Respuestas de los formularios semanales</p>
-      </div>
-
-      {/* Stats */}
       {stats && (
         <>
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3 flex items-center gap-3">
               <div className="h-9 w-9 rounded-xl bg-indigo-500 flex items-center justify-center shrink-0">
                 <MessageSquare className="h-4 w-4 text-white" />
@@ -263,10 +259,8 @@ export default function FeedbackPage() {
             </div>
           </div>
 
-          {/* Gráfica por módulo */}
           {stats.semanaStats.length > 0 && <AvgChart semanaStats={stats.semanaStats} />}
 
-          {/* Gráfica temporal de valoraciones */}
           {ratingTimeline.byWeek.length > 0 && (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
               <div className="flex items-center justify-between mb-4">
@@ -316,7 +310,6 @@ export default function FeedbackPage() {
         </>
       )}
 
-      {/* Filtro por semana */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-sm font-medium text-gray-500">Módulo:</span>
         <button
@@ -347,7 +340,6 @@ export default function FeedbackPage() {
         <span className="ml-auto text-sm text-gray-400">{count} respuestas</span>
       </div>
 
-      {/* Lista */}
       {loading ? (
         <div className="flex justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
@@ -359,18 +351,17 @@ export default function FeedbackPage() {
           <p className="text-xs mt-1">Ejecuta <code className="bg-gray-100 px-1 rounded">npm run import:feedback</code></p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-3">
           {items.map((item) => (
             <FeedbackCard
               key={item.id}
               item={item}
-              onDelete={(id) => setItems((prev) => prev.filter((i) => i.id !== id))}
+              onDelete={(id) => { setItems((prev) => prev.filter((i) => i.id !== id)); invalidateCache("/api/feedback"); }}
             />
           ))}
         </div>
       )}
 
-      {/* Paginación */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between pt-2">
           <p className="text-sm text-gray-400">Página {page} de {totalPages}</p>

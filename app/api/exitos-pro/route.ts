@@ -241,14 +241,43 @@ export async function PATCH(req: NextRequest) {
       .eq("id", id)
       .maybeSingle();
 
-    if (!purchase) return NextResponse.json({ error: "Alumno no encontrado" }, { status: 404 });
+    if (purchase) {
+      const newAlumno = {
+        airtable_id: `purchase_${purchase.id}`,
+        nombre_completo: purchase.nombre_completo,
+        email: purchase.correo_electronico,
+        fecha_union: purchase.fecha_compra,
+        tags: purchase.edicion,
+        ...updates,
+      };
+      const { data: inserted, error: insertErr } = await sb
+        .from("alumnos")
+        .insert(newAlumno)
+        .select()
+        .single();
+      if (insertErr) return NextResponse.json({ error: insertErr.message }, { status: 500 });
+      return NextResponse.json({ data: inserted });
+    }
+
+    // Fallback: alumno de la plataforma Revolutia (`profiles`).
+    // El id que llega es el `user_id` de auth.users.
+    const { data: profile } = await sb
+      .from("profiles")
+      .select("user_id, name, cohort, created_at")
+      .eq("user_id", id)
+      .maybeSingle();
+
+    if (!profile) return NextResponse.json({ error: "Alumno no encontrado" }, { status: 404 });
+
+    const emailToUserId = await getEmailToUserIdMap();
+    const email = Object.entries(emailToUserId).find(([, uid]) => uid === id)?.[0] ?? null;
 
     const newAlumno = {
-      airtable_id: `purchase_${purchase.id}`,
-      nombre_completo: purchase.nombre_completo,
-      email: purchase.correo_electronico,
-      fecha_union: purchase.fecha_compra,
-      tags: purchase.edicion,
+      airtable_id: `platform_${profile.user_id}`,
+      nombre_completo: profile.name,
+      email,
+      fecha_union: profile.created_at,
+      tags: profile.cohort,
       ...updates,
     };
     const { data: inserted, error: insertErr } = await sb

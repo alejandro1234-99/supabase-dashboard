@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { Search, Loader2, Award, CheckCircle2, XCircle, BarChart2, TrendingUp, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Legend } from "recharts";
+import { swr, invalidateCache } from "@/lib/cached-fetch";
 
 const PASS_THRESHOLD = 0.7;
 
@@ -149,7 +150,7 @@ function CertCard({ cert, onDelete }: { cert: Certificate; onDelete: (id: string
   );
 }
 
-export default function ArpPage() {
+export default function CertificadosArpPanel() {
   const [certs, setCerts] = useState<Certificate[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [filter, setFilter] = useState<"" | "aprobado" | "suspenso">("");
@@ -163,14 +164,14 @@ export default function ArpPage() {
     const params = new URLSearchParams();
     if (filterValue) params.set("filter", filterValue);
     if (searchValue) params.set("search", searchValue);
-    fetch(`/api/arp?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.error) return;
-        setCerts(d.data ?? []);
-        setStats({ total: d.total, aprobados: d.aprobados, suspensos: d.suspensos, avgPct: d.avgPct, rangos: d.rangos, monthlyData: d.monthlyData ?? [] });
-      })
-      .finally(() => { setLoading(false); setSearching(false); });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return swr<any>(`/api/arp?${params}`, (d) => {
+      if (d.error) { setLoading(false); setSearching(false); return; }
+      setCerts(d.data ?? []);
+      setStats({ total: d.total, aprobados: d.aprobados, suspensos: d.suspensos, avgPct: d.avgPct, rangos: d.rangos, monthlyData: d.monthlyData ?? [] });
+      setLoading(false);
+      setSearching(false);
+    });
   }, []);
 
   const handleSearch = (value: string) => {
@@ -185,7 +186,10 @@ export default function ArpPage() {
     fetchData(search, value);
   };
 
-  useEffect(() => { fetchData("", ""); }, [fetchData]);
+  useEffect(() => {
+    const cancel = fetchData("", "");
+    return () => { if (cancel) cancel(); };
+  }, [fetchData]);
 
   const handleDelete = (id: string) => {
     setCerts((prev) => prev.filter((c) => c.id !== id));
@@ -198,18 +202,15 @@ export default function ArpPage() {
       const suspensos = prev.suspensos - (removed.aprobado ? 0 : 1);
       return { ...prev, total, aprobados, suspensos };
     });
+    invalidateCache("/api/arp");
   };
 
   const passRate = stats ? Math.round((stats.aprobados / Math.max(stats.total, 1)) * 100) : 0;
 
   return (
-    <div className="space-y-8 max-w-4xl">
-      {/* Header */}
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Certificados ARP</h1>
-          <p className="text-gray-400 text-sm mt-0.5">Resultados del examen de certificación</p>
-        </div>
+        <p className="text-gray-400 text-sm">Resultados del examen de certificación</p>
         <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold ${
           passRate >= 80 ? "bg-emerald-50 text-emerald-700" : passRate >= 60 ? "bg-yellow-50 text-yellow-700" : "bg-red-50 text-red-600"
         }`}>
